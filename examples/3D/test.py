@@ -4,6 +4,8 @@ Created on May 6, 2010
 @author: joel
 '''
 import sys
+sys.path.append('../..')
+
 import numpy
 from numpy import array as na
 import PyPWDG.dg3d as dg3d
