@@ -74,6 +74,7 @@ class Mesh(object):
         self.dsfs = numpy.hstack(self.etof) # double-sided faces to faces
         nfs = len(self.dsfs)
         dftof = sparse.csr_matrix((numpy.ones(nfs), self.dsfs, range(nfs+1)))
+        self.dftof = dftof
         connectivity = dftof * dftof.transpose()
         connectivity.setdiag(zeros(nfs))
         connectivity.eliminate_zeros()      
@@ -110,12 +111,18 @@ class Mesh(object):
     
             
     @print_timing
+    def localvandermondes(self, refpoints, fd, fn):
+        blockvd = self.values(refpoints, fd)
+        blockvn = self.values(refpoints, fn)
+        indices = numpy.repeat(range(len(self.etof)),self.dim+1) 
+        indptr = range(len(indices)+1)        
+        return blockvd, blockvn 
+    
     def vandermonde(self, refpoints, fd,fn):
         """Compute the Vandermonde matrix """
         from scipy import sparse
 #        facepoints = self.facePoints(refpoints)
-        blockvd = self.values(refpoints, fd)
-        blockvn = self.values(refpoints, fn)
+        blockvd, blockvn = self.localvandermondes(refpoints, fd, fn)
         indices = numpy.repeat(range(len(self.etof)),self.dim+1) 
         indptr = range(len(indices)+1)        
         bvd = sparse.bsr_matrix((numpy.array(blockvd), indices, indptr))
@@ -145,6 +152,7 @@ class Mesh(object):
             det2s = [numpy.linalg.det(hstack((vs[:,range(i)],numpy.matlib.ones((dim,1)),vs[:,range(i+1,dim)])))**2 for i in range(dim)]
             fa.append(math.sqrt(sum(det2s))/math.factorial(dim-1))  
         return fa        
+
  
                     
 def tetmesh():
