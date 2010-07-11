@@ -114,8 +114,6 @@ class Mesh(object):
     def localvandermondes(self, refpoints, fd, fn):
         blockvd = self.values(refpoints, fd)
         blockvn = self.values(refpoints, fn)
-        indices = numpy.repeat(range(len(self.etof)),self.dim+1) 
-        indptr = range(len(indices)+1)        
         return blockvd, blockvn 
     
     def vandermonde(self, refpoints, fd,fn):
@@ -132,9 +130,8 @@ class Mesh(object):
     
     def values(self, refpoints, g):
         """ return the values of g at refpoints on each element in the mesh"""
-        import numpy.matlib
         facepoints = self.facePoints(refpoints)
-        return [g(facepoints[f],n) for e, (fs, ns) in enumerate(zip(self.etof, self.normals)) for (f,n) in zip(fs, ns)  ]
+        return [g(facepoints[f],n) for (fs, ns) in zip(self.etof, self.normals) for (f,n) in zip(fs, ns)  ]
         
      
     def faceareas(self):

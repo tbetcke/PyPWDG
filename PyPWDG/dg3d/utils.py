@@ -4,7 +4,7 @@ Created on May 28, 2010
 @author: joel
 '''
 import numpy
-from numpy import  mat, identity, ones,hstack,vstack,zeros,dot,asmatrix
+from numpy import  mat, identity, ones,hstack,vstack,zeros,dot
 import scipy.special.orthogonal
 import math
 
@@ -56,26 +56,60 @@ def createblock(mat, blocks):
     zipip = zip(csr.indptr[:-1], csr.indptr[1:])
     coords = [(i,j) for i,p in enumerate(zipip) for j in csr.indices[p[0]:p[1]] ]
     data = numpy.array([mat.data[n] * blocks(i,j) for n, (i,j) in enumerate(coords)])
-    return bsr_matrix((data, csr.indices,csr.indptr))
+    s = csr.get_shape()
+    b = data[0].shape
+    return bsr_matrix((data, csr.indices,csr.indptr), shape=(s[0]*b[0],s[1]*b[1] ))
 
 @print_timing
-def sparseblockmultiply2(a,b, prod=numpy.multiply):
-    from scipy.sparse import csr_matrix, bsr_matrix, isspmatrix_bsr, coo_matrix
+def sparseblockmultiply(a,b, prod=numpy.multiply):
+    """ `multiply' a . b 
+    
+    a and b should have a compatible sparsity structure and at least one should be a block sparse
+    matrix.  Effectively, we replace each entry x_ij of the non-block matrix, x by a_ij I where I
+    is an appropriately sized identity matrix; and then perform the multiplication.
+    
+    you could make prod something like lambda a,b:a if you know that all the entries in the non-block are 1
+    although it doesn't seem to make much difference
+    
+    the point is that we keep the block structure without having to explicitly construct a load of 
+    dense identity matrices.  despite the fact that numpy does smart things when you multiply a matrix
+    my the identity, this doesn't seem to carry through to the bsr world.
+    
+    As a side effect, if both a and b are block sparse then it performs a block by block sparse matrix multiply.  There
+    is no reason to expect this to be more efficient than the inbuilt multiply.  However, we now have
+    access to the prod function, which could therefore be distributed.  In any case, if a and b are both
+    block sparse then prod should be set to something like numpy.dot, otherwise, the multiplication
+    will be elementwise for each block multiply.  Note also that in this case, it's likely to be 
+    easier just to use createblock
+    
+    as much as possible, the standard sparse matrix routines are used to do all the work on the underlying
+    sparsity structure.  this might look a bit inefficient, but since all that's done in C++, it's not
+    caveat refactorer - it's very easy to slow this down.
+    """
+    from scipy.sparse import csr_matrix, bsr_matrix, isspmatrix_bsr
     from scipy import int32
-    # we want a and b to be either csr or bsr
+    # we want a and b to be either csr or bsr.  Also need to calculate the underlying sparsity
+    # structure size
+    ablocksize = (1,1)
+    bblocksize = (1,1)
     if not isspmatrix_bsr(a): a = a.tocsr()
+    else : ablocksize = a.blocksize
     if not isspmatrix_bsr(b): b = b.tocsr()
+    else : bblocksize = b.blocksize
+    ashape = [s/bs for s,bs in zip(a.get_shape(), ablocksize)]
+    bshape = [s/bs for s,bs in zip(b.get_shape(), bblocksize)]
+        
     a.sort_indices()
     # for each element of the product, we will iterate through a column of b.
     # it's much more efficient to do this if b is in column format.  
     # since b might be a block matrix and there's no blockcsr, we can't convert it
     # directly.  instead we build an index matrix:    
-    bi = csr_matrix((range(0,len(b.data)), b.indices, b.indptr), dtype=int32).tocsc()
+    bi = csr_matrix((range(0,len(b.data)), b.indices, b.indptr), dtype=int32, shape = bshape).tocsc()
     bi.sort_indices()
     
     # now determine the block-level sparsity structure of a . b
-    ao = csr_matrix((numpy.ones(len(a.data)), a.indices, a.indptr))
-    bo = csr_matrix((numpy.ones(len(b.data)), b.indices, b.indptr))
+    ao = csr_matrix((numpy.ones(len(a.data)), a.indices, a.indptr), shape = ashape)
+    bo = csr_matrix((numpy.ones(len(b.data)), b.indices, b.indptr), shape = bshape)
     abo = ao * bo
     abo.eliminate_zeros()
     abo.sum_duplicates()
@@ -105,109 +139,11 @@ def sparseblockmultiply2(a,b, prod=numpy.multiply):
             data.append(ab) 
             indices.append(j)                
         indptr.append(len(indices))
-        
-    return bsr_matrix((numpy.array(data), indices, indptr))    
+    bs = data[0].shape    
+    return bsr_matrix((numpy.array(data), indices, indptr), shape = (bs[0] * ashape[0], bs[1] * bshape[1]))    
 
-                        
-    
-
-@print_timing
-def sparseblockmultiply(a,b, prod=numpy.multiply):
-    """ `multiply' a . b 
-    
-    a and b should have a compatible sparsity structure and at least one should be a block sparse
-    matrix.  Effectively, each entry a_ij of the non-block matrix is replaced with a_ij I where I
-    is an appropriately sized identity matrix.
-    
-    As a side effect, if both a and b are block sparse then it performs a block by block sparse matrix multiply.  There
-    is no reason to expect this to be more efficient than the inbuilt multiply.  However, we now have
-    access to the prod function, which could therefore be distributed.  In any case, if a and b are both
-    block sparse then prod should be set to something like numpy.dot, otherwise, the multiplication
-    will be elementwise for each block multiply.  Note also that in this case, it's likely to be 
-    easier just to use createblock
-    """
-    import time 
-    from scipy.sparse import csr_matrix, bsr_matrix, isspmatrix_bsr, coo_matrix
-    from scipy import int32
-    t0 = time.time()
-    print "t1",time.time()-t0
-    # we want a and b to be either csr or bsr
-    if not isspmatrix_bsr(a): a = a.tocsr()
-    if not isspmatrix_bsr(b): b = b.tocsr()
-    print "t2",time.time()-t0    
-    # ao and bo just contain the sparsity structure of a and b
-    ao = csr_matrix((numpy.ones(len(a.data)), a.indices, a.indptr))
-    bo = csr_matrix((numpy.ones(len(b.data)), b.indices, b.indptr))
-    print "t3",time.time()-t0    
-    # abo gives us the sparsity structure of a . b.
-    abo = ao*bo
-    abo.eliminate_zeros()
-    abo.sum_duplicates()
-    abo.sort_indices()
-    print "t4",time.time()-t0    
-    # now determine what contributes to each entry of abo.
-    # first create an index matrix for each of a and b
-    # dense matrices are much faster look-ups than sparse
-    ai = csr_matrix((range(1,len(a.data)+1), a.indices, a.indptr), dtype=int32).todense()
-    bi = csr_matrix((range(1,len(b.data)+1), b.indices, b.indptr), dtype=int32).todense()
-    print "t5",time.time()-t0    
-    
-    # determine the row, col pairs that we need to take products of
-    abop = zip(abo.indptr[:-1], abo.indptr[1:])
-    abij = [(i,j) for i,p in enumerate(abop) for j in abo.indices[p[0]:p[1]]]
-    print "t5.5",time.time()-t0  
-    ap = zip(a.indptr[:-1], a.indptr[1:])  
-#    arind = [ai.getrow(i).indices for i in range(len(a.indptr)-1)]
-    arind = [a.indices[s:t] for s,t in ap]
-    print "t6",time.time()-t0    
-    add = numpy.matrix.__add__
-    data = [reduce(add,[prod(a.data[ai[i,k]-1], b.data[bi[k,j]-1]) for k in arind[i] if bi[k,j] > 0 ]) for i,j in abij]
-    
-    
-#    arbc = [(ai.getrow(i),bi.getcol(j)) for i,p in enumerate(abop) for j in abo.indices[p[0]:p[1]]]
-#    print len(arbc)
-#    print "t6",time.time()-t0    
-#    
-##    print b.data.shape
-##    print numpy.sum([b.data[k-1] for k in bi.data], axis=0)
-#    print "t6.5",time.time()-t0
-#    # take products
-#    data = [numpy.sum([prod(a.data[ar[0,k]-1], b.data[bc[k,0]-1]) for k in ar.indices if bc[k,0] > 0], axis=0) for ar,bc in arbc]
-    print "t7",time.time()-t0    
-        
-    return bsr_matrix((numpy.array(data), abo.indices, abo.indptr))    
-
-@print_timing
-def collapsebsr(c, b):
-    """ Sums a sparse block matrix across common faces
-    
-    c should be a list of lists of faces to collapse.  
-    b is a block for each pair of uncollapsed faces
-    """
-    from scipy.sparse import csr_matrix, bsr_matrix
-    from scipy import int32
-        
-    # first lets determine the new sparsity structure
-    C = csr_matrix((numpy.ones(len(numpy.hstack(c))), numpy.hstack(c), range(0,len(c)+1)))
-    B = csr_matrix((numpy.ones(len(b.indices)), b.indices, b.indptr ))
-    CBCt = (C * B * C.transpose()).tocsr()
-    CBCt.sum_duplicates()
-    CBCt.sort_indices()
-    print CBCt.indices.shape
-    
-    #Now lets create an index matrix into B
-    Bi = csr_matrix((range(1,len(b.indices)+1), b.indices, b.indptr),dtype=scipy.int32)
-    # Extract the list of lists of b.data that need to be summed
-    bdata = [[b.data[Bi[ii,jj]-1] for ii in i for jj in j if Bi[ii,jj] > 0] for i in c for j in c ]
-    print [len(bs) for bs in bdata]
-    # Sum all the blocks for each entry.  
-    data = numpy.array([numpy.sum(bs,axis=0) for bs in bdata])
-    print data.shape
-                   
-    return bsr_matrix((data, CBCt.indices, CBCt.indptr))    
-
-class innerproduct(object):
-    """ A class to calculate inner products based on vandermonde matrices """
+class globalvandermonde(object):
+    """ A class to calculate inner products and matrix vector based on local vandermonde matrices """
     def __init__(self, vandermondes, quadweights):
         """ vandermondes is a list of vandermonde matrices
             quadweights is a list of quadrature weights """  
@@ -218,8 +154,10 @@ class innerproduct(object):
         """ Return the inner product of the ith face against the jth face """
     # It should be the case that w[i] = w[j], otherwise the
     # inner product makes no sense.
-        return numpy.dot(numpy.multiply(self.v[i].H,self.w[i].A.flatten()), self.v[j])
-    
+        return numpy.dot(numpy.multiply(self.v[i].H,self.w[i].A.flatten()), self.v[j])        
+
+    def matvec(self, g):
+        return lambda i,j : numpy.dot(self.v[i].H, numpy.multiply(self.w[i].reshape(-1,1), g[j]))
 
 def cubeDirections(n):
     """ Return n^2 directions roughly parallel to (1,0,0)"""

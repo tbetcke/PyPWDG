@@ -49,12 +49,12 @@ if __name__ == '__main__':
     print k, maxvol
     g = dg3d.impedance(dir,k)
     gg = dg3d.planeWaves(dir,k)[0]
-    s = dg3d.solver(dg3d.cubemesh(maxvol), 3, 10, k)
+    s = dg3d.solver(dg3d.cubemesh(maxvol), 4, 10, k)
     
-#    s.solve(g)
-#    
-#    v = dg3d.Visualiser(s,gg)
-#    v.showuaveragereal()
-#    sys.exit(0)
+    s.solve(g)
+    
+    v = dg3d.Visualiser(s,gg)
+    v.showuaveragereal()
+    sys.exit(0)
     
     
