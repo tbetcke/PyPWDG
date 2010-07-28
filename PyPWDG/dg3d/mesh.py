@@ -222,3 +222,9 @@ def displayMesh(mesh):
 #    triangular_mesh(p[:,0],p[:,1],p[:,2],f,opacity=0.3)
     triangular_mesh(p[:,0],p[:,1],p[:,2],f,representation="wireframe", opacity=0.8)
     triangular_mesh(p[:,0],p[:,1],p[:,2],f,representation="surface", opacity=0.1)
+
+if __name__ == "__main__":
+    cube=cubemesh()
+
+
+
