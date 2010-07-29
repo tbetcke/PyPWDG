@@ -17,7 +17,7 @@ def gmsh_reader(fname):
         for i in range(nnodes):
             line=it.next().split()
             nodes.append(numpy.array(map(float,line[1:])))
-        meshDict['nodes']=nodes
+        meshDict['nodes']=numpy.array(nodes)
         meshDict['nnodes']=nnodes
 
     def read_elements(content):

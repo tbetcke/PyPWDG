@@ -16,9 +16,10 @@ class Mesh(object):
        Properties:
 
             gmsh_mesh     - Contains the mesh dictionary from the gmsh_reader
-            faces         - List of Tuples (ind,vertices) defining the faces, where ind
+            faces         - List of Tuples (ind,vertices,v) defining the faces, where ind
                             is the associated element and vertices is a tuple containing the
-                            defining vertices of the face
+                            defining vertices of the face. v contains the remaining non-face vertex
+                            of the triangle/tetrahedron
             nfaces        - Number of faces = len(self.__faces). Faces are counted twice if they are between two elements
             facemap       - face1 is adjacent face2 if self.__facemap[face1]=face2. If self.__facemap[face1]==face1 the
                             face is on the boundary. face1,face2 are indices into the self.__faces list
@@ -27,7 +28,15 @@ class Mesh(object):
             bnd_entities  - For each index i in self.__bndfaces self.__bnd_entities[i] is
                             the pysical entity of the boundary part assigned in Gmsh.
             nelements     - Number of elements
-       
+            dim           - Dimension of problem (dim=2,3)
+            face_vertices - Number of vertices in face
+            elem_vertices - Number of vertices in element
+            normals       - Numpy array of dimension (self.nfaces,self.dim). self.__normals[ind] contains the normal
+                            direction of the face with index ind.
+            dets          - Numpy array of dimension self.nfaces, containing the absolute value of the cross product of the
+                            partial derivatives for the map from the unit triangle (or unit line in 2d) to the face
+
+            
        
     """
     
@@ -37,9 +46,10 @@ class Mesh(object):
             The following private variables are created
             
             self.__gmsh_mesh     - Contains the mesh dictionary from the gmsh_reader
-            self.__faces        - List of Tuples (ind,vertices) defining the faces, where ind
+            self.__faces        - List of Tuples (ind,vertices,v) defining the faces, where ind
                                   is the associated element and vertices is a tuple containing the
-                                  defining vertices of the face
+                                  defining vertices of the face. v contains the remaining non-face vertex
+                                  of the triangle/tetrahedron
             self.__nfaces       - Number of faces = len(self.__faces). Faces are counted twice if they are between two elements
             self.__facemap      - face1 is adjacent face2 if self.__facemap[face1]=face2. If self.__facemap[face1]==face1 the
                                   face is on the boundary. face1,face2 are indices into the self.__faces list
@@ -47,7 +57,10 @@ class Mesh(object):
             self.__bndfaces     - List of indices of faces on the boundary
             self.__bnd_entities - For each index i in self.__bndfaces self.__bnd_entities[i] is
                                   the pysical entity of the boundary part assigned in Gmsh.
-            self.__nelements  - Number of elements
+            self.__nelements        - Number of elements
+            self.__dim             - Dimension of problem (dim=2,3)
+            self.__face_vertices    - Number of vertices in face
+            self.__elem_vertices    - Number of vertices in element
                              
             
             
@@ -68,9 +81,12 @@ class Mesh(object):
             gmsh_elem_key=4 # Key for tetrahedal element in Gmsh
             gmsh_face_key=2 # Key for triangle element in Gmsh
             
+        self.__dim=dim
+        self.__face_vertices=fv
+        self.__elem_vertices=ev
         
         # Faces are stored in the format (elem_key,(v1,..,vn)), where (v1,..,vn) define the face
-        faces = ([(key,tuple(sorted(elems[key]['nodes'][0:i]+elems[key]['nodes'][i+1:ev]))) for key in elems for i in range(0,ev) if elems[key]['type']==gmsh_elem_key])
+        faces = ([(key,tuple(sorted(elems[key]['nodes'][0:i]+elems[key]['nodes'][i+1:ev])),elems[key]['nodes'][i]) for key in elems for i in range(0,ev) if elems[key]['type']==gmsh_elem_key])
         self.__faces=faces
         self.__nfaces=len(faces)       
          
@@ -113,8 +129,98 @@ class Mesh(object):
             tuple_entity_dict[elem[1]]=elem[0]
         for ind in self.__bndfaces:
             self.__bnd_entities[ind]=tuple_entity_dict[self.__faces[ind][1]]
-     
+            
+        # Now generate direction vectors     
+        self.__compute_directions()
+        # Compute normals
+        self.__compute_normals_and_dets()
+            
+    def __compute_directions(self):
+        """ Compute direction vectors for all faces 
         
+            The following private variables are created
+            
+            self.__directions - three dimensional array, such that self.__directions[ind] returns
+                                a matrix whose first row is the coordinate vector of the vertex v0. The two other
+                                rows define the direction vectors v1-v0 and v2-v0. If the problem has two dimensional
+                                the self.__directions[ind] only has two rows. 
+        
+        """
+        
+        self.__directions=numpy.zeros((len(self.faces),self.elem_vertices,self.dim))
+        for ind,face in enumerate(self.faces):
+            self.__directions[ind,0,:]=self.gmsh_mesh['nodes'][face[1][0]][0:self.dim]
+            self.__directions[ind,1,:]=self.gmsh_mesh['nodes'][face[1][1]][0:self.dim]-self.__directions[ind,0]
+            if self.dim==3: self.__directions[ind,2,:]=self.gmsh_mesh['nodes'][face[1][2]][0:self.dim]-self.__directions[ind,0]
+            self.__directions[ind,-1,:]=self.gmsh_mesh['nodes'][face[2]][0:self.dim]-self.__directions[ind,0]
+            
+    def __compute_normals_and_dets(self):
+        """ Compute normal directions and determinants for all faces 
+        
+            The following private variables are created
+            
+            self.__normals - Numpy array of dimension (self.nfaces,self.dim). self.__normals[ind] contains the normal
+                             direction of the face with index ind.
+            self.__dets    - Numpy array of dimension self.nfaces, containing the absolute value of the cross product of the
+                             partial derivatives for the map from the unit triangle (or line in 2d) to the face
+        
+        """
+        
+        self.__normals=numpy.zeros((self.nfaces,self.dim))
+        self.__dets=numpy.zeros(self.nfaces)
+        if self.dim==2:
+            # Put normal vectors 
+            self.__normals[:,0]=self.__directions[:,1,1]
+            self.__normals[:,1]=-self.__directions[:,1,0]
+        else:
+            self.__normals[:,0]=self.__directions[:,1,1]*self.__directions[:,2,2]-self.__directions[:,2,1]*self.__directions[:,1,2]
+            self.__normals[:,1]=self.__directions[:,1,2]*self.__directions[:,2,0]-self.__directions[:,1,0]*self.__directions[:,2,2]
+            self.__normals[:,2]=self.__directions[:,1,0]*self.__directions[:,2,1]-self.__directions[:,2,0]*self.__directions[:,1,1]
+
+        for ind in range(self.nfaces):
+            # Adjust sign (outwards showing) and normalize length of normals
+            z=numpy.linalg.norm(self.__normals[ind,:])
+            self.__dets[ind]=z
+            self.__normals[ind,:] *=-numpy.sign(numpy.dot(self.__normals[ind,:],self.__directions[ind,-1,:]))/z
+        
+        
+            
+    def reference_face_map(self,indx,xcoords,ycoords=None):
+        """Return numpy array with transformed coordinates from reference element to face[indx]
+        
+            The unit triangle is defined as the triangle with coordinates (0,0), (1,0), (0,1)
+        
+        
+           Input arguments:
+           
+           indx    - index of wanted face
+           xcoords - numpy array with x coordinates in unit triangle
+           ycoords - numpy array with y coordinate  in unit triangle (only needed for dim=3)
+        
+           Output arguments:
+           
+           coords - numpy array of dimension (dim,len(xcoords)), containing the result of the
+                    map
+                
+        
+        """
+        coords=numpy.zeros((self.dim,len(xcoords)))
+        if self.dim==2:
+            coords[0,:]=self.__directions[indx,0,0]+self.__directions[indx,1,0]*xcoords
+            coords[1,:]=self.__directions[indx,0,1]+self.__directions[indx,1,1]*xcoords
+        else:
+            coords[0,:]=self.__directions[indx,0,0]+self.__directions[indx,1,0]*xcoords+self.__directions[indx,2,0]*ycoords
+            coords[1,:]=self.__directions[indx,0,1]+self.__directions[indx,1,1]*xcoords+self.__directions[indx,2,1]*ycoords
+            coords[2,:]=self.__directions[indx,0,2]+self.__directions[indx,1,2]*xcoords+self.__directions[indx,2,2]*ycoords
+
+        return coords  
+            
+        
+        
+        
+            
+    # Define get methods for properties
+             
     def get_gmsh_mesh(self):
         return self.__gmsh_mesh
     def get_faces(self):
@@ -131,6 +237,18 @@ class Mesh(object):
         return self.__bnd_entities
     def get_nelements(self):
         return self.__nelements
+    def get_dim(self):
+        return self.__dim
+    def get_face_vertices(self):
+        return self.__face_vertices
+    def get_elem_vertices(self):
+        return self.__elem_vertices
+    def get_normals(self):
+        return self.__normals
+    def get_dets(self):
+        return self.__dets
+    
+    # Assign properties
     
     gmsh_mesh=property(get_gmsh_mesh)
     faces=property(get_faces)
@@ -140,9 +258,11 @@ class Mesh(object):
     bndfaces=property(get_bndfaces)
     bnd_entities=property(get_bnd_entities)
     nelements=property(get_nelements)
-    
-        
-        
+    dim=property(get_dim)
+    face_vertices=property(get_face_vertices)
+    elem_vertices=property(get_elem_vertices)
+    normals=property(get_normals)
+    dets=property(get_dets)    
         
 
 if __name__ == "__main__":
@@ -155,6 +275,7 @@ if __name__ == "__main__":
     t2=time.time()
     print 'Import took %0.3f seconds for mesh with %i elements' % (t2-t1,squaremesh.nelements)
 
+
     
     print 'Import 3D mesh'
     import time
@@ -163,8 +284,9 @@ if __name__ == "__main__":
     cubemesh=Mesh(mesh_dict,dim=3)
     t2=time.time()
     print 'Import took %0.3f seconds for mesh with %i elements' % (t2-t1,cubemesh.nelements)
- 
 
+
+    
 
         
     
