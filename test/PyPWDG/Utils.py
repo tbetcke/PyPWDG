@@ -12,6 +12,13 @@ class testSparse(unittest.TestCase):
     def setUp(self):
         # VS1 is an example variable size block matrix
         blocks = [mat([[1,2],[3,4]]), mat([[1],[2]]), mat([[1],[2],[3]])]
+        indices = [0,1,1]
+        indptr = [0,2,3]
+        bsizei = [2,3]
+        bsizej = [2,1]
+        self.VS1 = vbsr_matrix(blocks,indices,indptr,bsizei,bsizej)
+        self.VS1D = self.VS1.tocsr().todense()
+
     
     def tearDown(self):
         pass
