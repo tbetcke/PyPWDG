@@ -130,6 +130,7 @@ class vbsr_matrix(object):
         return vbsr_matrix(data, indices, indptr, lsizes, rsizes) 
     
     def _scalarmul(self, x):
+        pass
         
         
     def __mul__(self, other):
@@ -139,7 +140,7 @@ class vbsr_matrix(object):
         """         
         import numpy
         from scipy.sparse import issparse
-        if numpy.isscalar(other) return self._scalarmul(other)
+        if numpy.isscalar(other): return self._scalarmul(other)
         if not issparse(other): return NotImplemented
         rcsr = other.tocsr()
         return self._mul(self.indices, self.indptr, self.blocks, (len(self.bsizei), len(self.bsizej)), self.bsizei, rcsr.indices, rcsr.indptr, rcsr.data, rcsr.get_shape(), numpy.ones(rcsr.get_shape()[1])*-1, numpy.multiply)
@@ -149,7 +150,7 @@ class vbsr_matrix(object):
         NotImplemented from __mul__ for an unknown rhs, annoyingly"""
         import numpy
         from scipy.sparse import issparse
-        if numpy.isscalar(other) return self._scalarmul(other)
+        if numpy.isscalar(other): return self._scalarmul(other)
         if not issparse(other): return NotImplemented
         lcsr = other.tocsr()
         return self._mul(lcsr.indices, lcsr.indptr, lcsr.data, lcsr.get_shape(), numpy.ones(lcsr.get_shape()[0])*-1, self.indices, self.indptr, self.blocks, (len(self.bsizei), len(self.bsizej)), self.bsizej, numpy.multiply)
@@ -194,6 +195,3 @@ class vbsr_matrix(object):
         
         
         
-        
-
-    
