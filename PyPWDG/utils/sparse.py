@@ -4,11 +4,49 @@ Created on Jul 14, 2010
 @author: joel
 '''
 
+def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
+    """ Creates a variable block sparse matrix
+    
+    mat gives the sparsity pattern.  
+    blocks is a callable returning the (i,j) block
+    bsizerows/cols give the block sizes.  These are optional - by default they are inferred from blocks(.,.)
+    However, if mat has any empty rows or columns, the relevant bsize* entry will be zero.  This might not be
+    what you want.  
+    
+    The (i,j)th block of the vbsr is mat[i,j] * blocks(i,j)
+    """
+    import numpy
+    csr = mat.tocsr().sorted_indices()
+    csr.eliminate_zeros()
+    zipip = zip(csr.indptr[:-1], csr.indptr[1:])
+    coords = [(i,j) for i,p in enumerate(zipip) for j in csr.indices[p[0]:p[1]] ]
+    data = numpy.array([mat.data[n] * numpy.mat(blocks(i,j)) for n, (i,j) in enumerate(coords)])
+    s = csr.get_shape()
+    if bsizerows is None: bsizerows = [None]*s[0]
+    if bsizecols is None: bsizecols = [None]*s[1]
+    for (i,j), block in zip(coords, data):
+        (r,c) = block.shape
+        if not bsizerows[i] in [r, None]: raise ValueError("Incompatible block sizes. row:%s, r:%s, bsizerows[i]:%s" %(i,r,bsizerows[i]))  
+        if not bsizecols[j] in [c, None]: raise ValueError("Incompatible block sizes. col:%s, c:%s, bsizecols[i]:%s" %(j,c,bsizecols[i]))
+        bsizerows[i] = r
+        bsizecols[j] = c 
+    
+    bsizerows = [0 if x is None else x for x in bsizerows]
+    bsizecols = [0 if x is None else x for x in bsizecols]
+        
+    return vbsr_matrix(data, csr.indices, csr.indptr, bsizerows, bsizecols)
+
 class vbsr_matrix(object):
     '''
     A block-sparse matrix containing blocks of variable size.
     
     The blocks must be dense matrices at the moment, although this would be easy to generalise
+    
+    A certain amount of consistency checking is done one the block sizes for the various operators.  However
+    this should not be relied upon yet.  This is an incomplete class - I'm just adding functionality as I need it  
+    
+    @see: test.PyPWDG.Utils
+
     '''
 
 
@@ -50,7 +88,10 @@ class vbsr_matrix(object):
                 csrptr.append(cptr)
         return csr_matrix((concatenate(csrdata), concatenate(csrind), csrptr), shape=(len(csrptr)-1, self.bindj[-1]))
     
-    def _mul(self, lindices, lindptr, ldata, lshape, lsizes, rindices, rindptr, rdata, rshape, rsizes, prod):
+    def todense(self):
+        return self.tocsr().todense()
+    
+    def _mul(self, lindices, lindptr, ldata, lshape, lsizes, rindices, rindptr, rdata, rshape, rsizes, otherscalar, prod):
         """ `multiply' a block matrix by a sparse matrix 
         
         l... and r... should be the data for (variable block) sparse matrices with compatible sparsity structures.
@@ -77,7 +118,7 @@ class vbsr_matrix(object):
         sparsity structure.  this might look a bit inefficient, but since all that's done in C++, it's not.
         Caveat refactorer - it's very easy to slow this down.
         """        
-        from numpy import ones
+        from numpy import ones, mat
         from scipy.sparse import csr_matrix
         from scipy import int32
         
@@ -117,12 +158,8 @@ class vbsr_matrix(object):
                         else: ab = ab + pab
                     if ak <= bk: pa+=1
                     if bk <= ak: pb+=1
-                (ln,rn) = ab.shape
-                if lsizes[i] == -1: lsizes[i] = ln
-                elif lsizes[i] != ln: raise ValueError("Incompatible block sizes") 
-                if rsizes[j] == -1: rsizes[j] = rn
-                elif rsizes[j] != rn: raise ValueError("Incompatible block sizes") 
-                data.append(ab) 
+                if (lsizes[i], rsizes[j]) != ab.shape: raise ValueError("Incompatible block sizes %s, %s"%((lsizes[i], rsizes[j]), ab.shape)) 
+                data.append(mat(ab) * otherscalar * self.scalar) 
                 indices.append(j)                
             indptr.append(len(indices))
          
@@ -130,20 +167,33 @@ class vbsr_matrix(object):
         return vbsr_matrix(data, indices, indptr, lsizes, rsizes) 
     
     def _scalarmul(self, x):
-        pass
+        return vbsr_matrix(self.blocks, self.indices, self.indptr, self.bsizei, self.bsizej, self.scalar * x)
         
+    
+    def _calculatesizes(self, csr, bsize):
+        from scipy.sparse import csr_matrix
+        from numpy import ones, divide
+        csro = csr_matrix((ones(len(csr.data)), csr.indices, csr.indptr), shape = csr.get_shape())
+        # number of entries in each row:
+        ne = csro * ones(len(bsize))
+        
+        return divide(csro * bsize, ne)
+
         
     def __mul__(self, other):
         """ Multiply this variable block sparse matrix by a sparse matrix at the structure level
         
-        Doesn't yet cope with variable * variable.
+        Doesn't yet cope with vbsr * vbsr.
         """         
         import numpy
         from scipy.sparse import issparse
         if numpy.isscalar(other): return self._scalarmul(other)
         if not issparse(other): return NotImplemented
         rcsr = other.tocsr()
-        return self._mul(self.indices, self.indptr, self.blocks, (len(self.bsizei), len(self.bsizej)), self.bsizei, rcsr.indices, rcsr.indptr, rcsr.data, rcsr.get_shape(), numpy.ones(rcsr.get_shape()[1])*-1, numpy.multiply)
+        colsizes = self._calculatesizes(other.transpose().tocsr(), self.bsizej) 
+        
+        return self._mul(self.indices, self.indptr, self.blocks, (len(self.bsizei), len(self.bsizej)), self.bsizei, \
+                         rcsr.indices, rcsr.indptr, rcsr.data, rcsr.get_shape(), colsizes, 1.0, numpy.multiply)
         
     def __rmul__(self, other):
         """ This doesn't work using the * operator because the sparse matrix classes don't return 
@@ -153,11 +203,12 @@ class vbsr_matrix(object):
         if numpy.isscalar(other): return self._scalarmul(other)
         if not issparse(other): return NotImplemented
         lcsr = other.tocsr()
-        return self._mul(lcsr.indices, lcsr.indptr, lcsr.data, lcsr.get_shape(), numpy.ones(lcsr.get_shape()[0])*-1, self.indices, self.indptr, self.blocks, (len(self.bsizei), len(self.bsizej)), self.bsizej, numpy.multiply)
+        rowsizes = self._calculatesizes(lcsr, self.bsizei)
+        return self._mul(lcsr.indices, lcsr.indptr, lcsr.data, lcsr.get_shape(), rowsizes, \
+                         self.indices, self.indptr, self.blocks, (len(self.bsizei), len(self.bsizej)), self.bsizej, 1.0,  numpy.multiply)
     
     def __add__(self, other):
-        print self.bsizei
-        print other.bsizei
+        from numpy import mat
         if not other.bsizei == self.bsizei: raise ValueError("Incompatible block sizes")
         if not other.bsizej == self.bsizej: raise ValueError("Incompatible block sizes")
         
@@ -176,21 +227,27 @@ class vbsr_matrix(object):
                 if bp0 == bp1: bj = n
                 j = min(aj,bj)
                 if aj < bj:
-                    ab = self.blocks[ap0]
+                    ab = self.blocks[ap0] * self.scalar
                     ap0+=1
                 elif aj > bj:
-                    ab = other.blocks[bp0]
+                    ab = other.blocks[bp0] * other.scalar
                     bp0+=1
                 elif aj == bj:
-                    ab = self.blocks[ap0] + other.blocks[bp0]
+                    ab = self.blocks[ap0]* self.scalar + other.blocks[bp0] * other.scalar
                     ap0+=1
                     bp0+=1
                 
                 indices.append(j)
-                blocks.append(ab)
+                blocks.append(mat(ab))
             indptr.append(len(indices))
         
         return vbsr_matrix(blocks, indices, indptr, self.bsizei, self.bsizej)
+    
+    def __sub__(self, other):
+        return self.__add__(-other)
+    
+    def __neg__(self):
+        return -1.0 * self
     
         
         

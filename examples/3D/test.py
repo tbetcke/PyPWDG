@@ -55,6 +55,7 @@ if __name__ == '__main__':
     
     v = dg3d.Visualiser(s,gg)
     v.showuaveragereal()
+    
     sys.exit(0)
     
     

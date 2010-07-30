@@ -149,6 +149,8 @@ class globalvandermonde(object):
             quadweights is a list of quadrature weights """  
         self.v = vandermondes
         self.w = quadweights
+        # calculate the number of shape functions in each block
+        self.nsf = [v.shape[1] for v in vandermondes]
     
     def product(self, i,j):
         """ Return the inner product of the ith face against the jth face """

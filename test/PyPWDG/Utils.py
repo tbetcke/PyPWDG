@@ -5,9 +5,11 @@ Created on Jul 15, 2010
 '''
 import unittest
 from PyPWDG.utils.sparse import vbsr_matrix
-from numpy import mat, bmat, zeros     
+import numpy as np
+from numpy import mat, bmat, zeros, equal     
 
 class testSparse(unittest.TestCase):
+#todo: create some tests for vbsrs with empty rows and columns
 
     def setUp(self):
         # VS1 is an example variable size block matrix
@@ -68,4 +70,14 @@ class testSparse(unittest.TestCase):
     def testAdd(self):
         m = self.VS1 + self.VS1
         self.assertTrue((m.tocsr().todense() == self.VS1D * 2).all())
+        
+    def testScalarMulSubAndNeg(self):
+        m1 = self.VS1 * -4.0
+        m2 = -4.0 * self.VS1
+        m3 = 4.0 * (-self.VS1)
+        m4 = m1 + m2 - m3
+        self.assertTrue(np.array_equal(m1.tocsr().todense(), self.VS1D*-4.0))
+        self.assertTrue(np.array_equal(m2.tocsr().todense(), self.VS1D*-4.0))
+        self.assertTrue(np.array_equal(m3.tocsr().todense(), self.VS1D*-4.0))
+        self.assertTrue(np.array_equal(m4.tocsr().todense(), self.VS1D*-4.0))
         

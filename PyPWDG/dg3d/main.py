@@ -57,6 +57,7 @@ class Solver(object):
     def stiffness(self, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
         """ Create a stiffness matrix for PWDG"""
         from scipy.sparse import bmat
+        from PyPWDG.utils.sparse import createvbsr
                 
         print "Creating stiffness matrix - quickly?"
         jk = 1j * self.k
@@ -67,10 +68,12 @@ class Solver(object):
         boundaryf = bmat([[jk*(1-delta)*self.b, - delta * self.b    ], 
                           [(1-delta)*self.b,    - delta*jki*self.b  ]]) 
         
-        S = createblock(internalf + boundaryf, self.vandermondes.product)
-        # now collapse the faces and contributions from D and N
+#        S = createblock(internalf + boundaryf, self.vandermondes.product)
+        S = createvbsr(internalf + boundaryf, self.vandermondes.product, self.vandermondes.nsf, self.vandermondes.nsf)
         
-        return sparseblockmultiply(self.EDF2.transpose(), sparseblockmultiply(S, self.EDF2))
+        # now collapse the faces and contributions from D and N
+#        return sparseblockmultiply(self.EDF2.transpose(), sparseblockmultiply(S, self.EDF2))
+        return (S * self.EDF2).__rmul__(self.EDF2.transpose())
   
     @print_timing
     def load(self, g, delta = 1.0/2):  
@@ -78,6 +81,7 @@ class Solver(object):
         
         print "Creating load matrix"
         from scipy.sparse import bmat, csr_matrix
+        from PyPWDG.utils.sparse import createvbsr
 
         gp = self.mesh.values(self.quadpoints,g)
         jki = 1/(1j*self.k)
@@ -88,9 +92,13 @@ class Solver(object):
         # this is long-winded.  The point is that it allows for the vandermondes to be managed, which,
         # in principle means that they could be distributed.  If one didn't care then the best way would
         # be to build a block sparse matrix out of the vandermondes and a column vector from gp
-        L = createblock(impedance, self.vandermondes.matvec(gp))
+#        L = createblock(impedance, self.vandermondes.matvec(gp))
+        L = createvbsr(impedance, self.vandermondes.matvec(gp), self.vandermondes.nsf, numpy.ones(len(gp)))
+        
+        
         # the final ones matrix pulls all the gs from each element into one place
-        return sparseblockmultiply(sparseblockmultiply(self.EDF2.transpose(), L), csr_matrix(numpy.ones((len(gp),1))))
+#        return sparseblockmultiply(sparseblockmultiply(self.EDF2.transpose(), L), csr_matrix(numpy.ones((len(gp),1))))
+        return L.__rmul__(self.EDF2.transpose()) * csr_matrix(numpy.ones((len(gp),1)))
     
 #        return - delta * jki* self.bvn.H * self.awdiag * self.boundary * gp + (1-delta) * self.bvd.H * self.awdiag * self.boundary * gp  
 
@@ -100,7 +108,7 @@ class Solver(object):
         self.s = self.stiffness()
         self.l = self.load(g)
         print "Solving system"
-        self.x = print_timing(spsolve)(self.s, self.l.todense())
+        self.x = print_timing(spsolve)(self.s.tocsr(), self.l.todense())
         self.g = g
         return self
 
