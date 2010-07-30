@@ -45,3 +45,6 @@ class vbsr_matrix(object):
                     cptr += b.shape[1]
                 csrptr.append(cptr)
         return csr_matrix((concatenate(csrdata), concatenate(csrind), csrptr), shape=(len(csrptr)-1, self.bindj[-1]))
+    
+    def __mul__(self, other):
+        
