@@ -5,6 +5,7 @@ Created on Jul 27, 2010
 '''
 import numpy
 from PyPWDG.mesh.gmsh_reader import gmsh_reader
+from PyPWDG.dg3d.utils import print_timing
 
 class Mesh(object):
     """Mesh - Object that stores all necessary mesh information
@@ -104,6 +105,7 @@ class Mesh(object):
         for ind in indx:
                 if not facemap.has_key(nzerox[ind]): facemap[nzerox[ind]]=[]
                 facemap[nzerox[ind]].append(nzeroy[ind])     
+        print 'Start facemap'
         for face1 in facemap:
             if len(facemap[face1])==2: # Interior faces - delete reference to face itself
                 facemap[face1].remove(face1)
@@ -111,7 +113,7 @@ class Mesh(object):
         self.__facemap=facemap
         self.__intfaces=[ind for ind in range(len(faces)) if facemap[ind]!=ind]
         self.__bndfaces=[ind for ind in range(len(faces)) if facemap[ind]==ind]
-                
+        print 'Created int and bnd lists'        
         # Create element to face map
         self.__etof={}
         for (iter,face) in enumerate(faces):
@@ -134,7 +136,8 @@ class Mesh(object):
         self.__compute_directions()
         # Compute normals
         self.__compute_normals_and_dets()
-            
+        
+    @print_timing        
     def __compute_directions(self):
         """ Compute direction vectors for all faces 
         
@@ -148,12 +151,15 @@ class Mesh(object):
         """
         
         self.__directions=numpy.zeros((len(self.faces),self.elem_vertices,self.dim))
+        print self.__directions.shape
+        nodes = self.gmsh_mesh['nodes']
         for ind,face in enumerate(self.faces):
-            self.__directions[ind,0,:]=self.gmsh_mesh['nodes'][face[1][0]][0:self.dim]
-            self.__directions[ind,1,:]=self.gmsh_mesh['nodes'][face[1][1]][0:self.dim]-self.__directions[ind,0]
-            if self.dim==3: self.__directions[ind,2,:]=self.gmsh_mesh['nodes'][face[1][2]][0:self.dim]-self.__directions[ind,0]
-            self.__directions[ind,-1,:]=self.gmsh_mesh['nodes'][face[2]][0:self.dim]-self.__directions[ind,0]
-            
+            self.__directions[ind,0,:]=nodes[face[1][0]][0:self.dim]
+            self.__directions[ind,1,:]=nodes[face[1][1]][0:self.dim]-self.__directions[ind,0]
+            if self.dim==3: self.__directions[ind,2,:]=nodes[face[1][2]][0:self.dim]-self.__directions[ind,0]
+            self.__directions[ind,-1,:]=nodes[face[2]][0:self.dim]-self.__directions[ind,0]
+    
+    @print_timing
     def __compute_normals_and_dets(self):
         """ Compute normal directions and determinants for all faces 
         
