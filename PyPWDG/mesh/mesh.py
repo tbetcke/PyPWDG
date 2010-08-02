@@ -131,11 +131,13 @@ class Mesh(object):
             tuple_entity_dict[elem[1]]=elem[0]
         for ind in self.__bndfaces:
             self.__bnd_entities[ind]=tuple_entity_dict[self.__faces[ind][1]]
-            
+        
+                    
         # Now generate direction vectors     
         self.__compute_directions()
+        
         # Compute normals
-        self.__compute_normals_and_dets()
+        self.__compute_normals_and_dets()        
         
     @print_timing        
     def __compute_directions(self):
@@ -149,16 +151,18 @@ class Mesh(object):
                                 the self.__directions[ind] only has two rows. 
         
         """
-        
-        self.__directions=numpy.zeros((len(self.faces),self.elem_vertices,self.dim))
-        print self.__directions.shape
-        nodes = self.gmsh_mesh['nodes']
-        for ind,face in enumerate(self.faces):
-            self.__directions[ind,0,:]=nodes[face[1][0]][0:self.dim]
-            self.__directions[ind,1,:]=nodes[face[1][1]][0:self.dim]-self.__directions[ind,0]
-            if self.dim==3: self.__directions[ind,2,:]=nodes[face[1][2]][0:self.dim]-self.__directions[ind,0]
-            self.__directions[ind,-1,:]=nodes[face[2]][0:self.dim]-self.__directions[ind,0]
-    
+        # Pick out the coordinates of the vertices that we actually need
+        nodes = self.gmsh_mesh['nodes'][:,0:self.dim]
+        # vertices is a 3-tensor.  For each (double sided) face, it contains a matrix of dim+1 coordinates.  The first dim of these
+        # are on the face, the final one is the non-face vertex for the corresponding element
+        vertices = numpy.array([[nodes[fv] for fv in face[1]] + [nodes[face[2]]] for face in self.faces])
+        # M picks out the first coord and the differences to the others
+        M = numpy.bmat([[numpy.mat([[1]]), numpy.zeros((1,self.dim))], [numpy.ones((self.dim,1))*-1, numpy.eye(self.dim)]])
+        # Apply the differencing matrix to each set of coordinates
+        dirs = numpy.tensordot(vertices, M, ([1],[1]))
+        # Ensure that the directions live in the last dimension
+        self.__directions = numpy.transpose(dirs, (0,2,1))
+            
     @print_timing
     def __compute_normals_and_dets(self):
         """ Compute normal directions and determinants for all faces 
