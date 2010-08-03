@@ -137,7 +137,7 @@ class Mesh(object):
         self.__compute_directions()
         
         # Compute normals
-        self.__compute_normals_and_dets()        
+        self.__compute_normals_and_dets()     
         
     @print_timing        
     def __compute_directions(self):
@@ -177,7 +177,7 @@ class Mesh(object):
         """
         
         self.__normals=numpy.zeros((self.nfaces,self.dim))
-        self.__dets=numpy.zeros(self.nfaces)
+        
         if self.dim==2:
             # Put normal vectors 
             self.__normals[:,0]=self.__directions[:,1,1]
@@ -187,13 +187,11 @@ class Mesh(object):
             self.__normals[:,1]=self.__directions[:,1,2]*self.__directions[:,2,0]-self.__directions[:,1,0]*self.__directions[:,2,2]
             self.__normals[:,2]=self.__directions[:,1,0]*self.__directions[:,2,1]-self.__directions[:,2,0]*self.__directions[:,1,1]
 
-        for ind in range(self.nfaces):
-            # Adjust sign (outwards showing) and normalize length of normals
-            z=numpy.linalg.norm(self.__normals[ind,:])
-            self.__dets[ind]=z
-            self.__normals[ind,:] *=-numpy.sign(numpy.dot(self.__normals[ind,:],self.__directions[ind,-1,:]))/z
-        
-        
+        # this is 100x faster than applying numpy.linalg.norm to each entry
+        self.__dets = numpy.sqrt(numpy.sum(self.__normals * self.__normals, axis = 1))
+                
+        self.__normals *= (-numpy.sign(numpy.sum(self.__normals * self.__directions[:,-1,:], axis = 1)) / self.__dets ).reshape((-1,1))
+                
             
     def reference_face_map(self,indx,xcoords,ycoords=None):
         """Return numpy array with transformed coordinates from reference element to face[indx]
