@@ -5,8 +5,11 @@ Created on Jul 15, 2010
 '''
 import unittest
 from PyPWDG.utils.sparse import vbsr_matrix
+from PyPWDG.utils.quadrature import *
+
 import numpy as np
-from numpy import mat, bmat, zeros, equal     
+from numpy import mat, bmat, zeros, equal  
+import math   
 
 class testSparse(unittest.TestCase):
 #todo: create some tests for vbsrs with empty rows and columns
@@ -81,3 +84,24 @@ class testSparse(unittest.TestCase):
         self.assertTrue(np.array_equal(m3.tocsr().todense(), self.VS1D*-4.0))
         self.assertTrue(np.array_equal(m4.tocsr().todense(), self.VS1D*-4.0))
         
+class testQuadrature(unittest.TestCase):
+    
+    def testTriangle(self):
+        for n in range(1,10):
+            x,w = trianglequadrature(n)
+            # test integration of constants
+            self.assertAlmostEqual(sum(w), 0.5)
+            # integrate x
+            self.assertAlmostEqual(numpy.dot(x[:,0],w), 1.0/6)
+            # integrate y
+            self.assertAlmostEqual(numpy.dot(x[:,1],w), 1.0/6)
+
+    def testLegendre(self):
+        for n in range(1,10):
+            x,w = legendrequadrature(n)
+            for m in range(0,2*n):
+                # test integration of x^m
+                self.assertAlmostEqual(np.dot(x ** m, w), 1.0/(m+1) )
+                
+            
+    
