@@ -22,4 +22,4 @@ def trianglequadrature(n):
 def legendrequadrature(n):
     """ Legendre quadrature points on [0,1] """
     x00,w00 = scipy.special.orthogonal.p_roots(n)
-    return (x00+1)/2, w00/2
+    return (x00.reshape(-1,1)+1)/2, w00/2

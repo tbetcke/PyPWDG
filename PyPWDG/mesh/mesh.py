@@ -270,7 +270,8 @@ class Mesh(object):
     face_vertices=property(get_face_vertices)
     elem_vertices=property(get_elem_vertices)
     normals=property(get_normals)
-    dets=property(get_dets)    
+    dets=property(get_dets)   
+    directions = property(lambda self : self.__directions) 
         
 
 if __name__ == "__main__":

@@ -101,7 +101,7 @@ class testQuadrature(unittest.TestCase):
             x,w = legendrequadrature(n)
             for m in range(0,2*n):
                 # test integration of x^m
-                self.assertAlmostEqual(np.dot(x ** m, w), 1.0/(m+1) )
+                self.assertAlmostEqual(np.dot(x.transpose() ** m, w), 1.0/(m+1) )
                 
             
     
