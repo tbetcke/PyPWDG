@@ -272,7 +272,8 @@ class Mesh(object):
     normals=property(get_normals)
     dets=property(get_dets)   
     directions = property(lambda self : self.__directions) 
-        
+
+
 
 if __name__ == "__main__":
 

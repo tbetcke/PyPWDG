@@ -8,10 +8,10 @@ import numpy
 
 class LocalVandermondes(object):
     
-    def __init__(self, mesh, elttobasis, quadrule):
+    def __init__(self, mesh, elttobasis, quadratures):
         self.__mesh = mesh
         self.__elttobasis = elttobasis
-        self.__qp, self.__qw = quadrule
+        self.__quads = quadratures
         self.__cache = [None] * mesh.nfaces        
         
     def getVandermondes(self, faceid):
@@ -27,12 +27,10 @@ class LocalVandermondes(object):
         if vandermondes==None:       
             face = self.__mesh.faces[faceid]
             normal = self.__mesh.normals[faceid]
-            dirs = self.__mesh.directions[faceid]
-            mappedpoints = numpy.tile(dirs[0], (len(self.__qp),1)) + numpy.dot(self.__qp, dirs[1:-1])
-            vals = numpy.hstack([b.values(mappedpoints, normal) for b in self.__elttobasis[face[0]]])
-            derivs = numpy.hstack([b.derivs(mappedpoints, normal) for b in self.__elttobasis[face[0]]])
-            weights = self.__qw * self.__mesh.dets[faceid]
-            self.__cache[faceid] = vandermondes = (vals,derivs, weights)
+            points = self.__quads.quadpoints(faceid)
+            vals = numpy.hstack([b.values(points, normal) for b in self.__elttobasis[face[0]]])
+            derivs = numpy.hstack([b.derivs(points, normal) for b in self.__elttobasis[face[0]]])
+            self.__cache[faceid] = vandermondes = (vals,derivs)
             
         return vandermondes
     
@@ -41,9 +39,6 @@ class LocalVandermondes(object):
     
     def getDerivs(self, faceid):
         return self.getVandermondes(faceid)[1]
-
-    def getWeights(self, faceid):
-        return self.getVandermondes(faceid)[2]
         
         
 class LocalInnerProducts(object):
@@ -63,4 +58,4 @@ class LocalInnerProducts(object):
         return numpy.dot(numpy.multiply(self.__vleft(i).H,self.__weights(i), self.__vright(j)))        
 
     def matvec(self, g):
-        return lambda i,j : numpy.dot(self.__vleft(i).H, numpy.multiply(self.__weights(i).reshape(-1,1), g[j])
+        return lambda i,j : numpy.dot(self.__vleft(i).H, numpy.multiply(self.__weights(i).reshape(-1,1), g[j]))

@@ -42,14 +42,15 @@ class TestAssembly(unittest.TestCase):
         from PyPWDG.core.bases import PlaneWaves
         from PyPWDG.core.assembly import LocalVandermondes
         from PyPWDG.utils.quadrature import legendrequadrature
+        from PyPWDG.mesh.meshutils import MeshQuadratures
         dirs = numpy.array([[1,0]])
         k = 3
         pw = PlaneWaves(dirs, k)
         faceid = 0
         testelt = self.squaremesh.faces[faceid][0]
         numquads = 3
-        (q,w) = legendrequadrature(numquads)
-        LV = LocalVandermondes(self.squaremesh, {testelt:[pw]}, (q,w))
+        mq = MeshQuadratures(self.squaremesh, legendrequadrature(numquads))
+        LV = LocalVandermondes(self.squaremesh, {testelt:[pw]}, mq)
         v = LV.getValues(faceid)
         d = LV.getDerivs(faceid)
         self.assertEqual(v.shape, (numquads, 1))
