@@ -7,6 +7,8 @@ import unittest
 
 import PyPWDG.core
 import numpy
+from test.PyPWDG import __path__ as path
+
 
 class TestBases(unittest.TestCase):
 
@@ -33,7 +35,7 @@ class TestAssembly(unittest.TestCase):
         from PyPWDG.mesh.gmsh_reader import gmsh_reader
         from PyPWDG.mesh.mesh import Mesh
         
-        mesh_dict=gmsh_reader('../../examples/2D/square.msh')
+        mesh_dict=gmsh_reader(path[0] + '/../../examples/2D/square.msh')
         self.squaremesh=Mesh(mesh_dict,dim=2)
 
     

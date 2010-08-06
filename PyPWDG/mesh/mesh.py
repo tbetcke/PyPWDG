@@ -5,7 +5,7 @@ Created on Jul 27, 2010
 '''
 import numpy
 from PyPWDG.mesh.gmsh_reader import gmsh_reader
-from PyPWDG.dg3d.utils import print_timing
+from PyPWDG.utils.timing import *
 
 class Mesh(object):
     """Mesh - Object that stores all necessary mesh information
@@ -66,11 +66,15 @@ class Mesh(object):
             
             
         """
+        from scipy.sparse import csr_matrix
+
+        t = Timer().start()
         
         self.__gmsh_mesh=mesh_dict
         # Extract all faces and create face to vertex map
         elems=self.__gmsh_mesh['elements']
-     
+        t.split("Loaded file")
+        
         if dim==2:
             fv=2 # Number of vertices in faces
             ev=3 # Number of vertices in element
@@ -90,31 +94,51 @@ class Mesh(object):
         faces = ([(key,tuple(sorted(elems[key]['nodes'][0:i]+elems[key]['nodes'][i+1:ev])),elems[key]['nodes'][i]) for key in elems for i in range(0,ev) if elems[key]['type']==gmsh_elem_key])
         self.__faces=faces
         self.__nfaces=len(faces)       
+        t.split("Created faces")
          
         # Create Face to Vertex Sparse Matrix
-        from scipy.sparse import csr_matrix
         ij=[[i for i in range(len(faces)) for j in range(fv)],
-            [vs[1][i] for vs in faces for i in range(fv)]] 
+            [vs[1][i] for vs in faces for i in range(fv)]]         
         data=numpy.ones(len(ij[0]))
         ftov=csr_matrix((data,ij),dtype='i')
         ftof=ftov*ftov.transpose() # Multiply to get connectivity
         ftof=ftof.tocoo()
         (nzerox,nzeroy,vals)=(ftof.col,ftof.row,ftof.data)
+        t.split("Done sparse stuff")
         indx=numpy.flatnonzero(vals==fv) # Get indices in connectivity matrices of adjacent faces        
-        facemap={} # facemap contains map from faces to adjacent faces (including reference to itself)
-        for ind in indx:
-                if not facemap.has_key(nzerox[ind]): facemap[nzerox[ind]]=[]
-                facemap[nzerox[ind]].append(nzeroy[ind])     
-        print 'Start facemap'
-        for face1 in facemap:
-            if len(facemap[face1])==2: # Interior faces - delete reference to face itself
-                facemap[face1].remove(face1)
-            facemap[face1]=facemap[face1][0] # Extract the single element lists
-        self.__facemap=facemap
-        self.__intfaces=[ind for ind in range(len(faces)) if facemap[ind]!=ind]
-        self.__bndfaces=[ind for ind in range(len(faces)) if facemap[ind]==ind]
-        print 'Created int and bnd lists'        
-        # Create element to face map
+#        facemap={} # facemap contains map from faces to adjacent faces (including reference to itself)
+#        for ind in indx:
+#                if not facemap.has_key(nzerox[ind]): facemap[nzerox[ind]]=[]
+#                facemap[nzerox[ind]].append(nzeroy[ind])     
+#        t.split("First bit of facemap")
+##        print 'Start facemap'
+#        for face1 in facemap:
+#            if len(facemap[face1])==2: # Interior faces - delete reference to face itself
+#                facemap[face1].remove(face1)
+#            facemap[face1]=facemap[face1][0] # Extract the single element lists
+#        t.split("Second bit of facemap")
+#        self.__facemap=facemap
+#
+#
+#        self.__intfaces=[ind for ind in range(len(faces)) if facemap[ind]!=ind]
+#        self.__bndfaces=[ind for ind in range(len(faces)) if facemap[ind]==ind]
+#        
+#        t.split("int and bnd lists")
+
+# This is about 10x faster than the above stuff.  Leaving it commented out for the moment just in case there's
+# something that I've missed
+        
+        nonequal = nzerox[indx] != nzeroy[indx]
+        faceids = numpy.arange(len(faces))
+        facemap2 = faceids.copy()
+        facemap2[nzerox[indx][nonequal]] = nzeroy[indx][nonequal]
+        self.__facemap = facemap2
+        self.__intfaces=faceids[facemap2 != faceids]
+        self.__bndfaces=faceids[facemap2 == faceids]
+        
+        t.split("new facemap")
+     
+#         Create element to face map
         self.__etof={}
         for (iter,face) in enumerate(faces):
             if face[0] in self.__etof:
@@ -122,6 +146,7 @@ class Mesh(object):
             else:
                 self.__etof[face[0]]=[iter]
         self.__nelements=len(self.__etof)
+        t.split("etof")
                 
         # Create map of physical entities
         self.__bnd_entities={}
@@ -132,12 +157,14 @@ class Mesh(object):
         for ind in self.__bndfaces:
             self.__bnd_entities[ind]=tuple_entity_dict[self.__faces[ind][1]]
         
-                    
+        t.split("entity maps")
         # Now generate direction vectors     
         self.__compute_directions()
         
         # Compute normals
         self.__compute_normals_and_dets()     
+        t.split("directions and normals")
+        t.show()
         
     @print_timing        
     def __compute_directions(self):

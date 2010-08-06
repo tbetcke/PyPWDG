@@ -17,8 +17,8 @@ class testSparse(unittest.TestCase):
     def setUp(self):
         # VS1 is an example variable size block matrix
         blocks = [mat([[1,2],[3,4]]), mat([[1],[2]]), mat([[1],[2],[3]])]
-        indices = [0,1,1]
-        indptr = [0,2,3]
+        indices = numpy.array([0,1,1], dtype=int)
+        indptr = numpy.array([0,2,3], dtype=int)
         bsizei = [2,3]
         bsizej = [2,1]
         self.VS1 = vbsr_matrix(blocks,indices,indptr,bsizei,bsizej)
@@ -37,8 +37,8 @@ class testSparse(unittest.TestCase):
     def testMul(self):
         from scipy.sparse import eye, csr_matrix
         block = mat([[1.0,2],[3,4]])
-        indices = [0,1]
-        indptr = [0,1,2]
+        indices = numpy.array([0,1], dtype=int)
+        indptr = numpy.array([0,1,2],dtype=int)
         bsizei = [2,2]
         bsizej = [2,2]
         # Construct a 2x2 block matrix of 2x2 blocks

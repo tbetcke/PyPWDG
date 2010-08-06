@@ -6,6 +6,7 @@ Created on Aug 6, 2010
 import unittest
 
 import numpy as np
+from test.PyPWDG import __path__ as path
 
 class TestMesh(unittest.TestCase):
 
@@ -14,9 +15,9 @@ class TestMesh(unittest.TestCase):
         from PyPWDG.mesh.gmsh_reader import gmsh_reader
         from PyPWDG.mesh.mesh import Mesh
         
-        mesh_dict=gmsh_reader('../../examples/2D/square.msh')
+        mesh_dict=gmsh_reader(path[0] + '/../../examples/2D/square.msh')
         self.squaremesh=Mesh(mesh_dict,dim=2)
-        mesh_dict=gmsh_reader('../../examples/3D/cube.msh')
+        mesh_dict=gmsh_reader(path[0] + '/../../examples/3D/cube.msh')
         self.cubemesh=Mesh(mesh_dict,dim=3)
 
     def testQuadratures(self):
@@ -32,7 +33,13 @@ class TestMesh(unittest.TestCase):
                 self.assertTrue(np.array_equal(mq.quadpoints(f1), mq.quadpoints(f2)))
                 self.assertTrue(np.array_equal(mq.quadweights(f1), mq.quadweights(f2)))
 
-        
+    def testStructure(self):
+        from PyPWDG.mesh.structure import sparseindex
+        rows = np.array([1,2])
+        cols = np.array([2,1])
+        id = sparseindex(rows, cols, 3)
+        m = np.array([[0,0,0],[0,0,1],[0,1,0]])
+        self.assertTrue(np.array_equal(m, id.todense()))
 
 
 
