@@ -28,8 +28,19 @@ class TestBases(unittest.TestCase):
         fn0 = pw.derivs(numpy.zeros((1,2)), numpy.array([[1,0],[0,1]]))
         self.assertAlmostEqual(fn0[0,0], k*1j)
         self.assertAlmostEqual(fn0[1,0], 0)
+    
+    def testDirections(self):
+        from PyPWDG.core.bases import cubeDirections, circleDirections, cubeRotations
+        n = 4
+        d1 = cubeDirections(n)
+        self.assertEqual(len(d1), n*n)
+        d1r = cubeRotations(d1)
+        self.assertEqual(len(d1r), 6 * n * n)
+        d2 = circleDirections(n)
+        self.assertEqual(len(d2), n)
         
-class TestAssembly(unittest.TestCase):
+        
+class TestVandermondes(unittest.TestCase):
     
     def setUp(self):
         from PyPWDG.mesh.gmsh_reader import gmsh_reader
@@ -40,9 +51,9 @@ class TestAssembly(unittest.TestCase):
 
     
     def testLocalVandermondes(self):
-        # This test is more about exercising the code than testing any results.  We need a known simple mesh to do that
+        # This test is more about exercising the code than testing any results.  We need a know simple mesh to do that
         from PyPWDG.core.bases import PlaneWaves
-        from PyPWDG.core.assembly import LocalVandermondes
+        from PyPWDG.core.vandermonde import LocalVandermondes
         from PyPWDG.utils.quadrature import legendrequadrature
         from PyPWDG.mesh.meshutils import MeshQuadratures
         dirs = numpy.array([[1,0]])
@@ -52,7 +63,7 @@ class TestAssembly(unittest.TestCase):
         testelt = self.squaremesh.faces[faceid][0]
         numquads = 3
         mq = MeshQuadratures(self.squaremesh, legendrequadrature(numquads))
-        LV = LocalVandermondes(self.squaremesh, {testelt:[pw]}, mq)
+        LV = LocalVandermondes(self.squaremesh, {testelt:[pw]}, mq.quadpoints)
         v = LV.getValues(faceid)
         d = LV.getDerivs(faceid)
         self.assertEqual(v.shape, (numquads, 1))
