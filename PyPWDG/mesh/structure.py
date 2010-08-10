@@ -29,6 +29,13 @@ class StructureMatrices(object):
         
         # The structure is at the level of double faces.  We'll need to sum the contributions from 
         # each face onto each element
-        edfi = numpy.hstack([numpy.ones(len(fs))*e for e,fs in enumerate(mesh.__etof)])
+        edfi = numpy.hstack([numpy.ones(len(fs))*e for e,fs in enumerate(mesh.etof.values())])
         self.eltstofaces = sparse.csr_matrix((numpy.ones(mesh.nfaces), edfi, range(0, mesh.nfaces+1)))
 
+        self.AD = self.average
+        self.AN = self.jump / 2
+        self.JD = self.jump
+        self.JN = self.average * 2
+        
+    def sumfaces(self, S):
+        return (S * self.eltstofaces).__rmul__(self.eltstofaces.transpose())

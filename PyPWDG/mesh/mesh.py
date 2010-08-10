@@ -146,6 +146,7 @@ class Mesh(object):
             else:
                 self.__etof[face[0]]=[iter]
         self.__nelements=len(self.__etof)
+        self.etof = self.__etof
         t.split("etof")
                 
         # Create map of physical entities
