@@ -68,7 +68,7 @@ class TestVandermondes(unittest.TestCase):
             d = LV.getDerivs(faceid)
             self.assertEqual(v.shape, (numquads, 1))
             self.assertEqual(d.shape, (numquads, 1))
-            self.assertEqual(LV.getBasisSize(faceid), 1)
+            self.assertEqual(LV.numbases[faceid], 1)
         
         
 

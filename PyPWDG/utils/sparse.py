@@ -227,11 +227,9 @@ class vbsr_matrix(object):
         for (ap0, ap1),(bp0,bp1) in zip(zip(self.indptr[:-1], self.indptr[1:]), zip(other.indptr[:-1], other.indptr[1:])):                        
             # Iterate through columns simultaneously
             while(ap0 < ap1 or bp0 < bp1):
-                aj = self.indices[ap0]
-                bj = self.indices[bp0]
                 # Check whether we've reached the end of a row in one matrix
-                if ap0 == ap1: aj = n
-                if bp0 == bp1: bj = n
+                aj = n if ap0 == ap1 else self.indices[ap0]
+                bj = n if bp0 == bp1 else other.indices[bp0]
                 j = min(aj,bj)
                 if aj < bj:
                     ab = self.blocks[ap0] * self.scalar

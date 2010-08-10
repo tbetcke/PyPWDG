@@ -36,9 +36,9 @@ class Mesh(object):
                             direction of the face with index ind.
             dets          - Numpy array of dimension self.nfaces, containing the absolute value of the cross product of the
                             partial derivatives for the map from the unit triangle (or unit line in 2d) to the face
-
+            etof          - List of lists of faces for each element
             
-       
+    The elements and faces of a mesh are given a canonical ordering by self.__faces and self.__elements   
     """
     
     def __init__(self,mesh_dict,dim):
@@ -48,9 +48,10 @@ class Mesh(object):
             
             self.__gmsh_mesh     - Contains the mesh dictionary from the gmsh_reader
             self.__faces        - List of Tuples (ind,vertices,v) defining the faces, where ind
-                                  is the associated element and vertices is a tuple containing the
+                                  is the index of the associated element in __elements and vertices is a tuple containing the
                                   defining vertices of the face. v contains the remaining non-face vertex
                                   of the triangle/tetrahedron
+            self.__elements     - A list of all the elements (i.e. finite element domains) in __gmsh_mesh.   
             self.__nfaces       - Number of faces = len(self.__faces). Faces are counted twice if they are between two elements
             self.__facemap      - face1 is adjacent face2 if self.__facemap[face1]=face2. If self.__facemap[face1]==face1 the
                                   face is on the boundary. face1,face2 are indices into the self.__faces list
@@ -62,9 +63,6 @@ class Mesh(object):
             self.__dim             - Dimension of problem (dim=2,3)
             self.__face_vertices    - Number of vertices in face
             self.__elem_vertices    - Number of vertices in element
-                             
-            
-            
         """
         from scipy.sparse import csr_matrix
 
@@ -92,11 +90,11 @@ class Mesh(object):
         self.__elem_vertices=ev
 
         # we want a canonical ordering for the elements.
-        elements=filter(lambda e : e['type']==gmsh_elem_key, gmshelems.values())
-        self.__nelements=len(elements)
+        self.__elements=filter(lambda e : e['type']==gmsh_elem_key, gmshelems.values())
+        self.__nelements=len(self.__elements)
         
         # Faces are stored in the format (elem_key,(v1,..,vn)), where (v1,..,vn) define the face
-        faces = ([(ekey,tuple(sorted(e['nodes'][0:i]+e['nodes'][i+1:ev])),e['nodes'][i]) for ekey, e in enumerate(elements) for i in range(0,ev)])
+        faces = ([(ekey,tuple(sorted(e['nodes'][0:i]+e['nodes'][i+1:ev])),e['nodes'][i]) for ekey, e in enumerate(self.__elements) for i in range(0,ev)])
         self.__faces=faces
         self.__nfaces=len(faces)       
         t.split("Created faces")
@@ -144,7 +142,7 @@ class Mesh(object):
         t.split("new facemap")
      
 #         Create element to face map
-        self.__etof=[[] for e in elements] # note, this doesn't work:  [[]] * len(elements)
+        self.__etof=[[] for e in self.__elements] # note, this doesn't work:  [[]] * len(elements)
         for (iter,face) in enumerate(faces):
             self.__etof[face[0]].append(iter)
 

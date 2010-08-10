@@ -14,21 +14,65 @@ from PyPWDG.utils.sparse import createvbsr
 from PyPWDG.utils.timing import print_timing
 
 class Assembly(object):
-    def __init__(self, lv, rv, mqs):
-        DD = LocalInnerProducts(lv.getValues, rv.getValues, mqs)
-        DN = LocalInnerProducts(lv.getValues, rv.getDerivs, mqs)
-        ND = LocalInnerProducts(lv.getDerivs, rv.getValues, mqs)
-        NN = LocalInnerProducts(lv.getDerivs, rv.getDerivs, mqs)
+    """ Assemble a global matrix based on local inner products and structure matrices 
+    
+    We suppose that we want to assemble the matrix:
+    
+    diag(U_1, ... U_n)^H * S^t * diag(W_1 ... W_n) * T * diag(V_1 ... V_n)
+    
+    where the matrices satisfy the following conditions:
+    - the number of rows in U_i = b_i = number of rows in V_i;
+    - S and T have a block structure where the entries T_ij = S_ij = zeros(b_i, b_j) if b_i <> b_j. 
+      If b_i = b_j then S_ij = s_ij * I and T_ij = t_ij * I where I is a b_i x b_i identity matrix.
+    - W_i is a b_i x b_i diagonal matrix (and if any S_ij or T_ij is non-zero then W_i = W_j).
+    
+    Think: The block structure is at the face level; b_i is the number of quadrature points on each face; 
+    U and V are Vandermonde matrices; S and T are structure matrices, e.g. representing averages or jumps 
+    across faces; and W_i are the quadrature weights on each face.
+    
+    We can calculate the matrix by first calculating r = s^H * t and then taking each block as
+    r_ij U_i^H * W_i * V_j.  That's what this class facilitates.  
+    
+    U and V are supplied as LocalVandermonde objects.  These supply values and normal derivatives 
+    
+    LocalInnerProduct objects are used to manage the blocks U_i^H * W_i * V_j for each of the 4 combinations of 
+    values and normal derivatives.
+    
+    The assemble method accepts a 2x2 array of structure matrices, r.   
+    """
+    def __init__(self, lv, rv, qws):
+        """ 
+            lv: Left Vandermonde object
+            rv: Right Vandermonde object
+            qws: Callable giving quadrature weights for each face
+        """
+        DD = LocalInnerProducts(lv.getValues, rv.getValues, qws)
+        DN = LocalInnerProducts(lv.getValues, rv.getDerivs, qws)
+        ND = LocalInnerProducts(lv.getDerivs, rv.getValues, qws)
+        NN = LocalInnerProducts(lv.getDerivs, rv.getDerivs, qws)
         
         self.ips = numpy.array([[DD,DN],[ND,NN]])
         self.numleft = lv.numbases
         self.numright = rv.numbases
         
     def assemble(self, structures):
+        """ Given a 2x2 array of structure matrices, return an assembled variable block sparse matrix
+        
+            A structure matrix SM.JD, for example, corresponds to the product u * [[v]].  
+            SM.JD^T * SM.JD, would correspond to [[u]] * [[v]] 
+        """
         return sum([createvbsr(structures[i,j],self.ips[i,j].product, self.numleft, self.numright) for i in [0,1] for j in [0,1]])
             
 
-def impedanceSystem(mesh, k, g, localquads, dirs, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
+@print_timing
+def impedanceSystem(mesh, k, g, localquads, dirs, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
+    """ Assemble the stiffness and load matrices for the PW DG method with UWVF parameters
+    
+        k: wave number
+        g: boundary data (should have a values method and a derivs method - see .core.bases.PlaneWaves)
+        localquads: local quadrature rule for each face
+        dirs: directions for plane wave bases (uniform, for the moment)
+    """
     boundaryentities = []
     SM = StructureMatrices(mesh, boundaryentities)
     jk = 1j * k
@@ -36,17 +80,16 @@ def impedanceSystem(mesh, k, g, localquads, dirs, alpha = 1.0/2, beta = 1.0/2, d
     mqs = MeshQuadratures(mesh, localquads)
     pws = PlaneWaves(dirs, k)
     elttobasis = [[pws]] * mesh.nelements
-    lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints)
+    lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)
     stiffassembly = Assembly(lv, lv, mqs.quadweights)        
     SI = stiffassembly.assemble(numpy.array([[jk * alpha * SM.JD,   -SM.AN], 
                                              [SM.AD,                -beta*jki * SM.JN]]))
     
-    SB = stiffassembly.assemble(numpy.array([[jk * (1-delta) * SM.boundary, -delta * SM.boundary],
-                                             [(1-delta) * SM.boundary,      -delta * jki * SM.boundary]]))
+    SB = stiffassembly.assemble(numpy.array([[jk * (1-delta) * SM.B, -delta * SM.B],
+                                             [(1-delta) * SM.B,      -delta * jki * SM.B]]))
         
     # now for the boundary contribution
     #impedance boundary conditions
-    print SI, SB
     S = SM.sumfaces(SI + SB)     
 
     # lets reuse what we have:

@@ -20,6 +20,7 @@ Np = 3
 dirs = cubeRotations(cubeDirections(Np))
 g = PlaneWaves(numpy.array([[1,0,0]]), k)
 
+print "Mesh has %s elements"%cubemesh.nelements
 S,G = impedanceSystem(cubemesh, k, g, trianglequadrature(Nq), dirs)
 
 print "Solving system"
