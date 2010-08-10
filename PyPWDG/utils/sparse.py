@@ -207,8 +207,15 @@ class vbsr_matrix(object):
         return self._mul(lcsr.indices, lcsr.indptr, lcsr.data, lcsr.get_shape(), rowsizes, \
                          self.indices, self.indptr, self.blocks, (len(self.bsizei), len(self.bsizej)), self.bsizej, 1.0,  numpy.multiply)
     
+    # this makes sum work for vbsr matrices
+    def __radd__(self, other):
+        if other==0: return self
+        return NotImplemented
+    
     def __add__(self, other):
         from numpy import mat
+        if other==0: return self
+        
         if not other.bsizei == self.bsizei: raise ValueError("Incompatible block sizes")
         if not other.bsizej == self.bsizej: raise ValueError("Incompatible block sizes")
         

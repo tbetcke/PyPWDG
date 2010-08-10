@@ -60,14 +60,16 @@ class TestVandermondes(unittest.TestCase):
         k = 3
         pw = PlaneWaves(dirs, k)
         faceid = 0
-        testelt = self.squaremesh.faces[faceid][0]
         numquads = 3
         mq = MeshQuadratures(self.squaremesh, legendrequadrature(numquads))
-        LV = LocalVandermondes(self.squaremesh, {testelt:[pw]}, mq.quadpoints)
-        v = LV.getValues(faceid)
-        d = LV.getDerivs(faceid)
-        self.assertEqual(v.shape, (numquads, 1))
-        self.assertEqual(d.shape, (numquads, 1))
+        LV = LocalVandermondes(self.squaremesh, [[pw]] * self.squaremesh.nelements, mq.quadpoints)
+        for faceid in range(self.squaremesh.nfaces):
+            v = LV.getValues(faceid)
+            d = LV.getDerivs(faceid)
+            self.assertEqual(v.shape, (numquads, 1))
+            self.assertEqual(d.shape, (numquads, 1))
+            self.assertEqual(LV.getBasisSize(faceid), 1)
+        
         
 
 if __name__ == "__main__":

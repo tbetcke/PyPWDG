@@ -72,8 +72,9 @@ class Mesh(object):
         
         self.__gmsh_mesh=mesh_dict
         # Extract all faces and create face to vertex map
-        elems=self.__gmsh_mesh['elements']
         t.split("Loaded file")
+        
+        gmshelems = self.__gmsh_mesh['elements']
         
         if dim==2:
             fv=2 # Number of vertices in faces
@@ -89,9 +90,13 @@ class Mesh(object):
         self.__dim=dim
         self.__face_vertices=fv
         self.__elem_vertices=ev
+
+        # we want a canonical ordering for the elements.
+        elements=filter(lambda e : e['type']==gmsh_elem_key, gmshelems.values())
+        self.__nelements=len(elements)
         
         # Faces are stored in the format (elem_key,(v1,..,vn)), where (v1,..,vn) define the face
-        faces = ([(key,tuple(sorted(elems[key]['nodes'][0:i]+elems[key]['nodes'][i+1:ev])),elems[key]['nodes'][i]) for key in elems for i in range(0,ev) if elems[key]['type']==gmsh_elem_key])
+        faces = ([(ekey,tuple(sorted(e['nodes'][0:i]+e['nodes'][i+1:ev])),e['nodes'][i]) for ekey, e in enumerate(elements) for i in range(0,ev)])
         self.__faces=faces
         self.__nfaces=len(faces)       
         t.split("Created faces")
@@ -139,19 +144,15 @@ class Mesh(object):
         t.split("new facemap")
      
 #         Create element to face map
-        self.__etof={}
+        self.__etof=[[] for e in elements] # note, this doesn't work:  [[]] * len(elements)
         for (iter,face) in enumerate(faces):
-            if face[0] in self.__etof:
-                self.__etof[face[0]].append(iter)
-            else:
-                self.__etof[face[0]]=[iter]
-        self.__nelements=len(self.__etof)
-        self.etof = self.__etof
+            self.__etof[face[0]].append(iter)
+
         t.split("etof")
                 
         # Create map of physical entities
         self.__bnd_entities={}
-        bnd_face_tuples = ([(elems[key]['physEntity'],tuple(sorted(elems[key]['nodes']))) for key in elems if elems[key]['type']==gmsh_face_key])
+        bnd_face_tuples = ([(gmshelems[key]['physEntity'],tuple(sorted(gmshelems[key]['nodes']))) for key in gmshelems if gmshelems[key]['type']==gmsh_face_key])
         tuple_entity_dict={}
         for elem in bnd_face_tuples:
             tuple_entity_dict[elem[1]]=elem[0]
@@ -300,7 +301,7 @@ class Mesh(object):
     normals=property(get_normals)
     dets=property(get_dets)   
     directions = property(lambda self : self.__directions) 
-
+    etof = property(lambda self: self.__etof)
 
 
 if __name__ == "__main__":
