@@ -3,6 +3,7 @@ Created on Jul 14, 2010
 
 @author: joel
 '''
+from pypwdg.utils.timing import print_timing
 
 def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
     """ Creates a variable block sparse matrix
@@ -170,7 +171,20 @@ class vbsr_matrix(object):
     def _scalarmul(self, x):
         return vbsr_matrix(self.blocks, self.indices, self.indptr, self.bsizei, self.bsizej, self.scalar * x)
         
-    
+    def _mularray(self, x):
+        """ Multiply by a dense structure vector
+        
+        In theory it should be easy to multiply by a dense structure matrix - just need to work out the correct
+        reshapes and sums """
+        from numpy import newaxis, vstack, zeros,sum
+        data = []
+        for ip0,ip1 in zip(self.indptr[:-1], self.indptr[1:]):
+            idx = self.indices[ip0:ip1]
+            
+            if len(idx) > 0 : data.append(sum(self.blocks[ip0:ip1] * x.reshape(-1,1,1)[idx], axis=0) )
+            else: data.append(zeros((self.bsizei[ip0], self.bsizej[0]))) # What's the correct thing to use for the number of columns?
+        return vstack(data)
+        
     def _calculatesizes(self, csr, bsize):
         from scipy.sparse import csr_matrix
         from numpy import ones, divide
@@ -180,7 +194,7 @@ class vbsr_matrix(object):
         
         return divide(csro * bsize, ne)
 
-        
+#    @print_timing    
     def __mul__(self, other):
         """ Multiply this variable block sparse matrix by a sparse matrix at the structure level
         
@@ -189,12 +203,14 @@ class vbsr_matrix(object):
         import numpy
         from scipy.sparse import issparse
         if numpy.isscalar(other): return self._scalarmul(other)
-        if not issparse(other): return NotImplemented
-        rcsr = other.tocsr()
-        colsizes = self._calculatesizes(other.transpose().tocsr(), self.bsizej) 
-        
-        return self._mul(self.indices, self.indptr, self.blocks, (len(self.bsizei), len(self.bsizej)), self.bsizei, \
-                         rcsr.indices, rcsr.indptr, rcsr.data, rcsr.get_shape(), colsizes, 1.0, numpy.multiply)
+        if issparse(other): 
+            rcsr = other.tocsr()
+            colsizes = self._calculatesizes(other.transpose().tocsr(), self.bsizej) 
+            
+            return self._mul(self.indices, self.indptr, self.blocks, (len(self.bsizei), len(self.bsizej)), self.bsizei, \
+                             rcsr.indices, rcsr.indptr, rcsr.data, rcsr.get_shape(), colsizes, 1.0, numpy.multiply)
+        if (isinstance(other, numpy.ndarray) and len(other.shape) == 1): return self._mularray(other)
+        return NotImplemented
         
     def __rmul__(self, other):
         """ This doesn't work using the * operator because the sparse matrix classes don't return 
@@ -213,6 +229,7 @@ class vbsr_matrix(object):
         if other==0: return self
         return NotImplemented
     
+#    @print_timing    
     def __add__(self, other):
         from numpy import mat, array_equal
         if other==0: return self

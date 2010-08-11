@@ -5,6 +5,7 @@ Created on Aug 6, 2010
 '''
 import numpy
 import scipy.sparse as sparse
+from pypwdg.utils.timing import print_timing
 
 def getintptr(indices, n):
     """ Calculate an intptr matrix that indices one element in each row in indices"""
@@ -57,8 +58,9 @@ class StructureMatrices(object):
         # we split each shape function into 4 components.  These need to be summed, which is what the 
         # eltstofaces matrix is for.
         self.eltstofaces = sparse.csc_matrix((numpy.ones(mesh.nfaces), numpy.hstack(mesh.etof), numpy.cumsum([0] + map(len, mesh.etof))))
-        self.allfaces = sparse.csr_matrix(numpy.ones((mesh.nfaces, 1)))
-        
+        self.allfaces = numpy.ones((mesh.nfaces))
+    
+    @print_timing    
     def sumfaces(self, S):
         """Sum all the faces that contribute to each element
         
@@ -66,9 +68,10 @@ class StructureMatrices(object):
         """
         return (S * self.eltstofaces).__rmul__(self.eltstofaces.transpose())
     
+    @print_timing    
     def sumrhs(self, G):
         """For the rows, sum the faces that contribute to each element; for the cols, sum everything
         
         This reduces a faces x faces structure to an elts x 1 structure
         """
-        return (G * self.allfaces).__rmul__(self.eltstofaces.transpose())
+        return G.__rmul__(self.eltstofaces.transpose()) * self.allfaces

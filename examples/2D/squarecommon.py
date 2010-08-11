@@ -26,7 +26,7 @@ g = PlaneWaves(numpy.array([[3.0/5,4.0/5]]), k)
 
 S,G = impedanceSystem(squaremesh, k, g, legendrequadrature(Nq), elttobasis)
 
-X = print_timing(spsolve)(S.tocsr(), G.tocsr().todense())
+X = print_timing(spsolve)(S.tocsr(), G)
 
 points = numpy.mgrid[0:1:0.01,0:1:0.01].reshape(2,-1).transpose()
 

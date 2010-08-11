@@ -29,7 +29,7 @@ S,G = impedanceSystem(cubemesh, k, g, trianglequadrature(Nq), elttobasis)
 
 print "Solving system"
 
-X = print_timing(spsolve)(S.tocsr(), G.tocsr().todense())
+X = print_timing(spsolve)(S.tocsr(), G)
 
 points = numpy.mgrid[0:1:0.2,0:1:0.2,0:1:0.02].reshape(3,-1).transpose()
 
