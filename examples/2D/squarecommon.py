@@ -12,12 +12,13 @@ from PyPWDG.utils.quadrature import legendrequadrature
 from PyPWDG.utils.timing import print_timing
 from PyPWDG.core.evaluation import Evaluator
 import numpy
+import math
 
 mesh_dict=gmsh_reader('../../examples/2D/square.msh')
 squaremesh=Mesh(mesh_dict,dim=2)
 k = 20
 Nq = 10
-Np = 8
+Np = 16
 dirs = circleDirections(Np)
 elttobasis = [[PlaneWaves(dirs, k)]] * squaremesh.nelements
 
@@ -35,4 +36,7 @@ xp = e.evaluate(X)
 
 gp = g.values(points).flatten()
 
-print gp - xp
+ep = gp - xp
+
+print ep
+print math.sqrt(numpy.vdot(ep,ep)/ len(points))
