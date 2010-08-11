@@ -7,9 +7,9 @@ import time
 
 def print_timing(func):
     """ timing utility function.  Use @print_timing """
-    def wrapper(*arg):
+    def wrapper(*arg, **kwds):
         t1 = time.time()
-        res = func(*arg)
+        res = func(*arg, **kwds)
         t2 = time.time()
         print '%s took %0.3f ms' % (func.func_name, (t2-t1)*1000.0)
         return res

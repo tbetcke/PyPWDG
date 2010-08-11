@@ -6,7 +6,7 @@ Created on Aug 10, 2010
 from scipy.sparse.linalg.dsolve.linsolve import spsolve 
 from PyPWDG.mesh.gmsh_reader import gmsh_reader
 from PyPWDG.mesh.mesh import Mesh
-from PyPWDG.core.assembly import impedanceSystem
+from PyPWDG.core.physics import impedanceSystem
 from PyPWDG.core.bases import cubeDirections, cubeRotations, PlaneWaves
 from PyPWDG.utils.quadrature import trianglequadrature
 from PyPWDG.utils.timing import print_timing
@@ -18,11 +18,14 @@ k = 10
 Nq = 15
 Np = 3
 dirs = cubeRotations(cubeDirections(Np))
+elttobasis = [[PlaneWaves(dirs, k)]] * cubemesh.nelements
+
 g = PlaneWaves(numpy.array([[1,0,0]]), k)
 
-print "Mesh has %s elements"%cubemesh.nelements
-S,G = impedanceSystem(cubemesh, k, g, trianglequadrature(Nq), dirs)
+S,G = impedanceSystem(cubemesh, k, g, trianglequadrature(Nq), elttobasis)
 
 print "Solving system"
 
 X = print_timing(spsolve)(S.tocsr(), G.tocsr().todense())
+
+print X[0:len(dirs)]

@@ -89,6 +89,10 @@ class Mesh(object):
         self.__face_vertices=fv
         self.__elem_vertices=ev
 
+        # Pick out the coordinates of the vertices that we actually need
+        self.__nodes = self.gmsh_mesh['nodes'][:,0:self.dim]
+
+
         # we want a canonical ordering for the elements.
         self.__elements=filter(lambda e : e['type']==gmsh_elem_key, gmshelems.values())
         self.__nelements=len(self.__elements)
@@ -164,9 +168,9 @@ class Mesh(object):
         # Compute normals
         self.__compute_normals_and_dets()     
         t.split("directions and normals")
-        t.show()
+#        t.show()
         
-    @print_timing        
+#    @print_timing        
     def __compute_directions(self):
         """ Compute direction vectors for all faces 
         
@@ -178,11 +182,9 @@ class Mesh(object):
                                 the self.__directions[ind] only has two rows. 
         
         """
-        # Pick out the coordinates of the vertices that we actually need
-        nodes = self.gmsh_mesh['nodes'][:,0:self.dim]
         # vertices is a 3-tensor.  For each (double sided) face, it contains a matrix of dim+1 coordinates.  The first dim of these
         # are on the face, the final one is the non-face vertex for the corresponding element
-        vertices = numpy.array([[nodes[fv] for fv in face[1]] + [nodes[face[2]]] for face in self.faces])
+        vertices = numpy.array([[self.nodes[fv] for fv in face[1]] + [self.nodes[face[2]]] for face in self.faces])
         # M picks out the first coord and the differences to the others
         M = numpy.bmat([[numpy.mat([[1]]), numpy.zeros((1,self.dim))], [numpy.ones((self.dim,1))*-1, numpy.eye(self.dim)]])
         # Apply the differencing matrix to each set of coordinates
@@ -190,7 +192,7 @@ class Mesh(object):
         # Ensure that the directions live in the last dimension
         self.__directions = numpy.transpose(dirs, (0,2,1))
             
-    @print_timing
+#    @print_timing
     def __compute_normals_and_dets(self):
         """ Compute normal directions and determinants for all faces 
         
@@ -300,6 +302,7 @@ class Mesh(object):
     dets=property(get_dets)   
     directions = property(lambda self : self.__directions) 
     etof = property(lambda self: self.__etof)
+    nodes = property(lambda self: self.__nodes)
 
 
 if __name__ == "__main__":

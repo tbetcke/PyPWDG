@@ -6,10 +6,7 @@ Created on Aug 9, 2010
 
 import numpy
 
-from PyPWDG.mesh.meshutils import MeshQuadratures
-from PyPWDG.core.vandermonde import LocalVandermondes, LocalInnerProducts
-from PyPWDG.core.bases import PlaneWaves
-from PyPWDG.mesh.structure import StructureMatrices
+from PyPWDG.core.vandermonde import LocalInnerProducts
 from PyPWDG.utils.sparse import createvbsr
 from PyPWDG.utils.timing import print_timing
 
@@ -54,7 +51,8 @@ class Assembly(object):
         self.ips = numpy.array([[DD,DN],[ND,NN]])
         self.numleft = lv.numbases
         self.numright = rv.numbases
-        
+    
+    @print_timing    
     def assemble(self, structures):
         """ Given a 2x2 array of structure matrices, return an assembled variable block sparse matrix
         
@@ -63,45 +61,4 @@ class Assembly(object):
         """
         return sum([createvbsr(structures[i,j],self.ips[i,j].product, self.numleft, self.numright) for i in [0,1] for j in [0,1]])
             
-
-@print_timing
-def impedanceSystem(mesh, k, g, localquads, dirs, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
-    """ Assemble the stiffness and load matrices for the PW DG method with UWVF parameters
-    
-        k: wave number
-        g: boundary data (should have a values method and a derivs method - see .core.bases.PlaneWaves)
-        localquads: local quadrature rule for each face
-        dirs: directions for plane wave bases (uniform, for the moment)
-    """
-    boundaryentities = []
-    SM = StructureMatrices(mesh, boundaryentities)
-    jk = 1j * k
-    jki = 1/jk
-    mqs = MeshQuadratures(mesh, localquads)
-    pws = PlaneWaves(dirs, k)
-    elttobasis = [[pws]] * mesh.nelements
-    lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)
-    stiffassembly = Assembly(lv, lv, mqs.quadweights)        
-    SI = stiffassembly.assemble(numpy.array([[jk * alpha * SM.JD,   -SM.AN], 
-                                             [SM.AD,                -beta*jki * SM.JN]]))
-    
-    SB = stiffassembly.assemble(numpy.array([[jk * (1-delta) * SM.B, -delta * SM.B],
-                                             [(1-delta) * SM.B,      -delta * jki * SM.B]]))
-        
-    # now for the boundary contribution
-    #impedance boundary conditions
-    S = SM.sumfaces(SI + SB)     
-
-    # lets reuse what we have:
-    gelts = [[g]] * mesh.nelements
-    gv = LocalVandermondes(mesh, gelts, mqs.quadpoints)
-    
-    loadassembly = Assembly(lv, gv, mqs.quadweights)
-    # todo - check the cross terms.  Works okay with delta = 1/2.  
-    GB = loadassembly.assemble(numpy.array([[jk * (1-delta) * SM.boundary,  (1-delta) * SM.boundary], 
-                                            [-delta * SM.boundary,          -delta * jki * SM.boundary]]))
-    
-    G = SM.sumrhs(GB)
-    return S,G    
-
 

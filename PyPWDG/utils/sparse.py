@@ -62,17 +62,17 @@ class vbsr_matrix(object):
          
         '''
         self.blocks = blocks
-        self.indices = indices
-        self.indptr = indptr    
-        self.bsizei = bsizei
-        self.bsizej = bsizej
+        self.indices = numpy.array(indices, dtype=int)
+        self.indptr = numpy.array(indptr, dtype=int)    
+        self.bsizei = numpy.array(bsizei, dtype=int)
+        self.bsizej = numpy.array(bsizej, dtype=int)
         self.bindj = numpy.concatenate(([0],bsizej)).cumsum()
         self.scalar = scalar
             
         
     def tocsr(self):
         ''' Return this matrix in csr format '''
-        from numpy import concatenate
+        from numpy import concatenate, array
         from scipy.sparse import csr_matrix
         bj = zip(self.blocks, self.indices)
         csrdata = []
@@ -86,7 +86,8 @@ class vbsr_matrix(object):
                     csrind.append(range(b.shape[1])+self.bindj[j])
                     cptr += b.shape[1]
                 csrptr.append(cptr)
-        return csr_matrix((concatenate(csrdata), concatenate(csrind), csrptr), shape=(len(csrptr)-1, self.bindj[-1]))
+        naind = array(concatenate(csrind),dtype=int) # for some reason, get a warning about non-ints from sparse if don't make this explicit
+        return csr_matrix((concatenate(csrdata), naind, csrptr), shape=(len(csrptr)-1, self.bindj[-1]))
     
     def todense(self):
         return self.tocsr().todense()
@@ -213,11 +214,11 @@ class vbsr_matrix(object):
         return NotImplemented
     
     def __add__(self, other):
-        from numpy import mat
+        from numpy import mat, array_equal
         if other==0: return self
         
-        if not other.bsizei == self.bsizei: raise ValueError("Incompatible block sizes")
-        if not other.bsizej == self.bsizej: raise ValueError("Incompatible block sizes")
+        if not array_equal(other.bsizei, self.bsizei): raise ValueError("Incompatible block sizes")
+        if not array_equal(other.bsizej, self.bsizej): raise ValueError("Incompatible block sizes")
         
         blocks = []
         indices = []

@@ -52,6 +52,27 @@ class LocalVandermondes(object):
         return self.getVandermondes(faceid)[1]
 
     numbases = property(lambda self: self.__numbases)
+
+class ElementVandermondes(object):
+    """ Calculate vandermonde matrices at the element level.  Clearly there's some duplication with LocalVandermondes ... todo: refactor"""
+    def __init__(self, mesh, elttobasis, points, usecache = True):
+        self.__mesh = mesh
+        self.__elttobasis = elttobasis
+        self.__points = points
+        self.__cache = [None] * mesh.nelements if usecache else None 
+        self.__numbases = [sum([b.n for b in bs]) for bs in elttobasis]     
+        
+    
+    def getVandermonde(self, eltid):
+        vandermonde = None if self.__cache is None else self.__cache[eltid] 
+        if vandermonde==None:       
+            points = self.__points(eltid)            
+            vandermonde = numpy.hstack([b.values(points, None) for b in self.__elttobasis[eltid]])
+            if self.__cache is not None: self.__cache[eltid] = vandermonde 
+            
+        return vandermonde
+
+    numbases = property(lambda self: self.__numbases)
         
         
 class LocalInnerProducts(object):
