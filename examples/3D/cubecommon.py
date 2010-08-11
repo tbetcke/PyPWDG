@@ -19,7 +19,7 @@ mesh_dict=gmsh_reader('../../examples/3D/cube.msh')
 cubemesh=Mesh(mesh_dict,dim=3)
 k = 10
 Nq = 8
-Np = 3
+Np = 2
 dirs = cubeRotations(cubeDirections(Np))
 elttobasis = [[PlaneWaves(dirs, k)]] * cubemesh.nelements
 

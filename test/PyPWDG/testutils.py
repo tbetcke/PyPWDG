@@ -122,5 +122,5 @@ class testGeometry(unittest.TestCase):
         
         points = numpy.array([[0.2,0.1],[0.3,0.4], [0.5,0.6]])
         pe = pointsToElement(points, self.squaremesh, StructureMatrices(self.squaremesh))
-        print pe
+        
         
