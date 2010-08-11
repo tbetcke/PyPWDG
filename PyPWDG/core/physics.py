@@ -48,8 +48,8 @@ def impedanceSystem(mesh, k, g, localquads, elttobasis, usecache=True, alpha = 1
     
     loadassembly = Assembly(lv, gv, mqs.quadweights)
     # todo - check the cross terms.  Works okay with delta = 1/2.  
-    GB = loadassembly.assemble(numpy.array([[jk * (1-delta) * SM.boundary,  (1-delta) * SM.boundary], 
-                                            [-delta * SM.boundary,          -delta * jki * SM.boundary]]))
+    GB = loadassembly.assemble(numpy.array([[jk * (1-delta) * SM.B,  (1-delta) * SM.B], 
+                                            [-delta * SM.B,          -delta * jki * SM.B]]))
     
     S = SM.sumfaces(SI + SB)     
     G = SM.sumrhs(GB)

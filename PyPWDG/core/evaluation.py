@@ -7,11 +7,12 @@ Created on Aug 11, 2010
 from PyPWDG.core.vandermonde import ElementVandermondes
 from PyPWDG.mesh.structure import StructureMatrices
 from PyPWDG.utils.geometry import pointsToElement
+from PyPWDG.utils.timing import print_timing
 
 import numpy
 
 class Evaluator(object):
-    
+    @print_timing
     def __init__(self, mesh, elttobasis, points):
         self.mesh = mesh
         self.points = points
@@ -23,7 +24,8 @@ class Evaluator(object):
             self.etop[e].append(p)
         
         self.v = ElementVandermondes(mesh, elttobasis, lambda e: points[self.etop[e]])
-        
+    
+    @print_timing    
     def evaluate(self, x):
         vals = numpy.zeros(len(self.points), dtype=numpy.complex128)
         n = 0
