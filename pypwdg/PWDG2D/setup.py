@@ -1,6 +1,6 @@
 import numpy
-from PyPWDG.PWDG2D.integration import gauss, tensorgauss
-from PyPWDG.MeshReader.Triangle2D import TriangleMesh2D
+from pypwdg.PWDG2D.integration import gauss, tensorgauss
+from pypwdg.MeshReader.Triangle2D import TriangleMesh2D
 
 def addBasis(dgstruct,btype,**kwargs):
     """ Add a set of basis functions to dgstruct

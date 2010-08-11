@@ -4,7 +4,7 @@ Created on May 28, 2010
 @author: joel
 '''
 
-from PyPWDG.dg3d.utils import *
+from pypwdg.dg3d.utils import *
 import numpy
 
 def solver(mesh, ndirs, nquad, k):
@@ -57,7 +57,7 @@ class Solver(object):
     def stiffness(self, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
         """ Create a stiffness matrix for PWDG"""
         from scipy.sparse import bmat
-        from PyPWDG.utils.sparse import createvbsr
+        from pypwdg.utils.sparse import createvbsr
                 
         print "Creating stiffness matrix - quickly?"
         jk = 1j * self.k
@@ -81,7 +81,7 @@ class Solver(object):
         
         print "Creating load matrix"
         from scipy.sparse import bmat, csr_matrix
-        from PyPWDG.utils.sparse import createvbsr
+        from pypwdg.utils.sparse import createvbsr
 
         gp = self.mesh.values(self.quadpoints,g)
         jki = 1/(1j*self.k)

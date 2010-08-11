@@ -1,10 +1,10 @@
 import numpy
 import scipy.special
-from PyPWDG.PWDG2D import setup
-from PyPWDG.PWDG2D.visualization import plotSol
-from PyPWDG.PWDG2D import assembly
-from PyPWDG.PWDG2D import bases
-from PyPWDG.PWDG2D import solver
+from pypwdg.PWDG2D import setup
+from pypwdg.PWDG2D.visualization import plotSol
+from pypwdg.PWDG2D import assembly
+from pypwdg.PWDG2D import bases
+from pypwdg.PWDG2D import solver
 
 
 

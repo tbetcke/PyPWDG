@@ -1,5 +1,5 @@
 import numpy
-from PyPWDG.MeshReader.GmshReader import GmshReader
+from pypwdg.MeshReader.GmshReader import GmshReader
 
 def Connect2D(elements,points):
     """Return the edges-to-edges and faces-to-faces matrices and sets of interior and boundary faces

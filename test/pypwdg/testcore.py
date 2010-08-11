@@ -5,16 +5,16 @@ Created on Aug 5, 2010
 '''
 import unittest
 
-import PyPWDG.core
+import pypwdg.core
 import numpy
-from test.PyPWDG import __path__ as path
+from test.pypwdg import __path__ as path
 
 
 class TestBases(unittest.TestCase):
 
 
     def testPlaneWave(self):
-        from PyPWDG.core.bases import PlaneWaves
+        from pypwdg.core.bases import PlaneWaves
         dirs = numpy.array([[1,0]])
         k = 3
         pw = PlaneWaves(dirs, k)
@@ -30,7 +30,7 @@ class TestBases(unittest.TestCase):
         self.assertAlmostEqual(fn0[1,0], 0)
     
     def testDirections(self):
-        from PyPWDG.core.bases import cubeDirections, circleDirections, cubeRotations
+        from pypwdg.core.bases import cubeDirections, circleDirections, cubeRotations
         n = 4
         d1 = cubeDirections(n)
         self.assertEqual(len(d1), n*n)
@@ -43,8 +43,8 @@ class TestBases(unittest.TestCase):
 class TestVandermondes(unittest.TestCase):
     
     def setUp(self):
-        from PyPWDG.mesh.gmsh_reader import gmsh_reader
-        from PyPWDG.mesh.mesh import Mesh
+        from pypwdg.mesh.gmsh_reader import gmsh_reader
+        from pypwdg.mesh.mesh import Mesh
         
         mesh_dict=gmsh_reader(path[0] + '/../../examples/2D/square.msh')
         self.squaremesh=Mesh(mesh_dict,dim=2)
@@ -52,10 +52,10 @@ class TestVandermondes(unittest.TestCase):
     
     def testLocalVandermondes(self):
         # This test is more about exercising the code than testing any results.  We need a know simple mesh to do that
-        from PyPWDG.core.bases import PlaneWaves
-        from PyPWDG.core.vandermonde import LocalVandermondes
-        from PyPWDG.utils.quadrature import legendrequadrature
-        from PyPWDG.mesh.meshutils import MeshQuadratures
+        from pypwdg.core.bases import PlaneWaves
+        from pypwdg.core.vandermonde import LocalVandermondes
+        from pypwdg.utils.quadrature import legendrequadrature
+        from pypwdg.mesh.meshutils import MeshQuadratures
         dirs = numpy.array([[1,0]])
         k = 3
         pw = PlaneWaves(dirs, k)

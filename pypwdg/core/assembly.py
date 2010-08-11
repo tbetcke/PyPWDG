@@ -6,9 +6,9 @@ Created on Aug 9, 2010
 
 import numpy
 
-from PyPWDG.core.vandermonde import LocalInnerProducts
-from PyPWDG.utils.sparse import createvbsr
-from PyPWDG.utils.timing import print_timing
+from pypwdg.core.vandermonde import LocalInnerProducts
+from pypwdg.utils.sparse import createvbsr
+from pypwdg.utils.timing import print_timing
 
 class Assembly(object):
     """ Assemble a global matrix based on local inner products and structure matrices 

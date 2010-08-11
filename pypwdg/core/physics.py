@@ -3,12 +3,12 @@ Created on Aug 11, 2010
 
 @author: joel
 '''
-from PyPWDG.mesh.meshutils import MeshQuadratures
-from PyPWDG.core.vandermonde import LocalVandermondes
-from PyPWDG.core.bases import PlaneWaves
-from PyPWDG.mesh.structure import StructureMatrices
-from PyPWDG.utils.timing import print_timing
-from PyPWDG.core.assembly import Assembly
+from pypwdg.mesh.meshutils import MeshQuadratures
+from pypwdg.core.vandermonde import LocalVandermondes
+from pypwdg.core.bases import PlaneWaves
+from pypwdg.mesh.structure import StructureMatrices
+from pypwdg.utils.timing import print_timing
+from pypwdg.core.assembly import Assembly
 
 import numpy
 

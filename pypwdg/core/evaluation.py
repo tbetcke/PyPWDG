@@ -4,10 +4,10 @@ Created on Aug 11, 2010
 @author: joel
 '''
 
-from PyPWDG.core.vandermonde import ElementVandermondes
-from PyPWDG.mesh.structure import StructureMatrices
-from PyPWDG.utils.geometry import pointsToElement
-from PyPWDG.utils.timing import print_timing
+from pypwdg.core.vandermonde import ElementVandermondes
+from pypwdg.mesh.structure import StructureMatrices
+from pypwdg.utils.geometry import pointsToElement
+from pypwdg.utils.timing import print_timing
 
 import numpy
 

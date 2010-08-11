@@ -4,9 +4,9 @@ Created on Jul 15, 2010
 @author: joel
 '''
 import unittest
-from PyPWDG.utils.sparse import vbsr_matrix
-from PyPWDG.utils.quadrature import *
-from test.PyPWDG import __path__ as path
+from pypwdg.utils.sparse import vbsr_matrix
+from pypwdg.utils.quadrature import *
+from test.pypwdg import __path__ as path
 
 import numpy as np
 from numpy import mat, bmat, zeros, equal  
@@ -108,8 +108,8 @@ class testQuadrature(unittest.TestCase):
 class testGeometry(unittest.TestCase):
     
     def setUp(self):
-        from PyPWDG.mesh.gmsh_reader import gmsh_reader
-        from PyPWDG.mesh.mesh import Mesh
+        from pypwdg.mesh.gmsh_reader import gmsh_reader
+        from pypwdg.mesh.mesh import Mesh
         
         mesh_dict=gmsh_reader(path[0] + '/../../examples/2D/square.msh')
         self.squaremesh=Mesh(mesh_dict,dim=2)
@@ -117,8 +117,8 @@ class testGeometry(unittest.TestCase):
         self.cubemesh=Mesh(mesh_dict,dim=3)
     
     def testPointsToElement(self):
-        from PyPWDG.utils.geometry import pointsToElement
-        from PyPWDG.mesh.structure import StructureMatrices
+        from pypwdg.utils.geometry import pointsToElement
+        from pypwdg.mesh.structure import StructureMatrices
         
         points = numpy.array([[0.2,0.1],[0.3,0.4], [0.5,0.6]])
         pe = pointsToElement(points, self.squaremesh, StructureMatrices(self.squaremesh))

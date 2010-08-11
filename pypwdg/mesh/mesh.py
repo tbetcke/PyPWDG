@@ -4,8 +4,8 @@ Created on Jul 27, 2010
 @author: tbetcke
 '''
 import numpy
-from PyPWDG.mesh.gmsh_reader import gmsh_reader
-from PyPWDG.utils.timing import *
+from pypwdg.mesh.gmsh_reader import gmsh_reader
+from pypwdg.utils.timing import *
 
 class Mesh(object):
     """Mesh - Object that stores all necessary mesh information

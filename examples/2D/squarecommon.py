@@ -4,13 +4,13 @@ Created on Aug 10, 2010
 @author: joel
 '''
 from scipy.sparse.linalg.dsolve.linsolve import spsolve 
-from PyPWDG.mesh.gmsh_reader import gmsh_reader
-from PyPWDG.mesh.mesh import Mesh
-from PyPWDG.core.physics import impedanceSystem
-from PyPWDG.core.bases import circleDirections,  PlaneWaves
-from PyPWDG.utils.quadrature import legendrequadrature
-from PyPWDG.utils.timing import print_timing
-from PyPWDG.core.evaluation import Evaluator
+from pypwdg.mesh.gmsh_reader import gmsh_reader
+from pypwdg.mesh.mesh import Mesh
+from pypwdg.core.physics import impedanceSystem
+from pypwdg.core.bases import circleDirections,  PlaneWaves
+from pypwdg.utils.quadrature import legendrequadrature
+from pypwdg.utils.timing import print_timing
+from pypwdg.core.evaluation import Evaluator
 import numpy
 import math
 

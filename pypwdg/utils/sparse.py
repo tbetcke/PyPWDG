@@ -45,7 +45,7 @@ class vbsr_matrix(object):
     A certain amount of consistency checking is done one the block sizes for the various operators.  However
     this should not be relied upon yet.  This is an incomplete class - I'm just adding functionality as I need it  
     
-    @see: test.PyPWDG.Utils
+    @see: test.pypwdg.Utils
 
     '''
 

@@ -3,7 +3,7 @@ Created on May 28, 2010
 
 @author: joel
 '''
-from PyPWDG.dg3d.utils import *
+from pypwdg.dg3d.utils import *
 import numpy
     
 class Visualiser(object):

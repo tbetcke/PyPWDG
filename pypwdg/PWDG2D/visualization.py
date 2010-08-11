@@ -10,7 +10,7 @@ def plotSol(dgstruct,xrange=(0,1),yrange=(0,1),h=.01,plotMesh=True):
       plotMesh - Boolean. If True (default) also plot the mesh.
     """
 
-    from PyPWDG.GeometryTools.inpolygon import pnpoly
+    from pypwdg.GeometryTools.inpolygon import pnpoly
 
     dx=xrange[1]-xrange[0]
     dy=yrange[1]-yrange[0]

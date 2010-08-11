@@ -8,8 +8,8 @@ sys.path.append('../..')
 
 import numpy
 from numpy import array as na
-import PyPWDG.dg3d as dg3d
-import PyPWDG.dg3d.visualisation
+import pypwdg.dg3d as dg3d
+import pypwdg.dg3d.visualisation
 
 def basiccube():
     dir = na([[1,0,0]])

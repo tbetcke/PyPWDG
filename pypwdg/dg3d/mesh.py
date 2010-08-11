@@ -7,7 +7,7 @@ from meshpy.tet import MeshInfo, build, Options
 import math
 import numpy
 from numpy import  mat, identity, ones,hstack,vstack,zeros,dot,asmatrix
-from PyPWDG.dg3d.utils import *
+from pypwdg.dg3d.utils import *
 
 class Mesh(object):
     """ Encapsulates properties of the mesh 
