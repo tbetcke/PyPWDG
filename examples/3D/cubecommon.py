@@ -11,12 +11,16 @@ from pypwdg.core.bases import cubeDirections, cubeRotations, PlaneWaves
 from pypwdg.utils.quadrature import trianglequadrature
 from pypwdg.utils.timing import print_timing
 from pypwdg.core.evaluation import Evaluator
+from pypwdg.mesh.structure import StructureMatrices
 import numpy
 import math
 
 
-mesh_dict=gmsh_reader('../../examples/3D/cube_coarse.msh')
+mesh_dict=gmsh_reader('../../examples/3D/cube.msh')
 cubemesh=Mesh(mesh_dict,dim=3)
+boundaryentities = []
+SM = StructureMatrices(cubemesh, boundaryentities)
+
 k = 10
 Nq = 8
 Np = 2
@@ -25,11 +29,13 @@ elttobasis = [[PlaneWaves(dirs, k)]] * cubemesh.nelements
 
 g = PlaneWaves(numpy.array([[1,2,3]])/math.sqrt(14), k)
 
-S,G = impedanceSystem(cubemesh, k, g, trianglequadrature(Nq), elttobasis)
+S,G = impedanceSystem(cubemesh, SM, k, g, trianglequadrature(Nq), elttobasis)
 
 print "Solving system"
 
 X = print_timing(spsolve)(S.tocsr(), G)
+
+#print X
 
 points = numpy.mgrid[0:1:0.2,0:1:0.2,0:1:0.02].reshape(3,-1).transpose()
 

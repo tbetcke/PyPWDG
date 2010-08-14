@@ -11,11 +11,15 @@ from pypwdg.core.bases import circleDirections,  PlaneWaves
 from pypwdg.utils.quadrature import legendrequadrature
 from pypwdg.utils.timing import print_timing
 from pypwdg.core.evaluation import Evaluator
+from pypwdg.mesh.structure import StructureMatrices
 import numpy
 import math
 
 mesh_dict=gmsh_reader('../../examples/2D/square.msh')
 squaremesh=Mesh(mesh_dict,dim=2)
+boundaryentities = []
+SM = StructureMatrices(squaremesh, boundaryentities)
+
 k = 20
 Nq = 20
 Np = 12
@@ -24,7 +28,7 @@ elttobasis = [[PlaneWaves(dirs, k)]] * squaremesh.nelements
 
 g = PlaneWaves(numpy.array([[3.0/5,4.0/5]]), k)
 
-S,G = impedanceSystem(squaremesh, k, g, legendrequadrature(Nq), elttobasis)
+S,G = impedanceSystem(squaremesh, SM, k, g, legendrequadrature(Nq), elttobasis)
 
 X = print_timing(spsolve)(S.tocsr(), G)
 

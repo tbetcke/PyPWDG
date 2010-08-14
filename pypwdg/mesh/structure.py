@@ -15,7 +15,7 @@ def getintptr(indices, n):
 
 def sparseindex(rows, cols, n):
     """ Return a csr matrix with a one at all the points given in rows and cols """
-    return sparse.csr_matrix((numpy.ones(len(rows)), cols, getintptr(rows, n)))
+    return sparse.csr_matrix((numpy.ones(len(rows)), cols, getintptr(rows, n)),shape=(n,n))
 
 class StructureMatrices(object):
     """ Calculate the structure matrices for a given mesh.
@@ -42,16 +42,16 @@ class StructureMatrices(object):
         self.average = (self.connectivity + self.internal)/2
         self.jump = self.internal - self.connectivity
 
-        self.AD = self.average
-        self.AN = self.jump / 2
-        self.JD = self.jump
-        self.JN = self.average * 2
-        self.B = self.boundary
-        
-        self.BE = {}
+        self.__AD = self.average
+        self.__AN = self.jump / 2
+        self.__JD = self.jump
+        self.__JN = self.average * 2
+        self.__B = self.boundary
+                
+        self.__BE = {}
         for b in bndentities:
             bf = numpy.array(filter(lambda f : mesh.bnd_entities[f] == b, mesh.bndfaces))
-            self.BE[b] = sparseindex(bf, bf, mesh.nfaces)
+            self.__BE[b] = sparseindex(bf, bf, mesh.nfaces)
             
                 # The structure matrix approach works because at a structure level, we make the vandermondes
         # look like the identity.  This means that we create dim+1 vandermondes for each elt - effectively
@@ -66,7 +66,7 @@ class StructureMatrices(object):
         
         This reduces a faces x faces structure to an elts x elts structure
         """
-        return (S * self.eltstofaces).__rmul__(self.eltstofaces.transpose())
+        return self.combine((S * self.eltstofaces).__rmul__(self.eltstofaces.transpose()))
     
     @print_timing    
     def sumrhs(self, G):
@@ -74,4 +74,48 @@ class StructureMatrices(object):
         
         This reduces a faces x faces structure to an elts x 1 structure
         """
-        return G.__rmul__(self.eltstofaces.transpose()) * self.allfaces
+        return self.combine(G.__rmul__(self.eltstofaces.transpose()) * self.allfaces)
+    
+    def partition(self, M):
+        """ This allows subclasses to partition the mesh """
+        return M
+    
+    def combine(self, M):
+        return M
+    
+    AD = property(lambda self: self.partition(self.__AD))
+    AN = property(lambda self: self.partition(self.__AN))
+    JD = property(lambda self: self.partition(self.__JD))
+    JN = property(lambda self: self.partition(self.__JN))
+    I = property(lambda self: map(self.partition, self.internal))
+    B = property(lambda self: self.partition(self.__B))
+    BE = property(lambda self: map(self.partition, self.__BE))
+            
+    
+class MPIDistributedStructure(StructureMatrices):
+    """ Contains structure matrices that distribute the computation of the matrices to each process
+    and recombine them to process 0
+    
+    Todo (amongst many): 
+    1) For a distributed matvec product, need to not run combine for the stiffness
+    2) There's nothing clever in the partition yet, so going to be unnecessary vandermonde duplication
+    """
+    
+    def __init__(self, mesh, bndentities=[]):
+        import boostmpi as mpi
+        StructureMatrices.__init__(self, mesh, bndentities)
+        facepartitions = None
+        if mpi.rank == 0:
+            partitions = [(p * mesh.nfaces) / mpi.size for p in range(0,mpi.size+1)]
+            facepartitions = [range(p0,p1) for p0,p1 in zip(partitions[:-1], partitions[1:])]
+        mypartition = numpy.array(mpi.scatter(comm=mpi.world, values=facepartitions, root=0))
+        self.__partition = sparseindex(mypartition,mypartition, mesh.nfaces)
+    
+    def partition(self, M):
+        import boostmpi as mpi
+        return (self.__partition * M).sorted_indices()
+    
+    def combine(self, M):
+        import boostmpi as mpi
+        return mpi.reduce(comm=mpi.world, value=M, op=lambda x,y: M.__add__(y), root=0)
+            
