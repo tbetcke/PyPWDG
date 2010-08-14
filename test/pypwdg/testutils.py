@@ -84,6 +84,17 @@ class testSparse(unittest.TestCase):
         self.assertTrue(np.array_equal(m2.tocsr().todense(), self.VS1D*-4.0))
         self.assertTrue(np.array_equal(m3.tocsr().todense(), self.VS1D*-4.0))
         self.assertTrue(np.array_equal(m4.tocsr().todense(), self.VS1D*-4.0))
+    
+    def testVectorMul(self):
+        blocks = [mat([[1],[2]]), mat([[3],[4]]), mat([[1],[2],[3]])]
+        indices = numpy.array([0,1,1], dtype=int)
+        indptr = numpy.array([0,2,2,3], dtype=int)
+        bsizei = [2,2,3]
+        bsizej = [1,1]
+        M = vbsr_matrix(blocks,indices,indptr,bsizei,bsizej)
+        v = M * numpy.array([1,2])
+        self.assertTrue(np.array_equal(v, M.tocsr().todense() * mat([1,2]).transpose()))
+        
         
 class testQuadrature(unittest.TestCase):
     

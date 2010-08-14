@@ -15,7 +15,7 @@ import numpy
 import math
 
 
-mesh_dict=gmsh_reader('../../examples/3D/cube.msh')
+mesh_dict=gmsh_reader('../../examples/3D/cube_coarse.msh')
 cubemesh=Mesh(mesh_dict,dim=3)
 k = 10
 Nq = 8

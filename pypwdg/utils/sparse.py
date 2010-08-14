@@ -178,11 +178,12 @@ class vbsr_matrix(object):
         reshapes and sums """
         from numpy import newaxis, vstack, zeros,sum
         data = []
-        for ip0,ip1 in zip(self.indptr[:-1], self.indptr[1:]):
+        for i, (ip0,ip1) in enumerate(zip(self.indptr[:-1], self.indptr[1:])):
             idx = self.indices[ip0:ip1]
+            print ip0,ip1
             
             if len(idx) > 0 : data.append(sum(self.blocks[ip0:ip1] * x.reshape(-1,1,1)[idx], axis=0) )
-            else: data.append(zeros((self.bsizei[ip0], self.bsizej[0]))) # What's the correct thing to use for the number of columns?
+            else: data.append(zeros((self.bsizei[i], self.bsizej[0]))) # What's the correct thing to use for the number of columns?
         return vstack(data)
         
     def _calculatesizes(self, csr, bsize):
