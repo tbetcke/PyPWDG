@@ -180,7 +180,6 @@ class vbsr_matrix(object):
         data = []
         for i, (ip0,ip1) in enumerate(zip(self.indptr[:-1], self.indptr[1:])):
             idx = self.indices[ip0:ip1]
-            print ip0,ip1
             
             if len(idx) > 0 : data.append(sum(self.blocks[ip0:ip1] * x.reshape(-1,1,1)[idx], axis=0) )
             else: data.append(zeros((self.bsizei[i], self.bsizej[0]))) # What's the correct thing to use for the number of columns?
