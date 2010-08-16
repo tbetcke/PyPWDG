@@ -17,8 +17,10 @@ def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
     The (i,j)th block of the vbsr is mat[i,j] * blocks(i,j)
     """
     import numpy
-    csr = mat.tocsr().sorted_indices()
+    csr = mat.tocsr()
+    csr.sum_duplicates()
     csr.eliminate_zeros()
+    csr.sort_indices()
     zipip = zip(csr.indptr[:-1], csr.indptr[1:])
     coords = [(i,j) for i,p in enumerate(zipip) for j in csr.indices[p[0]:p[1]] ]
     data = numpy.array([mat.data[n] * numpy.mat(blocks(i,j)) for n, (i,j) in enumerate(coords)])
@@ -135,8 +137,8 @@ class vbsr_matrix(object):
         lo = csr_matrix((ones(len(ldata)), lindices, lindptr), shape = lshape)
         ro = csr_matrix((ones(len(rdata)), rindices, rindptr), shape = rshape)
         lro = lo * ro
-        lro.eliminate_zeros()
         lro.sum_duplicates()
+        lro.eliminate_zeros()
         lro.sort_indices()
         
         # the data for the new matrix
