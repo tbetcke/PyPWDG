@@ -19,4 +19,4 @@ class MPIStructure(object):
         self.facepartition = mpi.scatter(comm=mpi.world, values=facepartitions, root=0)
     
     def combine(self, M):
-        return mpi.reduce(comm=mpi.world, value=M, op=lambda x,y: M.__add__(y), root=0)
+        return mpi.reduce(comm=mpi.world, value=M, op=lambda x,y: x + y, root=0)
