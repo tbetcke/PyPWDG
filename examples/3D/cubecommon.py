@@ -12,12 +12,19 @@ from pypwdg.utils.quadrature import trianglequadrature
 from pypwdg.utils.timing import print_timing
 from pypwdg.core.evaluation import Evaluator
 from pypwdg.mesh.structure import StructureMatrices
+from pypwdg.output.vtk_output import VTKStructuredPoints
+from pypwdg.output.vtk_output import VTKGrid
 import numpy
 import math
 
 
-mesh_dict=gmsh_reader('../../examples/3D/cube.msh')
+mesh_dict=gmsh_reader('../../examples/3D/cube_coarse.msh')
 cubemesh=Mesh(mesh_dict,dim=3)
+#print cubemesh.nodes
+vtkgrid=VTKGrid(cubemesh)
+vtkgrid.write('test.vtu')
+
+
 boundaryentities = []
 SM = StructureMatrices(cubemesh, boundaryentities)
 
@@ -37,15 +44,23 @@ X = print_timing(spsolve)(S.tocsr(), G)
 
 #print X
 
-points = numpy.mgrid[0:1:0.2,0:1:0.2,0:1:0.02].reshape(3,-1).transpose()
+eval_fun=lambda points: numpy.real(Evaluator(cubemesh,elttobasis,points).evaluate(X))
+bounds=numpy.array([[0,1],[0,1],[0,1]],dtype='d')
+npoints=numpy.array([50,50,50])
+vtk_structure=VTKStructuredPoints(eval_fun)
+vtk_structure.create_vtk_structured_points(bounds,npoints)
+vtk_structure.write_to_file('test.vti')
 
-e = Evaluator(cubemesh, elttobasis, points)
 
-xp = e.evaluate(X)
-
-gp = g.values(points).flatten()
-
-ep = gp - xp
-
-#print ep
-print math.sqrt(numpy.vdot(ep,ep)/ len(points))
+#points = numpy.mgrid[0:1:0.2,0:1:0.2,0:1:0.02].reshape(3,-1).transpose()
+#
+#e = Evaluator(cubemesh, elttobasis, points)
+#
+#xp = e.evaluate(X)
+#
+#gp = g.values(points).flatten()
+#
+#ep = gp - xp
+#
+##print ep
+#print math.sqrt(numpy.vdot(ep,ep)/ len(points))

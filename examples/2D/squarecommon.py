@@ -12,11 +12,18 @@ from pypwdg.utils.quadrature import legendrequadrature
 from pypwdg.utils.timing import print_timing
 from pypwdg.core.evaluation import Evaluator
 from pypwdg.mesh.structure import StructureMatrices
+from pypwdg.output.vtk_output import VTKStructuredPoints
+from pypwdg.output.vtk_output import VTKGrid
+
 import numpy
 import math
 
 mesh_dict=gmsh_reader('../../examples/2D/square.msh')
 squaremesh=Mesh(mesh_dict,dim=2)
+vtkgrid=VTKGrid(squaremesh)
+vtkgrid.write('test2d.vtu')
+
+
 boundaryentities = []
 SM = StructureMatrices(squaremesh, boundaryentities)
 
@@ -32,15 +39,23 @@ S,G = impedanceSystem(squaremesh, SM, k, g, legendrequadrature(Nq), elttobasis)
 
 X = print_timing(spsolve)(S.tocsr(), G)
 
-points = numpy.mgrid[0:1:0.01,0:1:0.01].reshape(2,-1).transpose()
+eval_fun=lambda points: numpy.real(Evaluator(squaremesh,elttobasis,points[:,:2]).evaluate(X))
+bounds=numpy.array([[0,1],[0,1],[0,0]],dtype='d')
+npoints=numpy.array([200,200,1])
+vtk_structure=VTKStructuredPoints(eval_fun)
+vtk_structure.create_vtk_structured_points(bounds,npoints)
+vtk_structure.write_to_file('test2d.vti')
 
-e = Evaluator(squaremesh, elttobasis, points)
-
-xp = e.evaluate(X)
-
-gp = g.values(points).flatten()
-
-ep = gp - xp
-
-#print ep
-print math.sqrt(numpy.vdot(ep,ep)/ len(points))
+#
+#points = numpy.mgrid[0:1:0.01,0:1:0.01].reshape(2,-1).transpose()
+#
+#e = Evaluator(squaremesh, elttobasis, points)
+#
+#xp = e.evaluate(X)
+#
+#gp = g.values(points).flatten()
+#
+#ep = gp - xp
+#
+##print ep
+#print math.sqrt(numpy.vdot(ep,ep)/ len(points))

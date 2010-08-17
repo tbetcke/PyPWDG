@@ -22,6 +22,8 @@ class Mesh(object):
                             defining vertices of the face. v contains the remaining non-face vertex
                             of the triangle/tetrahedron
             nfaces        - Number of faces = len(self.__faces). Faces are counted twice if they are between two elements
+            nnodes        - Number of nodes
+            nodes         - List of nodes
             facemap       - face1 is adjacent face2 if self.__facemap[face1]=face2. If self.__facemap[face1]==face1 the
                             face is on the boundary. face1,face2 are indices into the self.__faces list
             intfaces      - List of indices of faces in the interior
@@ -29,6 +31,7 @@ class Mesh(object):
             bnd_entities  - For each index i in self.__bndfaces self.__bnd_entities[i] is
                             the pysical entity of the boundary part assigned in Gmsh.
             nelements     - Number of elements
+            elements      - List of elements
             dim           - Dimension of problem (dim=2,3)
             face_vertices - Number of vertices in face
             elem_vertices - Number of vertices in element
@@ -63,6 +66,7 @@ class Mesh(object):
             self.__dim             - Dimension of problem (dim=2,3)
             self.__face_vertices    - Number of vertices in face
             self.__elem_vertices    - Number of vertices in element
+            self.__nnodes           - Number of nodes
         """
         from scipy.sparse import csr_matrix
 
@@ -91,6 +95,7 @@ class Mesh(object):
 
         # Pick out the coordinates of the vertices that we actually need
         self.__nodes = self.gmsh_mesh['nodes'][:,0:self.dim]
+        self.__nnodes=len(self.__nodes)
 
 
         # we want a canonical ordering for the elements.
@@ -274,6 +279,8 @@ class Mesh(object):
         return self.__bnd_entities
     def get_nelements(self):
         return self.__nelements
+    def get_elements(self):
+        return self.__elements
     def get_dim(self):
         return self.__dim
     def get_face_vertices(self):
@@ -303,6 +310,8 @@ class Mesh(object):
     directions = property(lambda self : self.__directions) 
     etof = property(lambda self: self.__etof)
     nodes = property(lambda self: self.__nodes)
+    nnodes = property(lambda self: self.__nnodes)
+    elements=property(get_elements)
 
 
 if __name__ == "__main__":
