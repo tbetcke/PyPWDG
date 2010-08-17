@@ -71,6 +71,8 @@ class vbsr_matrix(object):
         self.bsizej = numpy.array(bsizej, dtype=int)
         self.bindj = numpy.concatenate(([0],bsizej)).cumsum()
         self.scalar = scalar
+        self.shape = (sum(self.bsizei), sum(self.bsizej))
+
             
         
     def tocsr(self):
@@ -173,7 +175,7 @@ class vbsr_matrix(object):
     def _scalarmul(self, x):
         return vbsr_matrix(self.blocks, self.indices, self.indptr, self.bsizei, self.bsizej, self.scalar * x)
         
-    def _mularray(self, x):
+    def _mulstructarray(self, x):
         """ Multiply by a dense structure vector
         
         In theory it should be easy to multiply by a dense structure matrix - just need to work out the correct
@@ -184,8 +186,24 @@ class vbsr_matrix(object):
             idx = self.indices[ip0:ip1]
             
             if len(idx) > 0 : data.append(sum(self.blocks[ip0:ip1] * x.reshape(-1,1,1)[idx], axis=0) )
-            else: data.append(zeros((self.bsizei[i], self.bsizej[0]))) # What's the correct thing to use for the number of columns?
-        return vstack(data)
+            else: data.append(zeros((self.bsizei[i], self.bsizej[0]))) 
+        ret = vstack(data) * self.scalar
+        return ret
+    
+    # This appears to be a bad idea.  It's cheaper just to use .tocsr().  
+    def matmat(self, x):
+        from numpy import dot, sum, zeros, vstack
+        if len(x.shape) == 1: x = x.reshape(-1,1)
+        data = []
+        xslices = [x[b0:b1] for b0,b1 in zip(self.bindj[:-1], self.bindj[1:])]
+        for i, (ip0,ip1) in enumerate(zip(self.indptr[:-1], self.indptr[1:])):
+            idx = self.indices[ip0:ip1]                        
+            if len(idx) > 0 :
+                data.append(sum([dot(b, xslices[ii]).reshape(-1,x.shape[1]) for b,ii in zip(self.blocks[ip0:ip1], idx)], axis=0) )
+            else: data.append(zeros((self.bsizei[i], x.shape[1]))) 
+
+        return vstack(data)    
+            
         
     def _calculatesizes(self, csr, bsize):
         from scipy.sparse import csr_matrix
@@ -211,7 +229,7 @@ class vbsr_matrix(object):
             
             return self._mul(self.indices, self.indptr, self.blocks, (len(self.bsizei), len(self.bsizej)), self.bsizei, \
                              rcsr.indices, rcsr.indptr, rcsr.data, rcsr.get_shape(), colsizes, 1.0, numpy.multiply)
-        if (isinstance(other, numpy.ndarray) and len(other.shape) == 1): return self._mularray(other)
+        if (isinstance(other, numpy.ndarray) and len(other.shape) == 1): return self._mulstructarray(other)
         return NotImplemented
         
     def __rmul__(self, other):
@@ -272,8 +290,6 @@ class vbsr_matrix(object):
         return self.__add__(-other)
     
     def __neg__(self):
-        return -1.0 * self
-    
-        
+        return -1.0 * self    
         
         

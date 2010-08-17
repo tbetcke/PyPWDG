@@ -39,6 +39,8 @@ def impedanceSystem(mesh, SM, k, g, localquads, elttobasis, usecache=True, alpha
                                              [(1-delta) * SM.B,      -delta * jki * SM.B]]))
         
 
+    print "Cached vandermondes %s"%lv.getCachesize()
+    
     gelts = [[g]] * mesh.nelements
     gv = LocalVandermondes(mesh, gelts, mqs.quadpoints)
     
@@ -49,4 +51,5 @@ def impedanceSystem(mesh, SM, k, g, localquads, elttobasis, usecache=True, alpha
         
     S = SM.sumfaces(SI + SB)     
     G = SM.sumrhs(GB)
+        
     return S,G    

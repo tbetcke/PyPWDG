@@ -20,3 +20,19 @@ class MPIStructure(object):
     
     def combine(self, M):
         return mpi.reduce(comm=mpi.world, value=M, op=lambda x,y: x + y, root=0)
+    
+def mpiloop(mulop, combineop = lambda x,y: x + y):
+    if mpi.rank != 0:
+        while True:
+            x = mpi.broadcast(comm=mpi.world, value = None, root=0)
+            if x is None: return None
+            mpi.reduce(comm = mpi.world, value = mulop(x), op=combineop, root=0)
+            
+    else:
+        def mainfn(x):
+             mpi.broadcast(comm=mpi.world, value = x, root=0)
+             if x is None: return None
+             return mpi.reduce(comm = mpi.world, value = mulop(x), op=combineop, root=0) 
+        
+        return mainfn
+        
