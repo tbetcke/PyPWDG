@@ -10,6 +10,64 @@ from pypwdg.core.assembly import Assembly
 
 import numpy
 
+def init_assembly(mesh,localquads,elttobasis,bnddata,usecache=True):
+
+    mqs = MeshQuadratures(mesh, localquads)
+    lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)
+    stiffassembly = Assembly(lv, lv, mqs.quadweights) 
+    
+    gelts=[ [] for _ in range(mesh.nelements) ]
+    for bndface in mesh.bndfaces: gelts[bndface].append(bnddata[mesh.bnd_entities[bndface]])
+    bndv = LocalVandermondes(mesh, gelts, mqs.quadpoints)
+    
+    loadassembly = Assembly(lv, bndv, mqs.quadweights)
+
+    return (stiffassembly,loadassembly)
+
+def assemble_int_faces(mesh, SM, k, stiffassembly, params):
+    "Assemble the stiffness matrix for the interior faces"
+
+    print "Mesh has %s elements"%mesh.nelements
+    print "k = %s"%k
+    #print "%s basis functions"%sum([b.n for bs in elttobasis for b in bs ])
+    #print "%s quadrature points"%len(localquads[1])
+    
+    alpha=params['alpha']
+    beta=params['beta']
+    
+    jk = 1j * k
+    jki = 1/jk
+    #mqs = MeshQuadratures(mesh, localquads)
+    #lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)      
+    SI = stiffassembly.assemble(numpy.array([[jk * alpha * SM.JD,   -SM.AN], 
+                                             [SM.AD,                -beta*jki * SM.JN]]))
+    
+    return SM.sumfaces(SI)
+
+def assemble_impedance(mesh, SM, k, g, id, stiffassembly, loadassembly, params):
+    
+    #mqs = MeshQuadratures(mesh, localquads)
+    #lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)
+           
+
+    
+    delta=params['delta']
+    jk = 1j * k
+    jki = 1/jk
+
+    
+    SB = stiffassembly.assemble(numpy.array([[jk * (1-delta) * SM.Be[id], -delta * SM.Be[id]],
+                                             [(1-delta) * SM.Be[id],      -delta * jki * SM.Be[id]]]))
+        
+
+    # todo - check the cross terms.  Works okay with delta = 1/2.  
+    GB = loadassembly.assemble(numpy.array([[jk * (1-delta) * SM.Be[id],  (1-delta) * SM.Be[id]], 
+                                            [-delta * SM.Be[id],          -delta * jki * SM.Be[id]]]))
+        
+    S = SM.sumfaces(SB)     
+    G = SM.sumrhs(GB)
+    return S,G    
+
 
 @print_timing
 def impedanceSystem(mesh, SM, k, g, localquads, elttobasis, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):

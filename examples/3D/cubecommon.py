@@ -6,7 +6,7 @@ Created on Aug 10, 2010
 from scipy.sparse.linalg.dsolve.linsolve import spsolve 
 from pypwdg.mesh.gmsh_reader import gmsh_reader
 from pypwdg.mesh.mesh import Mesh
-from pypwdg.core.physics import impedanceSystem
+from pypwdg.core.physics import init_assembly, assemble_impedance, assemble_int_faces
 from pypwdg.core.bases import cubeDirections, cubeRotations, PlaneWaves
 from pypwdg.utils.quadrature import trianglequadrature
 from pypwdg.utils.timing import print_timing
@@ -26,19 +26,30 @@ vtkgrid=VTKGrid(cubemesh)
 vtkgrid.write('test.vtu')
 
 
-#boundaryentities = []
-#SM = StructureMatrices(cubemesh, boundaryentities)
-#
-#k = 10
-#Nq = 8
-#Np = 2
-#dirs = cubeRotations(cubeDirections(Np))
-#elttobasis = [[PlaneWaves(dirs, k)]] * cubemesh.nelements
-#
-#g = PlaneWaves(numpy.array([[1,2,3]])/math.sqrt(14), k)
-#
+boundaryentities = []
+SM = StructureMatrices(cubemesh, boundaryentities)
+
+k = 10
+Nq = 8
+Np = 2
+dirs = cubeRotations(cubeDirections(Np))
+elttobasis = [[PlaneWaves(dirs, k)]] * cubemesh.nelements
+
+params={'alpha':.5, 'beta':.5,'delta':.5}
+
+g = PlaneWaves(numpy.array([[1,2,3]])/math.sqrt(14), k)
+bnddata={29:g}
+
+
+stiffassembly,loadassembly=init_assembly(cubemesh,trianglequadrature(Nq),elttobasis,bnddata,usecache=True)
+Si=assemble_int_faces(cubemesh, SM, k, stiffassembly, params)
+S_imp,f_imp=assemble_impedance(cubemesh, SM, k, g, 29, stiffassembly, loadassembly, params)
+S=Si+S_imp
+
+
+
 #S,G = impedanceSystem(cubemesh, SM, k, g, trianglequadrature(Nq), elttobasis)
-#
+
 #print "Solving system"
 #
 #X = print_timing(spsolve)(S.tocsr(), G)
