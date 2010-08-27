@@ -7,6 +7,7 @@ from pypwdg.mesh.meshutils import MeshQuadratures
 from pypwdg.core.vandermonde import LocalVandermondes
 from pypwdg.utils.timing import print_timing
 from pypwdg.core.assembly import Assembly
+from pypwdg.core.bases import EmptyBasis
 
 import numpy
 
@@ -16,8 +17,10 @@ def init_assembly(mesh,localquads,elttobasis,bnddata,usecache=True):
     lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)
     stiffassembly = Assembly(lv, lv, mqs.quadweights) 
     
-    gelts=[ [] for _ in range(mesh.nelements) ]
-    for bndface in mesh.bndfaces: gelts[bndface].append(bnddata[mesh.bnd_entities[bndface]])
+    ftoe=lambda f: mesh.faces[f][0] # Mapping from a faceId f to the corresponding elementId
+    gelts=[ [EmptyBasis(1)] for _ in range(mesh.nelements) ]
+    for bndface in mesh.bndfaces: gelts[ftoe(bndface)]=[bnddata[mesh.bnd_entities[bndface]]]
+    #gelts=[[bnddata[29]]]*mesh.nelements
     bndv = LocalVandermondes(mesh, gelts, mqs.quadpoints)
     
     loadassembly = Assembly(lv, bndv, mqs.quadweights)
@@ -44,7 +47,7 @@ def assemble_int_faces(mesh, SM, k, stiffassembly, params):
     
     return SM.sumfaces(SI)
 
-def assemble_impedance(mesh, SM, k, g, id, stiffassembly, loadassembly, params):
+def assemble_bnd(mesh, SM, k, bnd_conditions, id, stiffassembly, loadassembly, params):
     
     #mqs = MeshQuadratures(mesh, localquads)
     #lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)
@@ -52,17 +55,19 @@ def assemble_impedance(mesh, SM, k, g, id, stiffassembly, loadassembly, params):
 
     
     delta=params['delta']
-    jk = 1j * k
-    jki = 1/jk
+
+    l_coeffs=bnd_conditions[id].l_coeffs
+    r_coeffs=bnd_conditions[id].r_coeffs
+    
 
     
-    SB = stiffassembly.assemble(numpy.array([[jk * (1-delta) * SM.Be[id], -delta * SM.Be[id]],
-                                             [(1-delta) * SM.Be[id],      -delta * jki * SM.Be[id]]]))
+    SB = stiffassembly.assemble(numpy.array([[l_coeffs[0]*(1-delta) * SM.BE[id], (-1+(1-delta)*l_coeffs[1])*SM.BE[id]],
+                                             [(1-delta*l_coeffs[0]) * SM.BE[id],      -delta * l_coeffs[1]*SM.BE[id]]]))
         
 
     # todo - check the cross terms.  Works okay with delta = 1/2.  
-    GB = loadassembly.assemble(numpy.array([[jk * (1-delta) * SM.Be[id],  (1-delta) * SM.Be[id]], 
-                                            [-delta * SM.Be[id],          -delta * jki * SM.Be[id]]]))
+    GB = loadassembly.assemble(numpy.array([[-(1-delta) *r_coeffs[0]* SM.BE[id],  -(1-delta) * r_coeffs[1]*SM.BE[id]], 
+                                            [delta*r_coeffs[0]* SM.BE[id],          delta * r_coeffs[1]*SM.BE[id]]]))
         
     S = SM.sumfaces(SB)     
     G = SM.sumrhs(GB)

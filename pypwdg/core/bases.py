@@ -54,5 +54,12 @@ class PlaneWaves(object):
     """ the number of functions """
     n=property(lambda self: self.__directions.shape[1])
     
+class EmptyBasis(object):
     
+    def __init__(self,n):
+        """Create an empty placeholder basis that returns size n"""
+        
+        self.__n=n
+        
+    n=property(lambda self: self.__n)
 
