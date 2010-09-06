@@ -6,6 +6,7 @@ Created on Jul 27, 2010
 import numpy
 from pypwdg.mesh.gmsh_reader import gmsh_reader
 from pypwdg.utils.timing import *
+import pymeshpart.mesh
 
 class Mesh(object):
     """Mesh - Object that stores all necessary mesh information
@@ -40,6 +41,9 @@ class Mesh(object):
             dets          - Numpy array of dimension self.nfaces, containing the absolute value of the cross product of the
                             partial derivatives for the map from the unit triangle (or unit line in 2d) to the face
             etof          - List of lists of faces for each element
+            facepartitions- Partitioning of the faces (created by mesh.partitions)
+            elempartitions- Partitioning of the elements (created by mesh.partitions)
+            
             
     The elements and faces of a mesh are given a canonical ordering by self.__faces and self.__elements   
     """
@@ -67,6 +71,9 @@ class Mesh(object):
             self.__face_vertices    - Number of vertices in face
             self.__elem_vertices    - Number of vertices in element
             self.__nnodes           - Number of nodes
+            self.__facepartitions   - Partitioning of the faces (created by mesh.partitions)
+            self.__elempartitions   - Partitioning of the elements (created by mesh.partitions)
+
         """
         from scipy.sparse import csr_matrix
 
@@ -196,6 +203,10 @@ class Mesh(object):
         dirs = numpy.tensordot(vertices, M, ([1],[1]))
         # Ensure that the directions live in the last dimension
         self.__directions = numpy.transpose(dirs, (0,2,1))
+        
+        # Set Partitions to None
+        self.__facepartitions=None
+        self.__elempartitions=None
             
 #    @print_timing
     def __compute_normals_and_dets(self):
@@ -257,7 +268,20 @@ class Mesh(object):
 
         return coords  
             
-        
+    def partition(self,nparts):
+        """ Partition the mesh into nparts partitions """
+        elemlist=[elem['nodes'] for elem in self.__elements]
+        if self.__dim==2:
+            elemtype=1
+        else:
+            elemtype=2
+                         
+        (epart,npart,edgecut)=pymeshpart.mesh.part_mesh_dual(elemlist,self.__nnodes,elemtype,nparts)
+        facepartitions=[list() for p in range(nparts)]
+        for i,face in enumerate(self.__faces): facepartitions[epart[face[0]]].append(i)
+        self.__facepartitions=facepartitions
+        self.__elempartitions=epart
+    
         
         
             
@@ -312,6 +336,8 @@ class Mesh(object):
     nodes = property(lambda self: self.__nodes)
     nnodes = property(lambda self: self.__nnodes)
     elements=property(get_elements)
+    elempartitions=property(lambda self: self.__elempartitions)
+    facepartitions=property(lambda self: self.__facepartitions)
 
 
 if __name__ == "__main__":
