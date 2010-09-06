@@ -26,31 +26,31 @@ vtkgrid=VTKGrid(cubemesh)
 vtkgrid.write('test.vtu')
 
 
-#boundaryentities = []
-#SM = StructureMatrices(cubemesh, boundaryentities)
-#
-#k = 10
-#Nq = 8
-#Np = 2
-#dirs = cubeRotations(cubeDirections(Np))
-#elttobasis = [[PlaneWaves(dirs, k)]] * cubemesh.nelements
-#
-#g = PlaneWaves(numpy.array([[1,2,3]])/math.sqrt(14), k)
-#
-#S,G = impedanceSystem(cubemesh, SM, k, g, trianglequadrature(Nq), elttobasis)
-#
-#print "Solving system"
-#
-#X = print_timing(spsolve)(S.tocsr(), G)
-#
-##print X
-#
-#eval_fun=lambda points: numpy.real(Evaluator(cubemesh,elttobasis,points).evaluate(X))
-#bounds=numpy.array([[0,1],[0,1],[0,1]],dtype='d')
-#npoints=numpy.array([50,50,50])
-#vtk_structure=VTKStructuredPoints(eval_fun)
-#vtk_structure.create_vtk_structured_points(bounds,npoints)
-#vtk_structure.write_to_file('test.vti')
+boundaryentities = []
+SM = StructureMatrices(cubemesh, boundaryentities)
+
+k = 10
+Nq = 6
+Np = 2
+dirs = cubeRotations(cubeDirections(Np))
+elttobasis = [[PlaneWaves(dirs, k)]] * cubemesh.nelements
+
+g = PlaneWaves(numpy.array([[1,2,3]])/math.sqrt(14), k)
+
+S,G = impedanceSystem(cubemesh, SM, k, g, trianglequadrature(Nq), elttobasis)
+
+print "Solving system"
+
+X = print_timing(spsolve)(S.tocsr(), G)
+
+#print X
+
+eval_fun=lambda points: numpy.real(Evaluator(cubemesh,elttobasis,points).evaluate(X))
+bounds=numpy.array([[0,1],[0,1],[0,1]],dtype='d')
+npoints=numpy.array([50,50,50])
+vtk_structure=VTKStructuredPoints(eval_fun)
+vtk_structure.create_vtk_structured_points(bounds,npoints)
+vtk_structure.write_to_file('test.vti')
 
 
 #points = numpy.mgrid[0:1:0.2,0:1:0.2,0:1:0.02].reshape(3,-1).transpose()

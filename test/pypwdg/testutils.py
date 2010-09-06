@@ -144,7 +144,9 @@ class testGeometry(unittest.TestCase):
         from pypwdg.utils.geometry import pointsToElement
         from pypwdg.mesh.structure import StructureMatrices
         
-        points = numpy.array([[0.2,0.1],[0.3,0.4], [0.5,0.6]])
+        points = numpy.array([[0.2,0.1],[0.3,0.4], [0.5,0.6], [1.2,2]])
         pe = pointsToElement(points, self.squaremesh, StructureMatrices(self.squaremesh))
+        #Check that the outside point is assigned to the element -1
+        self.assertEqual(pe[3], -1)
         
         

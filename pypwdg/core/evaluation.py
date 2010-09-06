@@ -6,7 +6,7 @@ Created on Aug 11, 2010
 
 from pypwdg.core.vandermonde import ElementVandermondes
 from pypwdg.mesh.structure import StructureMatrices
-from pypwdg.utils.geometry import pointsToElement
+from pypwdg.utils.geometry import pointsToElementBatch
 from pypwdg.utils.timing import print_timing
 
 import numpy
@@ -17,19 +17,20 @@ class Evaluator(object):
         self.mesh = mesh
         self.points = points
         SM = StructureMatrices(mesh)
-        ptoe = pointsToElement(points, mesh, SM)
+        ptoe = pointsToElementBatch(points, mesh, SM, 5000)
         # could use sparse matrix classes to speed this up, but it's a bit clearer like this
-        self.etop = [[] for e in range(mesh.nelements)] 
+        # pointsToElement returns -1 for elements which have no point
+        self.etop = [[] for e in range(mesh.nelements+1)] 
         for p,e in enumerate(ptoe):
-            self.etop[e].append(p)
+            self.etop[e+1].append(p)
         
-        self.v = ElementVandermondes(mesh, elttobasis, lambda e: points[self.etop[e]])
+        self.v = ElementVandermondes(mesh, elttobasis, lambda e: points[self.etop[e+1]])
     
     @print_timing    
     def evaluate(self, x):
         vals = numpy.zeros(len(self.points), dtype=numpy.complex128)
         n = 0
-        for e,p in enumerate(self.etop):
+        for e,p in enumerate(self.etop[1:]):
             nb = self.v.numbases[e]
 #            print self.v.getVandermonde(e)
 #            print x[n:n+nb]
