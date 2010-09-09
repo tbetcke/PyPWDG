@@ -88,11 +88,12 @@ def bestfit2(u, k, rect, numpw, nq, printresults = True):
     initialtheta = np.arange(numpw) * 2*math.pi / numpw
     thetaopt = so.fmin_powell(lstsqerr, initialtheta, disp=False)
     l2err, c = lstsqerr(thetaopt, True)
+    l2errnonadapt = lstsqerr(initialtheta)
     if printresults:
         print "Optimal thetas: ", thetaopt
         print "Optimal coeffs: ", c
         print "L2 error: ", l2err    
-    return l2err, thetaopt, c
+    return l2err, thetaopt, c, l2errnonadapt
 
 def fittopw():
     """ Example of attemping to fit a plane wave """
@@ -111,17 +112,20 @@ def fitfb():
     MAXPW = 15
     k = 10
     n = 5
-    rect = (np.array([1,1]), np.array([2,2]))
+    rect = (np.array([11,11]), np.array([12,12]))
     u = lambda points: fourierbessel(k,n,points)
     npws = []
     l2errs = []
+    l2errnas = []
     for npw in range(1,MAXPW): 
-        l2err, thetaopt, c = bestfit2(u,k,rect,npw,15, False)
-        print npw, l2err
+        l2err, thetaopt, c, l2errna = bestfit2(u,k,rect,npw,15, False)
+        print npw, l2err, l2errna
         npws.append(npw)
         l2errs.append(l2err)
+        l2errnas.append(l2errna)
     
     mp.semilogy(npws, l2errs)
+    mp.semilogy(npws, l2errnas)
     mp.show()
         
     
