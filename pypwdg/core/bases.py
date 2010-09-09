@@ -83,7 +83,7 @@ class FourierBessel(object):
         Js = numpy.hstack((x/r, -y/r2, y/r, x/r2)).reshape((-1,1,2,2))
         nJs = numpy.sum(n.reshape(-1,1,2,1) * Js, axis=2)        
         dru = numpy.concatenate((dr[:,:,numpy.newaxis], du[:,:,numpy.newaxis]), axis=2)
-        print  Js.shape, n.shape, nJs.shape, dru.shape
         return numpy.sum(nJs * dru, axis=2)
                               
+    n=property(lambda self: self.__orders.shape[1])
         
