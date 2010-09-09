@@ -65,6 +65,7 @@ class FourierBessel(object):
     def rtheta(self, points):
         r = numpy.sqrt(numpy.sum(points**2, axis=1)).reshape(-1,1)
         theta = numpy.arctan(points[:,1] / points[:,0]).reshape(-1,1)
+        theta[numpy.isnan(theta)]=0
         return r, theta
     
     def values(self, points, n=None):
