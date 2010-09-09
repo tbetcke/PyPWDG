@@ -39,6 +39,21 @@ class TestBases(unittest.TestCase):
         d2 = circleDirections(n)
         self.assertEqual(len(d2), n)
         
+    def testFourierBessel(self):
+        from pypwdg.core.bases import FourierBessel
+        orders = numpy.array([1,2,3,4])
+        origin = numpy.zeros(2)
+        k = 5
+        fb = FourierBessel(origin, orders, k)
+        points = numpy.array([[1,2],[1,0],[0,3]])
+        n = numpy.array([[1,0],[0,1],[0.6,0.8]])
+        h = 1E-10
+        v0 = fb.values(points)
+        vh = fb.values(points + n * h)
+        d = fb.derivs(points, n)
+        numpy.testing.assert_array_almost_equal(d, (vh - v0)/h, decimal=4)
+        
+        
         
 class TestVandermondes(unittest.TestCase):
     
