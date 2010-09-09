@@ -23,3 +23,10 @@ def legendrequadrature(n):
     """ Legendre quadrature points on [0,1] """
     x00,w00 = scipy.special.orthogonal.p_roots(n)
     return (x00.reshape(-1,1)+1)/2, w00/2
+
+def squarequadrature(n):
+    x00,w00 = legendrequadrature(n)
+    g = numpy.mgrid[0:n,0:n].reshape(2,-1)
+    w = w00[g[0]] * w00[g[1]]
+    x = numpy.hstack((x00[g[0]], x00[g[1]]))
+    return x, w
