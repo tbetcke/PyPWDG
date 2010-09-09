@@ -9,7 +9,9 @@ import numpy as np
 import pypwdg.utils.quadrature as puq
 import scipy.optimize as so
 import math
-import scipy.linalg as sl
+import numpy.linalg as sl
+import scipy.special as ss
+import matplotlib.pyplot as mp
 
 def thetatodirs(thetas):
     thetas = thetas.reshape(-1,1)
@@ -61,7 +63,7 @@ def bestfit(u, k, rect, numpw, nq):
     print "Thetas: ", xopt[:,1]
     print "Norm: ", fn(xopt)
     
-def bestfit2(u, k, rect, numpw, nq):
+def bestfit2(u, k, rect, numpw, nq, printresults = True):
     """ A potentially better best fit algorithm
     
         Just does the non-linear optimisation over the directions.  Uses least squares to work out the coefficients
@@ -84,19 +86,46 @@ def bestfit2(u, k, rect, numpw, nq):
         return l2err 
         
     initialtheta = np.arange(numpw) * 2*math.pi / numpw
-    thetaopt = so.fmin_powell(lstsqerr, initialtheta)
-    print "Optimal thetas: ", thetaopt
+    thetaopt = so.fmin_powell(lstsqerr, initialtheta, disp=False)
     l2err, c = lstsqerr(thetaopt, True)
-    print "Optimal coeffs: ", c
-    print "L2 error: ", l2err    
+    if printresults:
+        print "Optimal thetas: ", thetaopt
+        print "Optimal coeffs: ", c
+        print "L2 error: ", l2err    
+    return l2err, thetaopt, c
 
 def fittopw():
     """ Example of attemping to fit a plane wave """
     k = 10
     rect = (np.array([1,1]), np.array([2,2]))
-    u = pcb.PlaneWaves(np.array([[0.6,0.8]]), k).values
-#    bestfit(u,k,rect, 1, 20)
-    bestfit2(u,k,rect,1,5)
+    u = pcb.PlaneWaves(np.array([[0.0,1.0]]), k).values
+    bestfit(u,k,rect, 2, 20)
+    bestfit2(u,k,rect,2,20)
+
+def fourierbessel(k,n,points):
+    r = np.sqrt(np.sum(points**2, axis=1))
+    theta = np.arctan(points[:,1] / points[:,0])
+    return ss.jn(n, k*r)*np.exp(1j * n * theta)
+
+def fitfb():
+    MAXPW = 15
+    k = 10
+    n = 5
+    rect = (np.array([1,1]), np.array([2,2]))
+    u = lambda points: fourierbessel(k,n,points)
+    npws = []
+    l2errs = []
+    for npw in range(1,MAXPW): 
+        l2err, thetaopt, c = bestfit2(u,k,rect,npw,15, False)
+        print npw, l2err
+        npws.append(npw)
+        l2errs.append(l2err)
+    
+    mp.semilogy(npws, l2errs)
+    mp.show()
+        
+    
     
 if __name__ == '__main__':
-    fittopw()
+#    fittopw()
+    fitfb()
