@@ -33,7 +33,7 @@ def pointsToElement(points, mesh, SM):
     return ptoe
 
 def pointsToElementBatch(points, mesh, SM, batchsize = 5000):    
-    return numpy.concatenate([pointsToElement(points[i*batchsize:min(len(points),(i+1)*batchsize)], mesh, SM) for i in range(len(points)/batchsize)])        
+    return numpy.concatenate([pointsToElement(points[i*batchsize:min(len(points),(i+1)*batchsize)], mesh, SM) for i in range((len(points)-1)/batchsize+1)])        
 
     
     
