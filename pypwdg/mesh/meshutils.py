@@ -4,6 +4,7 @@ Created on Aug 6, 2010
 @author: joel
 '''
 import numpy
+import numpy as np
 import numpy.linalg as nl
 import math
         
@@ -40,4 +41,9 @@ class MeshElementQuadratures(object):
         # The area of a simplex is 1/n! times the area of a parallepiped;
         area = abs(nl.det(self.__mesh.directions[self.__mesh.etof[eltid][0]][1:]) / math.factorial(self.__mesh.dim))
         return self.__qw * area
-    
+
+def elementcentres(mesh):
+    # add the first direction to the average of the others (the offsets)
+    x = np.concatenate([[1], np.ones(mesh.dim)*1.0/mesh.dim])
+    # pick the first face associated with each element
+    for fs in mesh.etof: yield np.dot(x,mesh.directions[fs[0]])  

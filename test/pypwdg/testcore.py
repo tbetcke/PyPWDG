@@ -42,18 +42,18 @@ class TestBases(unittest.TestCase):
         self.assertEqual(len(d2), n)
         
     def testFourierBessel(self):
-        from pypwdg.core.bases import FourierBessel
+        from pypwdg.core.bases import FourierBessel, FourierHankel
         orders = numpy.array([1,2,3,4])
-        origin = numpy.zeros(2)
         k = 5
-        fb = FourierBessel(origin, orders, k)
-        points = numpy.array([[1,2],[1,0],[0,3]])
-        n = numpy.array([[1,0],[0,1],[0.6,0.8]])
-        h = 1E-10
-        v0 = fb.values(points)
-        vh = fb.values(points + n * h)
-        d = fb.derivs(points, n)
-        numpy.testing.assert_array_almost_equal(d, (vh - v0)/h, decimal=4)
+        for origin in [numpy.zeros(2), numpy.array([4.0,5.0])]:
+            for fb in [FourierBessel(origin, orders, k), FourierHankel(origin,orders,k)]:
+                points = numpy.array([[1,2],[1,0],[0,3]])
+                n = numpy.array([[1,0],[0,1],[0.6,0.8]])
+                h = 1E-10
+                v0 = fb.values(points)
+                vh = fb.values(points + n * h)
+                d = fb.derivs(points, n)
+                numpy.testing.assert_array_almost_equal(d, (vh - v0)/h, decimal=4)
         
         
         
