@@ -17,7 +17,9 @@ def optimalbasis(u, basisgenerator, initialparams, quadrule):
         basisvals = basis.values(qp) * qwsqrt.reshape(-1,1)
         coeffs = sl.lstsq(basisvals, urp)[0]
         err = np.dot(basisvals, coeffs) - urp
-        return np.vdot(err, err)         
+        l2err = math.sqrt(np.vdot(err, err))
+        print l2err / sum(qw)
+        return l2err
 
     optparams = so.fmin_powell(lstsqerr, initialparams, disp=False)
     return basisgenerator(optparams)

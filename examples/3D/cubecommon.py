@@ -30,7 +30,7 @@ boundaryentities = []
 SM = StructureMatrices(cubemesh, boundaryentities)
 
 k = 10
-Nq = 6
+Nq = 8
 Np = 2
 dirs = cubeRotations(cubeDirections(Np))
 elttobasis = [[PlaneWaves(dirs, k)]] * cubemesh.nelements
