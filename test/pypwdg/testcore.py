@@ -5,7 +5,9 @@ Created on Aug 5, 2010
 '''
 import unittest
 
-import pypwdg.core
+import pypwdg.core.bases as pcb
+import pypwdg.core.adaptivity as pca
+import pypwdg.utils.quadrature as puq
 import numpy
 from test.pypwdg import __path__ as path
 
@@ -40,18 +42,18 @@ class TestBases(unittest.TestCase):
         self.assertEqual(len(d2), n)
         
     def testFourierBessel(self):
-        from pypwdg.core.bases import FourierBessel
+        from pypwdg.core.bases import FourierBessel, FourierHankel
         orders = numpy.array([1,2,3,4])
-        origin = numpy.zeros(2)
         k = 5
-        fb = FourierBessel(origin, orders, k)
-        points = numpy.array([[1,2],[1,0],[0,3]])
-        n = numpy.array([[1,0],[0,1],[0.6,0.8]])
-        h = 1E-10
-        v0 = fb.values(points)
-        vh = fb.values(points + n * h)
-        d = fb.derivs(points, n)
-        numpy.testing.assert_array_almost_equal(d, (vh - v0)/h, decimal=4)
+        for origin in [numpy.zeros(2), numpy.array([4.0,5.0])]:
+            for fb in [FourierBessel(origin, orders, k), FourierHankel(origin,orders,k)]:
+                points = numpy.array([[1,2],[1,0],[0,3]])
+                n = numpy.array([[1,0],[0,1],[0.6,0.8]])
+                h = 1E-10
+                v0 = fb.values(points)
+                vh = fb.values(points + n * h)
+                d = fb.derivs(points, n)
+                numpy.testing.assert_array_almost_equal(d, (vh - v0)/h, decimal=4)
         
         
         
@@ -85,6 +87,18 @@ class TestVandermondes(unittest.TestCase):
             self.assertEqual(d.shape, (numquads, 1))
             self.assertEqual(LV.numbases[faceid], 1)
         
+class TestAdaptivity(unittest.TestCase):
+    def testOptimalBasis(self):
+        """ Can we find the right direction to approximate a plane wave?"""
+        k = 10
+        g = pcb.PlaneWaves(numpy.array([[3.0/5,4.0/5]]), k).values
+#        g = pcb.FourierBessel(numpy.array([-2,-1]), numpy.array([5]),k)
+        npw = 3
+        nq = 8
+        gen, ini = pca.pwbasisgeneration(k, npw)
+        triquad = puq.trianglequadrature(nq)
+        basis, coeffs, l2err = pca.optimalbasis(g, gen, ini, triquad, True)
+        self.assertAlmostEqual(l2err,0)
         
 
 if __name__ == "__main__":

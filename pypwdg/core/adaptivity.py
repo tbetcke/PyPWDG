@@ -5,24 +5,26 @@ import math
 import pypwdg.core.bases as pcb
 import pypwdg.mesh.meshutils as pmmu
     
-def optimalbasis(u, basisgenerator, initialparams, quadrule):
+def optimalbasis(u, basisgenerator, initialparams, quadrule, retcoeffs = False):
     qp, qw = quadrule
-    qwsqrt = np.sqrt(qw)
+    qwsqrt = np.sqrt(qw).flatten()
     urp = u(qp).flatten() * qwsqrt
-#    print "urp ", urp
-#    print qwsqrt
-    def lstsqerr(params, retcoeffs = False):
+    def lstsqerr(params, ret=False):
 #        print "params ", params
         basis = basisgenerator(params)
         basisvals = basis.values(qp) * qwsqrt.reshape(-1,1)
         coeffs = sl.lstsq(basisvals, urp)[0]
         err = np.dot(basisvals, coeffs) - urp
-        l2err = math.sqrt(np.vdot(err, err))
-        print l2err / sum(qw)
-        return l2err
+        l2err = math.sqrt(np.vdot(err,err))
+        if ret: return basis, coeffs, l2err
+        else: return l2err         
 
-    optparams = so.fmin_powell(lstsqerr, initialparams, disp=False)
-    return basisgenerator(optparams)
+    optparams = so.fmin_powell(lstsqerr, initialparams, ftol = 1e-2, disp=False)
+    
+    if retcoeffs:
+        return lstsqerr(optparams, True)
+    else:
+        return basisgenerator(optparams) 
 
 def pwbasisgeneration(k, npw):
     initialtheta = np.arange(npw).reshape((-1,1)) * 2*math.pi / npw
