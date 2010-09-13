@@ -3,6 +3,8 @@ Created on Aug 10, 2010
 
 @author: joel
 '''
+import pypwdg.parallel.main
+
 from scipy.sparse.linalg.dsolve.linsolve import spsolve 
 from pypwdg.mesh.gmsh_reader import gmsh_reader
 from pypwdg.mesh.mesh import Mesh
@@ -35,7 +37,7 @@ elttobasis = [[PlaneWaves(dirs, k)]] * squaremesh.nelements
 
 g = PlaneWaves(numpy.array([[3.0/5,4.0/5]]), k)
 
-S,G = impedanceSystem(squaremesh, SM, k, g, legendrequadrature(Nq), elttobasis)
+S,G = print_timing(impedanceSystem)(squaremesh, SM, k, g, legendrequadrature(Nq), elttobasis)
 
 X = print_timing(spsolve)(S.tocsr(), G)
 
@@ -46,16 +48,16 @@ vtk_structure=VTKStructuredPoints(eval_fun)
 vtk_structure.create_vtk_structured_points(bounds,npoints)
 vtk_structure.write_to_file('test2d.vti')
 
-#
-#points = numpy.mgrid[0:1:0.01,0:1:0.01].reshape(2,-1).transpose()
-#
-#e = Evaluator(squaremesh, elttobasis, points)
-#
-#xp = e.evaluate(X)
-#
-#gp = g.values(points).flatten()
-#
-#ep = gp - xp
-#
-##print ep
-#print math.sqrt(numpy.vdot(ep,ep)/ len(points))
+
+points = numpy.mgrid[0:1:0.01,0:1:0.01].reshape(2,-1).transpose()
+
+e = Evaluator(squaremesh, elttobasis, points)
+
+xp = e.evaluate(X)
+
+gp = g.values(points).flatten()
+
+ep = gp - xp
+
+#print ep
+print math.sqrt(numpy.vdot(ep,ep)/ len(points))

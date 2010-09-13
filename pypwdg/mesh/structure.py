@@ -35,14 +35,12 @@ class StructureMatrices(object):
     def __init__(self, mesh, bndentities=[], facepartition=None):
         """ bndentities is a list of entities to build BE matrices for. """
 
-        # All the following structure matrices map from double-sided faces to double-sided faces
-        if facepartition is None: facepartition = range(0,mesh.nfaces)
-        nafpart = numpy.array(facepartition)
-        FP = sparseindex(nafpart,nafpart, mesh.nfaces)
-        
-        self.connectivity = FP * sparseindex(mesh.intfaces, mesh.facemap[mesh.intfaces], mesh.nfaces)
-        self.internal = FP * sparseindex(mesh.intfaces, mesh.intfaces, mesh.nfaces)
-        self.boundary = FP * sparseindex(mesh.bndfaces, mesh.bndfaces, mesh.nfaces)
+        self.__nfaces = mesh.nfaces
+        self._setFP(facepartition)
+        # All the following structure matrices map from double-sided faces to double-sided faces        
+        self.connectivity = sparseindex(mesh.intfaces, mesh.facemap[mesh.intfaces], mesh.nfaces)
+        self.internal = sparseindex(mesh.intfaces, mesh.intfaces, mesh.nfaces)
+        self.boundary = sparseindex(mesh.bndfaces, mesh.bndfaces, mesh.nfaces)
         self.average = (self.connectivity + self.internal)/2
         self.jump = self.internal - self.connectivity
 
@@ -54,7 +52,7 @@ class StructureMatrices(object):
         self.__BE = {}
         for b in bndentities:
             bf = numpy.array(filter(lambda f : mesh.bnd_entities[f] == b, mesh.bndfaces))
-            self.__BE[b] = FP * sparseindex(bf, bf, mesh.nfaces)
+            self.__BE[b] = sparseindex(bf, bf, mesh.nfaces)
             
                 # The structure matrix approach works because at a structure level, we make the vandermondes
         # look like the identity.  This means that we create dim+1 vandermondes for each elt - effectively
@@ -63,6 +61,18 @@ class StructureMatrices(object):
         self.eltstofaces = sparse.csc_matrix((numpy.ones(mesh.nfaces), numpy.hstack(mesh.etof), numpy.cumsum([0] + map(len, mesh.etof))))
         self.allfaces = numpy.ones((mesh.nfaces))
     
+    def _setFP(self, facepartition):
+        self.__FP = None if facepartition is None else sparseindex(numpy.array(facepartition), numpy.array(facepartition), self.__nfaces)
+    
+    def withFP(self, facepartition):
+        import copy
+        SMFP = copy.copy(self)
+        SMFP._setFP(facepartition)
+        return SMFP
+    
+    def applyFP(self, sm):
+        return sm if self.__FP is None else self.__FP * sm
+        
     @print_timing    
     def sumfaces(self, S):
         """Sum all the faces that contribute to each element
@@ -79,13 +89,15 @@ class StructureMatrices(object):
         """
         return G.__rmul__(self.eltstofaces.transpose()) * self.allfaces
     
-    AD = property(lambda self: self.__AD)
-    AN = property(lambda self: self.__AN)
-    JD = property(lambda self: self.__JD)
-    JN = property(lambda self: self.__JN)
-    I = property(lambda self: self.internal)
-    B = property(lambda self: self.boundary)
-    BE = property(lambda self: self.__BE)
+    
+    
+    AD = property(lambda self: self.applyFP(self.__AD))
+    AN = property(lambda self: self.applyFP(self.__AN))
+    JD = property(lambda self: self.applyFP(self.__JD))
+    JN = property(lambda self: self.applyFP(self.__JN))
+    I = property(lambda self: self.applyFP(self.internal))
+    B = property(lambda self: self.applyFP(self.boundary))
+    BE = property(lambda self: dict(zip(self.__BE.keys(), map(self.applyFP, self.__BE.values()))))
             
     
 

@@ -270,18 +270,22 @@ class Mesh(object):
 #        return coords  
             
     def partition(self,nparts):
-        """ Partition the mesh into nparts partitions """
-        elemlist=[elem['nodes'] for elem in self.__elements]
-        if self.__dim==2:
-            elemtype=1
+        if nparts ==1:
+             self.__facepartitions = [range(self.__nfaces)]
+             self.__elempartitions = [range(self.__nelements)]
         else:
-            elemtype=2
-                         
-        (epart,npart,edgecut)=pymeshpart.mesh.part_mesh_dual(elemlist,self.__nnodes,elemtype,nparts)
-        facepartitions=[list() for p in range(nparts)]
-        for i,face in enumerate(self.__faces): facepartitions[epart[face[0]]].append(i)
-        self.__facepartitions=facepartitions
-        self.__elempartitions=epart
+            """ Partition the mesh into nparts partitions """
+            elemlist=[elem['nodes'] for elem in self.__elements]
+            if self.__dim==2:
+                elemtype=1
+            else:
+                elemtype=2
+                             
+            (epart,npart,edgecut)=pymeshpart.mesh.part_mesh_dual(elemlist,self.__nnodes,elemtype,nparts)
+            facepartitions=[list() for p in range(nparts)]
+            for i,face in enumerate(self.__faces): facepartitions[epart[face[0]]].append(i)
+            self.__facepartitions=facepartitions
+            self.__elempartitions=epart
     
         
         

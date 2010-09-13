@@ -3,6 +3,8 @@ Created on Aug 10, 2010
 
 @author: joel
 '''
+import pypwdg.parallel.main
+
 from scipy.sparse.linalg.dsolve.linsolve import spsolve 
 from pypwdg.mesh.gmsh_reader import gmsh_reader
 from pypwdg.mesh.mesh import Mesh
@@ -37,7 +39,7 @@ elttobasis = [[PlaneWaves(dirs, k)]] * cubemesh.nelements
 
 g = PlaneWaves(numpy.array([[1,2,3]])/math.sqrt(14), k)
 
-S,G = impedanceSystem(cubemesh, SM, k, g, trianglequadrature(Nq), elttobasis)
+S,G = print_timing(impedanceSystem)(cubemesh, SM, k, g, trianglequadrature(Nq), elttobasis)
 
 print "Solving system"
 

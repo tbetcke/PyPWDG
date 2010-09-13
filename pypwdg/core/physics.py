@@ -12,7 +12,11 @@ from pypwdg.parallel.decorate import parallel, parallelTupleSum
 
 import numpy
 
-def impsysscatter(mesh, SM, k, g, localquads, elttobasis, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
+def impsysscatter(numpartitions, mesh, SM):
+    import copy
+    mesh.partition(numpartitions)
+    scatterdata = [{'SM':SM.withFP(facepart)} for facepart in mesh.facepartitions]
+    return scatterdata
 
 @parallel(impsysscatter, reduceop=parallelTupleSum)
 def impedanceSystem(mesh, SM, k, g, localquads, elttobasis, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
@@ -41,7 +45,6 @@ def impedanceSystem(mesh, SM, k, g, localquads, elttobasis, usecache=True, alpha
     SB = stiffassembly.assemble(numpy.array([[jk * (1-delta) * SM.B, -delta * SM.B],
                                              [(1-delta) * SM.B,      -delta * jki * SM.B]]))
         
-
     print "Cached vandermondes %s"%lv.getCachesize()
     
     gelts = [[g]] * mesh.nelements
@@ -54,5 +57,5 @@ def impedanceSystem(mesh, SM, k, g, localquads, elttobasis, usecache=True, alpha
         
     S = SM.sumfaces(SI + SB)     
     G = SM.sumrhs(GB)
-        
+            
     return S,G    
