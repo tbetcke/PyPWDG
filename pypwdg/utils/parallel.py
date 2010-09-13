@@ -4,11 +4,6 @@ Created on Aug 15, 2010
 @author: joel
 '''
 
-try:
-    import boostmpi as mpi
-except:
-    import mpi
-    
 import pymeshpart.mesh
 
 class MPIStructure(object):
