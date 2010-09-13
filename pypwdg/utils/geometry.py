@@ -3,7 +3,7 @@ Created on Aug 11, 2010
 
 @author: joel
 '''
-from pypwdg.parallel.decorate import parallel
+from pypwdg.parallel.decorate import parallel, parallelNumpyConcatenate
 
 import numpy
 import scipy.sparse
@@ -36,9 +36,10 @@ def pointsToElement(points, mesh, SM):
 
 
 def partitionpoints(numparts, points):
-    
+    np = len(points)
+    return [{'points': points[np * i / numparts:np * (i+1)/numparts]} for i in range(numparts)]
 
-@parallel(partitionpoints)
+@parallel(partitionpoints, reduceop=parallelNumpyConcatenate)
 def pointsToElementBatch(points, mesh, SM, batchsize = 5000):    
     return numpy.concatenate([pointsToElement(points[i*batchsize:min(len(points),(i+1)*batchsize)], mesh, SM) for i in range((len(points)-1)/batchsize+1)])        
 
