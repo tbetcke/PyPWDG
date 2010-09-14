@@ -8,11 +8,13 @@ from pypwdg.core.vandermonde import ElementVandermondes
 from pypwdg.mesh.structure import StructureMatrices
 from pypwdg.utils.geometry import pointsToElementBatch
 from pypwdg.utils.timing import print_timing
+from pypwdg.parallel.decorate import distribute, partitionlist
+
 
 import numpy
 
+@distribute(lambda n: lambda mesh,eltobasis,points : [((mesh,eltobasis,pp),{}) for pp in partitionlist(n,points)])
 class Evaluator(object):
-    @print_timing
     def __init__(self, mesh, elttobasis, points):
         self.mesh = mesh
         self.points = points
@@ -26,7 +28,6 @@ class Evaluator(object):
         
         self.v = ElementVandermondes(mesh, elttobasis, lambda e: points[self.etop[e+1]])
     
-    @print_timing    
     def evaluate(self, x):
         vals = numpy.zeros(len(self.points), dtype=numpy.complex128)
         n = 0

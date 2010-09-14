@@ -12,11 +12,12 @@ from pypwdg.parallel.decorate import parallel, parallelTupleSum
 
 import numpy
 
-def impsysscatter(numpartitions, mesh, SM):
-    import copy
-    mesh.partition(numpartitions)
-    scatterdata = [{'SM':SM.withFP(facepart)} for facepart in mesh.facepartitions]
-    return scatterdata
+# is this ugly.  However, the right way to do it is to distribute the SM object ... coming soon.
+def impsysscatter(n):
+    def splitargs(mesh, SM,k, g, localquads, elttobasis, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
+        mesh.partition(n)    
+        return [((mesh, SM.withFP(facepart), k, g, localquads, elttobasis, usecache, alpha, beta, delta),{}) for facepart in mesh.facepartitions]
+    return splitargs
 
 @parallel(impsysscatter, reduceop=parallelTupleSum)
 def impedanceSystem(mesh, SM, k, g, localquads, elttobasis, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):

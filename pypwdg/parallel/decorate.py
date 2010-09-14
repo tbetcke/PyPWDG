@@ -10,9 +10,10 @@ except:
     import boost.mpi as mpi
 
 import inspect
-import pickle
 import functools
 import numpy as np
+import pypwdg.parallel.proxy as ppp
+import uuid
 
 def parallelSum(x,y):
     if x is None: return y
@@ -20,7 +21,19 @@ def parallelSum(x,y):
     return x + y
         
 
-def parallel(scatterfn, reduceop = parallelSum):     
+def scatterfncall(fn, args, reduceop):
+    mpi.broadcast(mpi.world, root=0)
+    
+    tasks = [None] # task 0 goes to this process, which we want to remain idle.       
+    # generate the arguments for the scattered functions         
+    for a in args:
+        tasks.append((fn.__name__, fn.__module__, a[0], a[1], reduceop))
+    mpi.scatter(comm=mpi.world, values = tasks, root=0)
+    ret = mpi.reduce(comm=mpi.world, value=None, op = reduceop, root = 0)
+    return ret
+    
+
+def parallel(scatterargs, reduceop = parallelSum):     
     """ A decorator that will parallelise a function (in some circumstances)
     
         The underlying function is run on all available worker processes.  The results are reduced back to
@@ -37,23 +50,8 @@ def parallel(scatterfn, reduceop = parallelSum):
             # this means that we can wrap a print_timing around the class and still get sensible results
             @functools.wraps(fn)
             def parallelwrapper(*arg, **kw):
-                # broadcast a wake-up call to the worker threads.  
-                mpi.broadcast(mpi.world, root=0)
-                # munge all the arguments into key-word arguments
-                allargsaskw = dict(zip(inspect.getargspec(fn)[0], arg))
-                allargsaskw.update(kw)
-                # work out which arguments to pass to scatterfn
-                scatterfnkw = dict([(key,val) for key, val in allargsaskw.items() if key in set(inspect.getargspec(scatterfn)[0])])
-                scattereddata = scatterfn(mpi.world.size-1, **scatterfnkw)
-                tasks = [None] # task 0 goes to this process, which we want to remain idle.       
-                # generate the arguments for the scattered functions         
-                for sd in scattereddata:
-                    taskkw = allargsaskw.copy()
-                    taskkw.update(sd)
-                    tasks.append((fn.__name__, fn.__module__, [], taskkw, reduceop))
-                mpi.scatter(comm=mpi.world, values = tasks, root=0)
-                ret = mpi.reduce(comm=mpi.world, value=None, op = reduceop, root = 0)
-                return ret
+                scatteredargs = scatterargs(mpi.world.size-1)(*arg, **kw)  
+                return scatterfncall(fn, scatteredargs, reduceop)
             return parallelwrapper
         else:
             return fn
@@ -68,3 +66,26 @@ def parallelNumpyConcatenate(x,y):
     if x is None: return y
     if y is None: return x
     return np.concatenate((x,y))
+
+def distribute(scatterargs):
+    def buildobjectcreator(klass):    
+        # Check that there's mpi happening and that we're not already in a worker process 
+        if mpi.world.size>1 and mpi.world.rank == 0:  
+            @functools.wraps(klass)                 
+            def objectcreator(*args, **kwargs):
+                print args
+                id = uuid.uuid4()
+                scatteredargs = [((klass, id) + s[0], s[1]) for s in scatterargs(mpi.world.size-1)(*args, **kwargs)]
+                scatterfncall(ppp.createproxy, scatteredargs, parallelSum)
+                return ppp.Proxy(klass, id)
+            return objectcreator
+        else:
+            return klass
+    return buildobjectcreator
+
+        
+def partitionlist(numparts, l):
+    np = len(l)
+    return [l[np * i / numparts:np * (i+1)/numparts] for i in range(numparts)]
+
+    
