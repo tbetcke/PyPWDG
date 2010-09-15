@@ -16,6 +16,7 @@ import os
 import atexit
 import sys
 import time
+import multiprocessing
 
 if mpi.world.size > 1:
     # mpi things are happening.
@@ -25,16 +26,18 @@ if mpi.world.size > 1:
             # wake them up:
             mpi.broadcast(comm=mpi.world, root=0)
             # and send them home
-            mpi.scatter(comm=mpi.world, values=[('exit','sys', [], {}, None)]*mpi.world.size, root=0)
+            mpi.scatter(comm=mpi.world, values=[(sys.exit, [], {}, None)]*mpi.world.size, root=0)
             
         atexit.register(freeTheWorkers)
     else:
         # we are a worker process
-        # worker processes should use single-threaded BLAS (the threading is at a higher level)
+        # worker processes should contain their desire for lots of threads for BLAS 
         # this will only work if parallel is imported before anything that initialises the BLAS libraries
         # there is a better way to do this ... there's a C call that will set OMP_NUM_THREADS at run-time
-        # todo: create a wrapper for it.        
-        os.putenv('OMP_NUM_THREADS', '1')
+        # todo: create a wrapper for it.   
+        nt = max(multiprocessing.cpu_count() / mpi.world.size, 1)
+             
+        os.putenv('OMP_NUM_THREADS', nt.__str__())
         while True:
             
             # For some unclear reason, the developers of openmpi think that it's acceptable for a thread to use 100% CPU
@@ -47,7 +50,9 @@ if mpi.world.size > 1:
                 time.sleep(0.001)            
             
             task = mpi.scatter(comm=mpi.world, values=None, root=0)
-            fnname, fnmodule, args, kwargs, reduceop = task
-            __import__(fnmodule)
-            res = getattr(sys.modules[fnmodule],fnname)(*args, **kwargs)
+#            fnname, fnmodule, args, kwargs, reduceop = task
+#            __import__(fnmodule)
+#            res = getattr(sys.modules[fnmodule],fnname)(*args, **kwargs)
+            fn, args, kwargs, reduceop = task
+            res = fn(*args, **kwargs) 
             mpi.reduce(comm=mpi.world, value = res, op=reduceop, root=0)

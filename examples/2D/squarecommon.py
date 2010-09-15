@@ -41,7 +41,10 @@ S,G = print_timing(impedanceSystem)(squaremesh, SM, k, g, legendrequadrature(Nq)
 
 X = print_timing(spsolve)(S.tocsr(), G)
 
-eval_fun=lambda points: numpy.real(Evaluator(squaremesh,elttobasis,points[:,:2]).evaluate(X))
+
+def eval_fun(points):
+    E = Evaluator(squaremesh,elttobasis,points[:,:2])
+    return numpy.real(E.evaluate(X))
 bounds=numpy.array([[0,1],[0,1],[0,0]],dtype='d')
 npoints=numpy.array([200,200,1])
 vtk_structure=VTKStructuredPoints(eval_fun)

@@ -20,7 +20,7 @@ import numpy
 import math
 
 
-mesh_dict=gmsh_reader('../../examples/3D/cube.msh')
+mesh_dict=gmsh_reader('cube.msh')
 cubemesh=Mesh(mesh_dict,dim=3)
 cubemesh.partition(4)
 #print cubemesh.nodes
@@ -51,7 +51,7 @@ eval_fun=lambda points: numpy.real(Evaluator(cubemesh,elttobasis,points).evaluat
 bounds=numpy.array([[0,1],[0,1],[0,1]],dtype='d')
 npoints=numpy.array([50,50,50])
 vtk_structure=VTKStructuredPoints(eval_fun)
-vtk_structure.create_vtk_structured_points(bounds,npoints)
+print_timing(vtk_structure.create_vtk_structured_points)(bounds,npoints)
 vtk_structure.write_to_file('test.vti')
 
 
