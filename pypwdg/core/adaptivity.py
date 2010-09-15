@@ -49,6 +49,7 @@ def generatebasis(mesh, oldbasis, x, generator, initialparams, refquad):
     
     return newbasis
 
+@ppd.parallel(lambda n : lambda m, bs, X, q, k, npw: [((m,bb,X,q,k,npw),{}) for bb in ppd.partitionlist(n, bs)])
 def generatepwbasis(mesh, oldbasis, X, refquad, k, npws, ):
     gen, ini = pwbasisgeneration(k, npws)
     return generatebasis(mesh, oldbasis, X, gen, ini, refquad)

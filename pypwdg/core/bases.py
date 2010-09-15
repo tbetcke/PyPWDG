@@ -94,15 +94,22 @@ class FourierBessel(FourierHankelBessel):
     
     def __init__(self, origin, orders, k):
         FourierHankelBessel.__init__(self, origin, orders, k)
-        self.rfn = ss.jn
-        self.rfnd = ss.jvp
+
+    def rfn(self, n, x):
+        return ss.jn(n,x)
+    def rfnd(self, n, x, d):
+        return ss.jvp(n,x,d)
         
 class FourierHankel(FourierHankelBessel):
     
     def __init__(self, origin, orders, k):
         FourierHankelBessel.__init__(self, origin, orders, k)
-        self.rfn = ss.hankel1
-        self.rfnd = ss.h1vp
+        
+    def rfn(self, n, x):
+        return ss.hankel1(n,x)
+    def rfnd(self, n, x, d):
+        return ss.h1vp(n,x,d)        
+
 
 class BasisReduce(object):
     """ Reduce a basis object to return just one function """

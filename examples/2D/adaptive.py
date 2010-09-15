@@ -32,7 +32,6 @@ boundaryentities = []
 SM = StructureMatrices(squaremesh, boundaryentities)
 
 eltcentres = list(pmmu.elementcentres(squaremesh))
-print eltcentres
 
 k = 50
 Nq = 20

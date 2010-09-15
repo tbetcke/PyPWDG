@@ -63,7 +63,7 @@ def scatterfncall(fn, args, reduceop=None):
         reduceop: reduction operator to apply to results (can be None)        
     """
     mpi.broadcast(mpi.world, root=0)
-    
+    print fn
     tasks = [None] # task 0 goes to this process, which we want to remain idle.       
     # generate the arguments for the scattered functions     
     r = Reducer(reduceop)    
