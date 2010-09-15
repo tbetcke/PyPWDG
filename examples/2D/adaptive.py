@@ -82,8 +82,7 @@ for n in range(20):
     ep = (gp - xp)
     print "L2 error", math.sqrt(numpy.vdot(ep,ep)/ len(points))
     print "Relative L2 error", math.sqrt(numpy.vdot(ep,ep)/ numpy.vdot(gp,gp))
-    gen, ini = pcad.pwbasisgeneration(k, Np)
-    elttobasis = pcad.generatebasis(squaremesh, elttobasis, X, gen, ini, triquad)
+    elttobasis = pcad.generatepwbasis(squaremesh, elttobasis, X, triquad, k, Np)
     for bs, c in zip(elttobasis, eltcentres): bs.append(FourierBessel(c, numpy.arange(-1,2), k))
  #   for bs, c in zip(elttobasis, eltcentres): bs.append(PlaneWaves(dirs, k))
     

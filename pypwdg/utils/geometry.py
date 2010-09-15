@@ -3,7 +3,6 @@ Created on Aug 11, 2010
 
 @author: joel
 '''
-from pypwdg.parallel.decorate import parallel, parallelNumpyConcatenate
 
 import numpy
 import scipy.sparse

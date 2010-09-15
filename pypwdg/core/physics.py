@@ -8,7 +8,7 @@ from pypwdg.core.vandermonde import LocalVandermondes
 from pypwdg.utils.timing import print_timing
 from pypwdg.core.assembly import Assembly
 
-from pypwdg.parallel.decorate import parallel, parallelTupleSum
+from pypwdg.parallel.decorate import parallel, tuplesum
 
 import numpy
 
@@ -19,7 +19,7 @@ def impsysscatter(n):
         return [((mesh, SM.withFP(facepart), k, g, localquads, elttobasis, usecache, alpha, beta, delta),{}) for facepart in mesh.facepartitions]
     return splitargs
 
-@parallel(impsysscatter, reduceop=parallelTupleSum)
+@parallel(impsysscatter, reduceop=tuplesum)
 def impedanceSystem(mesh, SM, k, g, localquads, elttobasis, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
     """ Assemble the stiffness and load matrices for the PW DG method with UWVF parameters
     

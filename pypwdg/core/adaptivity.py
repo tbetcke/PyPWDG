@@ -4,6 +4,8 @@ import scipy.linalg as sl
 import math
 import pypwdg.core.bases as pcb
 import pypwdg.mesh.meshutils as pmmu
+
+import pypwdg.parallel.decorate as ppd
     
 def optimalbasis(u, basisgenerator, initialparams, quadrule, retcoeffs = False):
     qp, qw = quadrule
@@ -46,3 +48,7 @@ def generatebasis(mesh, oldbasis, x, generator, initialparams, refquad):
         indx = newindx        
     
     return newbasis
+
+def generatepwbasis(mesh, oldbasis, X, refquad, k, npws, ):
+    gen, ini = pwbasisgeneration(k, npws)
+    return generatebasis(mesh, oldbasis, X, gen, ini, refquad)

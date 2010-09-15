@@ -50,9 +50,6 @@ if mpi.world.size > 1:
                 time.sleep(0.001)            
             
             task = mpi.scatter(comm=mpi.world, values=None, root=0)
-#            fnname, fnmodule, args, kwargs, reduceop = task
-#            __import__(fnmodule)
-#            res = getattr(sys.modules[fnmodule],fnname)(*args, **kwargs)
             fn, args, kwargs, reduceop = task
             res = fn(*args, **kwargs) 
             mpi.reduce(comm=mpi.world, value = res, op=reduceop, root=0)
