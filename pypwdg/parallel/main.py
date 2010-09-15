@@ -52,4 +52,5 @@ if mpi.world.size > 1:
             task = mpi.scatter(comm=mpi.world, values=None, root=0)
             fn, args, kwargs, reduceop = task
             res = fn(*args, **kwargs) 
-            mpi.reduce(comm=mpi.world, value = res, op=reduceop, root=0)
+#            mpi.reduce(comm=mpi.world, value = res, op=reduceop, root=0)
+            mpi.gather(comm=mpi.world, value=res, root=0)
