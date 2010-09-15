@@ -70,7 +70,9 @@ def scatterfncall(fn, args, reduceop=None):
     for a in args:
         tasks.append((fn, a[0], a[1], r))
     mpi.scatter(comm=mpi.world, values = tasks, root=0)
-    ret = mpi.reduce(comm=mpi.world, value=None, op = r, root = 0)
+#    ret = mpi.reduce(comm=mpi.world, value=None, op = r, root = 0)
+    values = mpi.gather(comm=mpi.world, root=0)
+    ret = reduce(reduceop, values)
     return ret
              
 
