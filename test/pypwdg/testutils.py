@@ -9,7 +9,7 @@ from pypwdg.utils.quadrature import *
 from test.pypwdg import __path__ as path
 
 import numpy as np
-from numpy import mat, bmat, zeros, equal  
+from numpy import mat, bmat, zeros, equal, dot  
 import math   
 
 class testSparse(unittest.TestCase):
@@ -85,7 +85,7 @@ class testSparse(unittest.TestCase):
         self.assertTrue(np.array_equal(m3.tocsr().todense(), self.VS1D*-4.0))
         self.assertTrue(np.array_equal(m4.tocsr().todense(), self.VS1D*-4.0))
     
-    def testVectorMul(self):
+    def testStructureVectorMul(self):
         blocks = [mat([[1],[2]]), mat([[3],[4]]), mat([[1],[2],[3]])]
         indices = numpy.array([0,2,2], dtype=int)
         indptr = numpy.array([0,2,2,3], dtype=int)
@@ -94,6 +94,19 @@ class testSparse(unittest.TestCase):
         M = vbsr_matrix(blocks,indices,indptr,bsizei,bsizej)
         v = M * numpy.array([1,3,2])
         self.assertTrue(np.array_equal(v, M.tocsr().todense() * mat([1,3,2]).transpose()))
+        
+    def testFullMul(self):
+        x = numpy.array([1,2,3])
+        xx = numpy.array([[1],[2],[3]])
+        y = numpy.array([[1,4],[2,5],[3,6]])
+        
+        vx = self.VS1.matmat(x)
+        vxx = self.VS1.matmat(xx) 
+        vy = self.VS1.matmat(y)
+        
+        self.assertTrue(np.array_equal(vx, dot(self.VS1D,xx)))  
+        self.assertTrue(np.array_equal(vxx, dot(self.VS1D,xx)))  
+        self.assertTrue(np.array_equal(vy, dot(self.VS1D,y)))  
         
         
 class testQuadrature(unittest.TestCase):
@@ -131,7 +144,9 @@ class testGeometry(unittest.TestCase):
         from pypwdg.utils.geometry import pointsToElement
         from pypwdg.mesh.structure import StructureMatrices
         
-        points = numpy.array([[0.2,0.1],[0.3,0.4], [0.5,0.6]])
+        points = numpy.array([[0.2,0.1],[0.3,0.4], [0.5,0.6], [1.2,2]])
         pe = pointsToElement(points, self.squaremesh, StructureMatrices(self.squaremesh))
+        #Check that the outside point is assigned to the element -1
+        self.assertEqual(pe[3], -1)
         
         

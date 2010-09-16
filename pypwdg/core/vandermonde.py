@@ -51,6 +51,9 @@ class LocalVandermondes(object):
     def getDerivs(self, faceid):
         return self.getVandermondes(faceid)[1]
 
+    def getCachesize(self):
+        return 0 if self.__cache is None else len(self.__cache) - self.__cache.count(None)
+        
     numbases = property(lambda self: self.__numbases)
 
 class ElementVandermondes(object):

@@ -25,8 +25,15 @@ def pointsToElement(points, mesh, SM):
     withinelt = scipy.sparse.csr_matrix((behindface * SM.eltstofaces) == (mesh.dim + 1))
     
     # for each point, pick an element that it's a member of (this is arbitrary for points that lie on faces)
-    return withinelt.indices[withinelt.indptr[:-1]]
-            
+    ptoe = withinelt.indices[withinelt.indptr[:-1] % len(withinelt.indices)]
+    
+    # If the point is not in any element, assign it to -1
+    ptoe[withinelt.indptr[:-1]==withinelt.indptr[1:]] = -1
+    
+    return ptoe
+
+def pointsToElementBatch(points, mesh, SM, batchsize = 5000):    
+    return numpy.concatenate([pointsToElement(points[i*batchsize:min(len(points),(i+1)*batchsize)], mesh, SM) for i in range((len(points)-1)/batchsize+1)])        
 
     
     

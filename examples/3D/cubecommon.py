@@ -31,6 +31,7 @@ boundaryentities = [82, 83]
 SM = StructureMatrices(cubemesh, boundaryentities)
 
 k = 3
+
 Nq = 8
 Np = 2
 dirs = cubeRotations(cubeDirections(Np))
