@@ -29,7 +29,7 @@ vtkgrid.write('test.vtu')
 boundaryentities = []
 SM = StructureMatrices(cubemesh, boundaryentities)
 
-k = 10
+k = 50
 Nq = 8
 Np = 2
 dirs = cubeRotations(cubeDirections(Np))
