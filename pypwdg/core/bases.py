@@ -74,7 +74,7 @@ class FourierHankelBessel(object):
 #        print numpy.hstack((points, points - self.__origin, theta, r, numpy.exp(1j * self.__orders * theta)))
         return self.rfn(self.__orders,self.__k * r) * numpy.exp(1j * self.__orders * theta)
     
-   def derivs(self, points, n):
+    def derivs(self, points, n):
         poffset = points-self.__origin
         r,theta = self.rtheta(poffset)
         ent = numpy.exp(1j * self.__orders * theta)

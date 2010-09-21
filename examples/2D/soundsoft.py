@@ -39,11 +39,9 @@ elttobasis = [[PlaneWaves(dirs, k)]] * mesh.nelements
 params={'alpha':.5, 'beta':.5,'delta':.5}
 
 g = PlaneWaves(numpy.array([[1,0]])/math.sqrt(1), k)
-l_coeffs=[-1j*k, 1]
-r_coeffs=[-1j*k, 1]
       
 bnddata={11:dirichlet(g.values), 
-         10:dirichlet(g.values)}
+         10:zero_impedance(k)}
 
 stiffassembly,loadassembly=init_assembly(mesh,legendrequadrature(Nq),elttobasis,bnddata,usecache=True)
 
@@ -65,7 +63,7 @@ X = print_timing(spsolve)(S.tocsr(), f)
 print "Evaluating solution"
 
 eval_fun=lambda points: numpy.real(Evaluator(mesh,elttobasis,points[:,:2]).evaluate(X))
-bounds=numpy.array([[-1,1],[-1,1],[0,0]],dtype='d')
+bounds=numpy.array([[-2,2],[-2,2],[0,0]],dtype='d')
 npoints=numpy.array([200,200,1])
 vtk_structure=VTKStructuredPoints(eval_fun)
 vtk_structure.create_vtk_structured_points(bounds,npoints)
