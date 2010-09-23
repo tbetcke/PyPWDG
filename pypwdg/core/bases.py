@@ -31,7 +31,7 @@ class PlaneWaves(object):
     
     def __init__(self, directions, k):
         """ directions should be a n x dim array of directions.  k is the wave number """
-        self.__directions = directions.transpose()
+        self.directions = directions.transpose()
         self.__k = k
     
     def values(self,x,n=None):
@@ -41,7 +41,7 @@ class PlaneWaves(object):
         n is ignored
         The return value is a m x self.n array
         """
-        return numpy.exp(1j * self.__k * numpy.dot(x, self.__directions))
+        return numpy.exp(1j * self.__k * numpy.dot(x, self.directions))
     
     def derivs(self,x,n):
         """ return the directional derivatives of the plane-waves at points x and direction n 
@@ -50,10 +50,13 @@ class PlaneWaves(object):
         n should be a vector of length dim
         The return value is a m x self.n array
         """
-        return 1j*self.__k*numpy.multiply(numpy.dot(n, self.__directions), self.values(x,n))
+        return 1j*self.__k*numpy.multiply(numpy.dot(n, self.directions), self.values(x,n))
+    
+    def __str__(self):
+        return "PW "+ str(self.directions)
     
     """ the number of functions """
-    n=property(lambda self: self.__directions.shape[1])
+    n=property(lambda self: self.directions.shape[1])
 
     
 class FourierHankelBessel(object):

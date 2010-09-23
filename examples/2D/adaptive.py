@@ -14,6 +14,7 @@ from pypwdg.core.evaluation import Evaluator
 from pypwdg.mesh.structure import StructureMatrices
 import pypwdg.core.adaptivity as pcad
 import pypwdg.mesh.meshutils as pmmu
+import pypwdg.output.basis as pob
 
 from pypwdg.output.vtk_output import VTKStructuredPoints
 from pypwdg.output.vtk_output import VTKGrid
@@ -29,16 +30,17 @@ squaremesh=Mesh(mesh_dict,dim=2)
 boundaryentities = []
 SM = StructureMatrices(squaremesh, boundaryentities)
 
-eltcentres = list(pmmu.elementcentres(squaremesh))
+eltcentres = pmmu.elementcentres(squaremesh)
 print eltcentres
 
 k = 100
-Nq = 20
-Np = 3
+Nq = 15
+Np = 5
+Nfb = 1
 dirs = circleDirections(Np)
 #elttobasis = [[PlaneWaves(dirs, k)]] * squaremesh.nelements
 #fb = FourierBessel(numpy.zeros(2), numpy.arange(0,1), k)
-elttobasis = [[FourierBessel(c, numpy.arange(-1,2), k), PlaneWaves(dirs, k)] for c in eltcentres]
+elttobasis = [[FourierBessel(c, numpy.arange(-Nfb,Nfb+1), k), PlaneWaves(dirs, k)] for c in eltcentres]
 
 #g = PlaneWaves(numpy.array([[3.0/5,4.0/5]]), k)
 #g = FourierBessel(numpy.array([-2,-1]), numpy.array([3]),k)
@@ -46,11 +48,11 @@ elttobasis = [[FourierBessel(c, numpy.arange(-1,2), k), PlaneWaves(dirs, k)] for
 
 
         
-#g = BasisComb(PlaneWaves(numpy.array([[1.0,0],[-0.6,0.8]]), k), numpy.array([2,1]))
+#g = BasisReduce(PlaneWaves(numpy.array([[0.6,0.8],[-0.6,0.8]]), k), numpy.array([2,1]))
 #bases = [FourierHankel(c, numpy.array([0]), k) for c in numpy.array([[-0.2,0.5],[1.1,0.2]])]
 #g = BasisCombine(bases, numpy.array([2,1]))
 
-g = FourierHankel(numpy.array([-2.0, -1.0]), numpy.array([0]), k)
+g = FourierHankel(numpy.array([-2.0, -1]), numpy.array([0]), k)
 
 triquad = trianglequadrature(10)
 bounds=numpy.array([[0,1],[0,1],[0,0]],dtype='d')
@@ -63,6 +65,8 @@ for n in range(20):
     S,G = impedanceSystem(squaremesh, SM, k, g, legendrequadrature(Nq), elttobasis)
     
     X = spsolve(S.tocsr(), G)
+
+    pob.vtkbasis(eltcentres, elttobasis, "%sdirs%s.vtu"%(filename,n), X)
     
     eval_fun=lambda points: numpy.real(Evaluator(squaremesh,elttobasis,points[:,:2]).evaluate(X))
     points = numpy.mgrid[0:1:0.05,0:1:0.05].reshape(2,-1).transpose()
@@ -84,9 +88,9 @@ for n in range(20):
     ep = (gp - xp)
     print "L2 error", math.sqrt(numpy.vdot(ep,ep)/ len(points))
     print "Relative L2 error", math.sqrt(numpy.vdot(ep,ep)/ numpy.vdot(gp,gp))
-    gen, ini = pcad.pwbasisgeneration(k, 5)
+    gen, ini = pcad.pwbasisgeneration(k, Np)
     elttobasis = pcad.generatebasis(squaremesh, elttobasis, X, gen, ini, triquad)
-    for bs, c in zip(elttobasis, eltcentres): bs.append(FourierBessel(c, numpy.arange(-1,2), k))
+    for bs, c in zip(elttobasis, eltcentres): bs.append(FourierBessel(c, numpy.arange(-Nfb,Nfb+1), k))
  #   for bs, c in zip(elttobasis, eltcentres): bs.append(PlaneWaves(dirs, k))
     
     
