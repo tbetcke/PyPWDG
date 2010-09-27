@@ -90,6 +90,16 @@ class FourierHankelBessel(object):
     
     n=property(lambda self: self.__orders.shape[1])
 
+class EmptyBasis(object):
+    
+    def __init__(self,n):
+        """Create an empty placeholder basis that returns size n"""
+        
+        self.__n=n
+        
+    n=property(lambda self: self.__n)
+ 
+
 class FourierBessel(FourierHankelBessel):
     
     def __init__(self, origin, orders, k):

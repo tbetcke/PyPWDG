@@ -29,7 +29,7 @@ class Mesh(object):
                             face is on the boundary. face1,face2 are indices into the self.__faces list
             intfaces      - List of indices of faces in the interior
             bndfaces      - List of indices of faces on the boundary
-            bnd_entities  - For each index i in self.__bndfaces self.__bnd_entities[i] is
+            bnd_entities  - For each index i in self.bndfaces self.bnd_entities[i] is
                             the pysical entity of the boundary part assigned in Gmsh.
             nelements     - Number of elements
             elements      - List of elements

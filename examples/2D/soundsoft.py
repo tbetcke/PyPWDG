@@ -1,94 +1,70 @@
+'''
+Created on Aug 30, 2010
+
+@author: tbetcke
+'''
+from scipy.sparse.linalg.dsolve.linsolve import spsolve 
+from pypwdg.mesh.gmsh_reader import gmsh_reader
+from pypwdg.mesh.mesh import Mesh
+from pypwdg.core.physics import init_assembly, assemble_bnd, assemble_int_faces
+from pypwdg.core.bases import circleDirections, PlaneWaves
+from pypwdg.core.boundary_data import zero_impedance, dirichlet, generic_boundary_data
+from pypwdg.utils.quadrature import legendrequadrature
+from pypwdg.utils.timing import print_timing
+from pypwdg.core.evaluation import Evaluator
+from pypwdg.mesh.structure import StructureMatrices
+from pypwdg.output.vtk_output import VTKStructuredPoints
+from pypwdg.output.vtk_output import VTKGrid
 import numpy
-import scipy.special
-from pypwdg.PWDG2D import setup
-from pypwdg.PWDG2D.visualization import plotSol
-from pypwdg.PWDG2D import assembly
-from pypwdg.PWDG2D import bases
-from pypwdg.PWDG2D import solver
+import math
 
 
-
-def ImpedanceBndFun(z,n,k):
-    """ Plane Wave Impedance Boundary Condition
+mesh_dict=gmsh_reader('../../examples/2D/squarescatt.msh')
+mesh=Mesh(mesh_dict,dim=2)
+mesh.partition(4)
+#print cubemesh.nodes
+vtkgrid=VTKGrid(mesh)
+vtkgrid.write('soundsoft.vtu')
     
-        z: Numpy array of m coordinates [x[j],y[j]], j=1,..,m
-        n: Numpy array of 1 or m normal directions
-                     [[n_x[0],..,n_x[m],
-                      [n_y[0],..,n_y[m]]
-        k: Wavenumber
-    """
-                      
-    
-    return numpy.zeros(len(z))
 
+boundaryentities = [10,11]
+SM = StructureMatrices(mesh, boundaryentities)
 
-def planeWaveNeumannBndFun(z,n,k):
-    """ Plane Wave Neumann Boundary Condition
-    
-        z: Numpy array of m coordinates [x[j],y[j]], j=1,..,m
-        n: Numpy array of 1 or m normal directions
-                     [[n_x[0],..,n_x[m],
-                      [n_y[0],..,n_y[m]]
-        k: Wavenumber
-    """
-                      
-    
-    d=numpy.array([1,1])
-    d=d/numpy.linalg.norm(d)
-    return -numpy.dot(d,n)*1j*k*numpy.exp(1j*k*numpy.dot(z,d))
+k = 40
+Nq = 20
+Np = 20
+dirs = circleDirections(Np)
+elttobasis = [[PlaneWaves(dirs, k)]] * mesh.nelements
 
+params={'alpha':.5, 'beta':.5,'delta':.5}
 
-def planeWaveDirichletBndFun(z,n,k):
-    """ Plane Wave Dirichlet Boundary Condition
-    
-        z: Numpy array of m coordinates [x[j],y[j]], j=1,..,m
-        n: Numpy array of 1 or m normal directions
-                     [[n_x[0],..,n_x[m],
-                      [n_y[0],..,n_y[m]]
-        k: Wavenumber
-    """
-                      
-    
-    d=numpy.array([1,0])
-    d=d/numpy.linalg.norm(d)
-    return -numpy.exp(1j*k*numpy.dot(z,d))
+g = PlaneWaves(numpy.array([[1,0]])/math.sqrt(1), k)
+      
+bnddata={11:dirichlet(g.values), 
+         10:zero_impedance(k)}
 
+stiffassembly,loadassembly=init_assembly(mesh,legendrequadrature(Nq),elttobasis,bnddata,usecache=True)
 
-def soundsourcebndfun(z,n,k):
-    """ Sound source Boundary Condition
-    
-        z: Numpy array of m coordinates [x[j],y[j]], j=1,..,m
-        n: Numpy array of 1 or m normal directions
-                     [[n_x[0],..,n_x[m],
-                      [n_y[0],..,n_y[m]]
-        k: Wavenumber
-    """
-    
-    source=numpy.array([-2.3, 0])
-    zs=numpy.array([z[:,0]-source[0],z[:,1]-source[1]])
-    dist=numpy.sqrt(zs[0,:]*zs[0,:]+zs[1,:]*zs[1,:])
-    f=scipy.special.hankel1(0,k*dist)
-    return -f
+S=assemble_int_faces(mesh, SM, k, stiffassembly, params)
+f=0
 
+for i in bnddata:
+    print i
+    (Sb,fb)=assemble_bnd(mesh, SM, k, bnddata, i, stiffassembly, loadassembly, params)
+    S=S+Sb
+    f=f+fb
 
-sqmesh='squarescatt.msh'
-bndCond={10:('impedance',ImpedanceBndFun),
-         11:('dirichlet',planeWaveDirichletBndFun)}
-k=10
-dgstruct=setup.init(sqmesh,bnd_cond=bndCond,
-                    alpha=0.5,beta=0.5,delta=0.5,k=k,ngauss=20)
+print "Solving system"
 
-setup.addBasis(dgstruct,bases.PlaneWaveBasis,p=5,k=k)
-print "Create local Vandermonde matrices"
-assembly.processVandermonde(dgstruct)
-print "Assemble fluxes"
-A=assembly.assembleIntFlux(dgstruct)
-(Abnd,rhs)=assembly.assembleBndFlux(dgstruct)
-A=A+Abnd
-dgstruct['A']=A
-dgstruct['rhs']=rhs
-solver.solveDirect(dgstruct)
-print "Plot result"
-plotSol(dgstruct,xrange=(-2,2),yrange=(-2,2),h=.05,plotMesh=False)
-print "Complete"
+X = print_timing(spsolve)(S.tocsr(), f)
 
+#print X
+
+print "Evaluating solution"
+
+eval_fun=lambda points: numpy.real(Evaluator(mesh,elttobasis,points[:,:2]).evaluate(X))
+bounds=numpy.array([[-2,2],[-2,2],[0,0]],dtype='d')
+npoints=numpy.array([200,200,1])
+vtk_structure=VTKStructuredPoints(eval_fun)
+vtk_structure.create_vtk_structured_points(bounds,npoints)
+vtk_structure.write_to_file('soundsoft.vti')
