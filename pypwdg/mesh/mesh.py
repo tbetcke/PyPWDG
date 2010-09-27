@@ -29,7 +29,7 @@ class Mesh(object):
                             face is on the boundary. face1,face2 are indices into the self.__faces list
             intfaces      - List of indices of faces in the interior
             bndfaces      - List of indices of faces on the boundary
-            bnd_entities  - For each index i in self.__bndfaces self.__bnd_entities[i] is
+            bnd_entities  - For each index i in self.bndfaces self.bnd_entities[i] is
                             the pysical entity of the boundary part assigned in Gmsh.
             nelements     - Number of elements
             elements      - List of elements
@@ -189,9 +189,10 @@ class Mesh(object):
             The following private variables are created
             
             self.__directions - three dimensional array, such that self.__directions[ind] returns
-                                a matrix whose first row is the coordinate vector of the vertex v0. The two other
-                                rows define the direction vectors v1-v0 and v2-v0. If the problem has two dimensional
-                                the self.__directions[ind] only has two rows. 
+                                a matrix:
+                                    row 0 is the coordinate vector of the vertex v0. 
+                                    rows 1:dim are the offsets to the other vertices of the face
+                                    rows dim is the offset to the non-face vertex in the element 
         
         """
         # vertices is a 3-tensor.  For each (double sided) face, it contains a matrix of dim+1 coordinates.  The first dim of these
@@ -238,35 +239,35 @@ class Mesh(object):
         self.__normals *= (-numpy.sign(numpy.sum(self.__normals * self.__directions[:,-1,:], axis = 1)) / self.__dets ).reshape((-1,1))
                 
             
-    def reference_face_map(self,indx,xcoords,ycoords=None):
-        """Return numpy array with transformed coordinates from reference element to face[indx]
-        
-            The unit triangle is defined as the triangle with coordinates (0,0), (1,0), (0,1)
-        
-        
-           Input arguments:
-           
-           indx    - index of wanted face
-           xcoords - numpy array with x coordinates in unit triangle
-           ycoords - numpy array with y coordinate  in unit triangle (only needed for dim=3)
-        
-           Output arguments:
-           
-           coords - numpy array of dimension (dim,len(xcoords)), containing the result of the
-                    map
-                
-        
-        """
-        coords=numpy.zeros((self.dim,len(xcoords)))
-        if self.dim==2:
-            coords[0,:]=self.__directions[indx,0,0]+self.__directions[indx,1,0]*xcoords
-            coords[1,:]=self.__directions[indx,0,1]+self.__directions[indx,1,1]*xcoords
-        else:
-            coords[0,:]=self.__directions[indx,0,0]+self.__directions[indx,1,0]*xcoords+self.__directions[indx,2,0]*ycoords
-            coords[1,:]=self.__directions[indx,0,1]+self.__directions[indx,1,1]*xcoords+self.__directions[indx,2,1]*ycoords
-            coords[2,:]=self.__directions[indx,0,2]+self.__directions[indx,1,2]*xcoords+self.__directions[indx,2,2]*ycoords
-
-        return coords  
+#    def reference_face_map(self,indx,xcoords,ycoords=None):
+#        """Return numpy array with transformed coordinates from reference element to face[indx]
+#        
+#            The unit triangle is defined as the triangle with coordinates (0,0), (1,0), (0,1)
+#        
+#        
+#           Input arguments:
+#           
+#           indx    - index of wanted face
+#           xcoords - numpy array with x coordinates in unit triangle
+#           ycoords - numpy array with y coordinate  in unit triangle (only needed for dim=3)
+#        
+#           Output arguments:
+#           
+#           coords - numpy array of dimension (dim,len(xcoords)), containing the result of the
+#                    map
+#                
+#        
+#        """
+#        coords=numpy.zeros((self.dim,len(xcoords)))
+#        if self.dim==2:
+#            coords[0,:]=self.__directions[indx,0,0]+self.__directions[indx,1,0]*xcoords
+#            coords[1,:]=self.__directions[indx,0,1]+self.__directions[indx,1,1]*xcoords
+#        else:
+#            coords[0,:]=self.__directions[indx,0,0]+self.__directions[indx,1,0]*xcoords+self.__directions[indx,2,0]*ycoords
+#            coords[1,:]=self.__directions[indx,0,1]+self.__directions[indx,1,1]*xcoords+self.__directions[indx,2,1]*ycoords
+#            coords[2,:]=self.__directions[indx,0,2]+self.__directions[indx,1,2]*xcoords+self.__directions[indx,2,2]*ycoords
+#
+#        return coords  
             
     def partition(self,nparts):
         """ Partition the mesh into nparts partitions """

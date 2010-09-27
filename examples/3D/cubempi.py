@@ -33,7 +33,7 @@ SM = StructureMatrices(cubemesh, boundaryentities, mpi.facepartition)
 t.split("Built structure matrices")
 
 k = 10
-Nq = 8
+Nq = 6
 Np = 2
 dirs = cubeRotations(cubeDirections(Np))
 elttobasis = [[PlaneWaves(dirs, k)]] * cubemesh.nelements
