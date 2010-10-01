@@ -32,14 +32,9 @@ class Evaluator(object):
         vals = numpy.zeros(len(self.points), dtype=numpy.complex128)
         n = 0
         for e,p in enumerate(self.etop[1:]):
-            nb = self.v.numbases[e]
-#            print self.v.getVandermonde(e)
-#            print x[n:n+nb]
-            
+            nb = self.v.numbases[e]            
             vals[p] += numpy.dot(self.v.getVandermonde(e), x[n:n+nb])
             n+=nb
-#            print "Vals = %s"%vals
-        
         return vals
 
      

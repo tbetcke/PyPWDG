@@ -13,14 +13,6 @@ from pypwdg.parallel.decorate import parallel, tuplesum
 
 import numpy
 
-# is this ugly.  However, the right way to do it is to distribute the SM object ... coming soon.
-def impsysscatter(n):
-    def splitargs(mesh, SM,k, g, localquads, elttobasis, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
-        mesh.partition(n)    
-        return [((mesh, SM.withFP(facepart), k, g, localquads, elttobasis, usecache, alpha, beta, delta),{}) for facepart in mesh.facepartitions]
-    return splitargs
-
-@parallel(impsysscatter, reduceop=tuplesum)
 def init_assembly(mesh,localquads,elttobasis,bnddata,usecache=True):
 
     mqs = MeshQuadratures(mesh, localquads)
@@ -84,7 +76,15 @@ def assemble_bnd(mesh, SM, k, bnd_conditions, id, stiffassembly, loadassembly, p
     return S,G    
 
 
-@print_timing
+# is this ugly.  However, the right way to do it is to distribute the SM object ... coming soon.
+def impsysscatter(n):
+    def splitargs(mesh, SM,k, g, localquads, elttobasis, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
+        mesh.partition(n)    
+        return [((mesh, SM.withFP(facepart), k, g, localquads, elttobasis, usecache, alpha, beta, delta),{}) for facepart in mesh.facepartitions]
+    return splitargs
+
+@parallel(impsysscatter, reduceop=tuplesum)
+
 def impedanceSystem(mesh, SM, k, g, localquads, elttobasis, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
     """ Assemble the stiffness and load matrices for the PW DG method with UWVF parameters
     
