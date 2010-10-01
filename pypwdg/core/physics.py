@@ -19,15 +19,12 @@ def init_assembly(mesh,localquads,elttobasis,bnddata,usecache=True):
     lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)
     stiffassembly = Assembly(lv, lv, mqs.quadweights) 
     
-    ftoe=lambda f: mesh.faces[f][0] # Mapping from a faceId f to the corresponding elementId
-    gelts=[ [EmptyBasis(1)] for _ in range(mesh.nelements) ]
-    for bndface in mesh.bndfaces: gelts[ftoe(bndface)]=[bnddata[mesh.bnd_entities[bndface]]]
-    #gelts=[[bnddata[29]]]*mesh.nelements
-    bndv = LocalVandermondes(mesh, gelts, mqs.quadpoints)
-    
-    loadassembly = Assembly(lv, bndv, mqs.quadweights)
+    loadassemblies = []
+    for (entityid, data) in bnddata.items():
+        bndv = LocalVandermondes(mesh, [[data]] * mesh.nelements, mqs.quadpoints)        
+        loadassemblies.append(Assembly(lv, bndv, mqs.quadweights))
 
-    return (stiffassembly,loadassembly)
+    return (stiffassembly,loadassemblies)
 
 def assemble_int_faces(mesh, SM, k, stiffassembly, params):
     "Assemble the stiffness matrix for the interior faces"
@@ -49,7 +46,7 @@ def assemble_int_faces(mesh, SM, k, stiffassembly, params):
     
     return SM.sumfaces(SI)
 
-def assemble_bnd(mesh, SM, k, bnd_conditions, id, stiffassembly, loadassembly, params):
+def assemble_bnd(mesh, SM, k, id, bnd_condition, stiffassembly, loadassembly, params):
     
     #mqs = MeshQuadratures(mesh, localquads)
     #lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)
@@ -58,11 +55,10 @@ def assemble_bnd(mesh, SM, k, bnd_conditions, id, stiffassembly, loadassembly, p
     
     delta=params['delta']
 
-    l_coeffs=bnd_conditions[id].l_coeffs
-    r_coeffs=bnd_conditions[id].r_coeffs
-    
-
-    
+    l_coeffs=bnd_condition.l_coeffs
+    r_coeffs=bnd_condition.r_coeffs
+    print SM.BE[id].get_shape()
+        
     SB = stiffassembly.assemble(numpy.array([[l_coeffs[0]*(1-delta) * SM.BE[id], (-1+(1-delta)*l_coeffs[1])*SM.BE[id]],
                                              [(1-delta*l_coeffs[0]) * SM.BE[id],      -delta * l_coeffs[1]*SM.BE[id]]]))
         

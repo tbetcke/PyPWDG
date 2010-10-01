@@ -38,23 +38,25 @@ class StructureMatrices(object):
         self.__nfaces = mesh.nfaces
         self._setFP(facepartition)
         # All the following structure matrices map from double-sided faces to double-sided faces        
-        self.connectivity = sparseindex(mesh.intfaces, mesh.facemap[mesh.intfaces], mesh.nfaces)
-        self.internal = sparseindex(mesh.intfaces, mesh.intfaces, mesh.nfaces)
-        self.boundary = sparseindex(mesh.bndfaces, mesh.bndfaces, mesh.nfaces)
-        self.average = (self.connectivity + self.internal)/2
-        self.jump = self.internal - self.connectivity
+#        self.connectivity = sparseindex(mesh.intfaces, mesh.facemap[mesh.intfaces], mesh.nfaces)
+#        self.internal = sparseindex(mesh.intfaces, mesh.intfaces, mesh.nfaces)
+#        self.boundary = sparseindex(mesh.bndfaces, mesh.bndfaces, mesh.nfaces)
+        self.average = (mesh.connectivity + mesh.internal)/2
+        self.jump = mesh.internal - mesh.connectivity
 
         self.__AD = self.average
         self.__AN = self.jump / 2
         self.__JD = self.jump
         self.__JN = self.average * 2
                 
-        self.__BE = {}
-        for b in bndentities:
-            bf = numpy.array(filter(lambda f : mesh.bnd_entities[f] == b, mesh.bndfaces))
-            self.__BE[b] = sparseindex(bf, bf, mesh.nfaces)
+        self.__BE = mesh.entityfaces
+        self.boundary = mesh.boundary
+        
+#        for b in bndentities:
+#            bf = numpy.array(filter(lambda f : mesh.bnd_entities[f] == b, mesh.bndfaces))
+#            self.__BE[b] = sparseindex(bf, bf, mesh.nfaces)
             
-                # The structure matrix approach works because at a structure level, we make the vandermondes
+        # The structure matrix approach works because at a structure level, we make the vandermondes
         # look like the identity.  This means that we create dim+1 vandermondes for each elt - effectively
         # we split each shape function into 4 components.  These need to be summed, which is what the 
         # eltstofaces matrix is for.
@@ -95,7 +97,7 @@ class StructureMatrices(object):
     AN = property(lambda self: self.applyFP(self.__AN))
     JD = property(lambda self: self.applyFP(self.__JD))
     JN = property(lambda self: self.applyFP(self.__JN))
-    I = property(lambda self: self.applyFP(self.internal))
+#    I = property(lambda self: self.applyFP(self.internal))
     B = property(lambda self: self.applyFP(self.boundary))
     BE = property(lambda self: dict(zip(self.__BE.keys(), map(self.applyFP, self.__BE.values()))))
             

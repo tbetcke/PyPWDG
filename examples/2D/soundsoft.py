@@ -5,7 +5,7 @@ Created on Aug 30, 2010
 '''
 from scipy.sparse.linalg.dsolve.linsolve import spsolve 
 from pypwdg.mesh.gmsh_reader import gmsh_reader
-from pypwdg.mesh.mesh import Mesh
+from pypwdg.mesh.mesh import gmshMesh
 from pypwdg.core.physics import init_assembly, assemble_bnd, assemble_int_faces
 from pypwdg.core.bases import circleDirections, PlaneWaves
 from pypwdg.core.boundary_data import zero_impedance, dirichlet, generic_boundary_data
@@ -20,8 +20,8 @@ import math
 
 
 mesh_dict=gmsh_reader('../../examples/2D/squarescatt.msh')
-mesh=Mesh(mesh_dict,dim=2)
-mesh.partition(4)
+mesh=gmshMesh(mesh_dict,dim=2)
+#mesh.partition(4)
 #print cubemesh.nodes
 vtkgrid=VTKGrid(mesh)
 vtkgrid.write('soundsoft.vtu')
@@ -43,14 +43,13 @@ g = PlaneWaves(numpy.array([[1,0]])/math.sqrt(1), k)
 bnddata={11:dirichlet(g.values), 
          10:zero_impedance(k)}
 
-stiffassembly,loadassembly=init_assembly(mesh,legendrequadrature(Nq),elttobasis,bnddata,usecache=True)
+stiffassembly,loadassemblies=init_assembly(mesh,legendrequadrature(Nq),elttobasis,bnddata,usecache=True)
 
 S=assemble_int_faces(mesh, SM, k, stiffassembly, params)
 f=0
 
-for i in bnddata:
-    print i
-    (Sb,fb)=assemble_bnd(mesh, SM, k, bnddata, i, stiffassembly, loadassembly, params)
+for (id, bdycondition), loadassembly in zip(bnddata.items(), loadassemblies):
+    (Sb,fb)=assemble_bnd(mesh, SM, k, id, bdycondition, stiffassembly, loadassembly, params)
     S=S+Sb
     f=f+fb
 

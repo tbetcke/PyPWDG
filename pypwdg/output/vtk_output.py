@@ -89,13 +89,13 @@ class VTKGrid(object):
         for elem in self.__elems:
             self.__grid.InsertNextCell(elem.GetCellType(), elem.GetPointIds())
             
-        if mesh.elempartitions is not None:
-            pdata=self.__grid.GetCellData()
-            data=vtk.vtkDoubleArray()
-            data.SetNumberOfValues(nelems)
-            elemp=mesh.elempartitions
-            for i,p in enumerate(elemp): data.SetValue(i,p)
-            pdata.SetScalars(data)
+#        if mesh.elempartitions is not None:
+#            pdata=self.__grid.GetCellData()
+#            data=vtk.vtkDoubleArray()
+#            data.SetNumberOfValues(nelems)
+#            elemp=mesh.elempartitions
+#            for i,p in enumerate(elemp): data.SetValue(i,p)
+#            pdata.SetScalars(data)
                           
            
            
