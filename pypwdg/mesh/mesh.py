@@ -115,8 +115,29 @@ class Mesh(object):
         
         # Compute normals
         self.__compute_normals_and_dets()     
+    
+    def partitions(self,nparts):
+        """ Return a partition of the elements of the mesh into nparts parts """ 
+        if nparts ==1:
+            return [range(self.nelements)]
+        else:
+            """ Partition the mesh into nparts partitions """
+            if self.dim==2:
+                elemtype=1
+            elif self.dim==3:
+                elemtype=2
+               
+            (epart,npart,edgecut)=pymeshpart.mesh.part_mesh_dual(self.elements,self.nnodes,elemtype,nparts)
+            return epart
         
-#    @print_timing        
+
+class MeshPart(object):
+    """ A part of a mesh"""
+    def __init__(self, mesh, eltpartition):
+        self.mesh = mesh
+        self.es = eltpartition
+        self.facepartition = [f for e in eltpartition for f in mesh.etof[e]]
+    
     def __compute_directions(self):
         """ Compute direction vectors for all faces 
         
@@ -174,24 +195,7 @@ class Mesh(object):
                 
  
             
-    def partition(self,nparts):
-        if nparts ==1:
-             self.__facepartitions = [range(self.__nfaces)]
-             self.__elempartitions = [range(self.__nelements)]
-        else:
-            """ Partition the mesh into nparts partitions """
-            elemlist=[elem['nodes'] for elem in self.__elements]
-            if self.__dim==2:
-                elemtype=1
-            else:
-                elemtype=2
-                             
-            (epart,npart,edgecut)=pymeshpart.mesh.part_mesh_dual(elemlist,self.__nnodes,elemtype,nparts)
-            facepartitions=[list() for p in range(nparts)]
-            for i,face in enumerate(self.__faces): facepartitions[epart[face[0]]].append(i)
-            self.__facepartitions=facepartitions
-            self.__elempartitions=epart
-    
+   
         
         
             
@@ -211,8 +215,6 @@ class Mesh(object):
     facepartitions=property(lambda self: self.__facepartitions)
 
 
-class MeshPart(object):
-    pass
     
 
 if __name__ == "__main__":
