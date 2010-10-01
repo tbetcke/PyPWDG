@@ -7,7 +7,7 @@ import pypwdg.parallel.main
 
 from scipy.sparse.linalg.dsolve.linsolve import spsolve 
 from pypwdg.mesh.gmsh_reader import gmsh_reader
-from pypwdg.mesh.mesh import Mesh
+from pypwdg.mesh.mesh import gmshMesh
 from pypwdg.core.physics import init_assembly, assemble_bnd, assemble_int_faces
 from pypwdg.core.bases import cubeDirections, cubeRotations, PlaneWaves
 from pypwdg.core.boundary_data import generic_boundary_data, zero_impedance, dirichlet
@@ -22,7 +22,7 @@ import math
 
 
 mesh_dict=gmsh_reader('../../examples/3D/scattmesh.msh')
-cubemesh=Mesh(mesh_dict,dim=3)
+cubemesh=gmshMesh(mesh_dict,dim=3)
 cubemesh.partition(4)
 #print cubemesh.nodes
 vtkgrid=VTKGrid(cubemesh)

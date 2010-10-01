@@ -67,18 +67,18 @@ class VTKGrid(object):
             def create_cell(elem):
                 triangle = vtk.vtkTriangle()
                 ids = triangle.GetPointIds()
-                ids.SetId(0, elem['nodes'][0])
-                ids.SetId(1, elem['nodes'][1])
-                ids.SetId(2, elem['nodes'][2])
+                ids.SetId(0, elem[0])
+                ids.SetId(1, elem[1])
+                ids.SetId(2, elem[2])
                 return triangle
         else:
             def create_cell(elem):
                 tetra = vtk.vtkTetra()
                 ids = tetra.GetPointIds()
-                ids.SetId(0, elem['nodes'][0])
-                ids.SetId(1, elem['nodes'][1])
-                ids.SetId(2, elem['nodes'][2])
-                ids.SetId(3, elem['nodes'][3])
+                ids.SetId(0, elem[0])
+                ids.SetId(1, elem[1])
+                ids.SetId(2, elem[2])
+                ids.SetId(3, elem[3])
                 return tetra
             
         elements = mesh.elements
