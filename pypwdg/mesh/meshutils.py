@@ -47,3 +47,5 @@ def elementcentres(mesh):
     x = np.concatenate([[1], np.ones(mesh.dim)*1.0/mesh.dim])
     # pick the first face associated with each element
     for fs in mesh.etof: yield np.dot(x,mesh.directions[fs[0]])  
+
+

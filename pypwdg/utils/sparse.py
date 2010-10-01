@@ -4,6 +4,7 @@ Created on Jul 14, 2010
 @author: joel
 '''
 from pypwdg.utils.timing import print_timing
+import numpy as np
 
 def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
     """ Creates a variable block sparse matrix
@@ -253,9 +254,10 @@ class vbsr_matrix(object):
     def __add__(self, other):
         from numpy import mat, array_equal
         if other==0: return self
-        
-        if not array_equal(other.bsizei, self.bsizei): raise ValueError("Incompatible block sizes")
-        if not array_equal(other.bsizej, self.bsizej): raise ValueError("Incompatible block sizes")
+        sizeinonzero = np.logical_and(other.bsizei != 0, self.bsizei !=0) 
+        if not array_equal(other.bsizei[sizeinonzero], self.bsizei[sizeinonzero]): raise ValueError("Incompatible block sizes")
+        sizejnonzero = np.logical_and(other.bsizej != 0, self.bsizej !=0) 
+        if not array_equal(other.bsizej[sizejnonzero], self.bsizej[sizejnonzero]): raise ValueError("Incompatible block sizes")
         
         blocks = []
         indices = []
@@ -284,7 +286,7 @@ class vbsr_matrix(object):
                 blocks.append(mat(ab))
             indptr.append(len(indices))
         
-        return vbsr_matrix(blocks, indices, indptr, self.bsizei, self.bsizej)
+        return vbsr_matrix(blocks, indices, indptr, np.amax((self.bsizei, other.bsizei), axis=0), np.amax((self.bsizej,other.bsizej),axis=0))
     
     def __sub__(self, other):
         return self.__add__(-other)

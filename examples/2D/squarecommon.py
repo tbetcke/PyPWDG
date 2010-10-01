@@ -7,7 +7,7 @@ import pypwdg.parallel.main
 
 from scipy.sparse.linalg.dsolve.linsolve import spsolve 
 from pypwdg.mesh.gmsh_reader import gmsh_reader
-from pypwdg.mesh.mesh import Mesh
+from pypwdg.mesh.mesh import gmshMesh
 from pypwdg.core.physics import impedanceSystem
 from pypwdg.core.bases import circleDirections,  PlaneWaves
 from pypwdg.utils.quadrature import legendrequadrature
@@ -21,10 +21,9 @@ import numpy
 import math
 
 mesh_dict=gmsh_reader('../../examples/2D/square.msh')
-squaremesh=Mesh(mesh_dict,dim=2)
+squaremesh=gmshMesh(mesh_dict,dim=2)
 vtkgrid=VTKGrid(squaremesh)
 vtkgrid.write('test2d.vtu')
-
 
 boundaryentities = []
 SM = StructureMatrices(squaremesh, boundaryentities)
