@@ -15,9 +15,9 @@ import pypwdg.parallel.main
 
 from scipy.sparse.linalg.dsolve.linsolve import spsolve 
 from pypwdg.mesh.gmsh_reader import gmsh_reader
-from pypwdg.mesh.mesh import gmshMesh, MeshPart
+from pypwdg.mesh.mesh import gmshMesh
 from pypwdg.core.physics import assemble
-from pypwdg.core.boundary_data import zero_impedance, dirichlet, generic_boundary_data
+from pypwdg.core.boundary_data import zero_impedance, dirichlet
 from pypwdg.utils.quadrature import legendrequadrature
 from pypwdg.utils.timing import print_timing
 from pypwdg.core.evaluation import Evaluator
