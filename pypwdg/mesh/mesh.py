@@ -102,17 +102,15 @@ class Mesh(object):
         
         self.nfaces=len(faces)
         self.etof = np.arange(self.nfaces).reshape((-1,nev))
-        
+                
         ftov = ss.csr_matrix((numpy.ones(self.nfaces * dim), faces.ravel(), np.arange(0, self.nfaces+1)*dim), dtype=int)
         ftov2=(ftov*ftov.transpose()).tocsr() # Multiply to get connectivity.
         ftof = ss.csr_matrix((ftov2.data / dim, ftov2.indices, ftov2.indptr))  # ftov2 contains integer data, so dividing by dim means we're left with matching faces
         
-        self._connectivity = ftof     
-        self._connectivity.setdiag(np.zeros(self.nfaces), 0)
+        self._connectivity = ftof - ss.eye(self.nfaces, self.nfaces)
         self._connectivity.eliminate_zeros()
         self._internal = self._connectivity **2
         self._boundary = ss.eye(self.nfaces, self.nfaces) - self._internal
-
         self.elttofaces = ss.csr_matrix((numpy.ones(self.nfaces), numpy.concatenate(self.etof), numpy.cumsum([0] + map(len, self.etof))))
         self.meshpart = MeshPart(self)
     

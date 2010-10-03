@@ -6,7 +6,7 @@ Created on Aug 10, 2010
 from pypwdg.core.bases import cubeDirections, cubeRotations, PlaneWaves
 import numpy
 import math
-k = 40
+k = 3
 
 def g(x):
     return PlaneWaves(numpy.array([[1,0]])/math.sqrt(1), k).values(x)
@@ -30,10 +30,8 @@ mesh_dict=gmsh_reader('../../examples/3D/scattmesh.msh')
 cubemesh=gmshMesh(mesh_dict,dim=3)
 vtkgrid=VTKGrid(cubemesh)
 vtkgrid.write('test.vtu')
-
 boundaryentities = [82, 83]
 
-k = 3
 
 Nq = 8
 Np = 2
