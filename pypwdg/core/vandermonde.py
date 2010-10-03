@@ -27,19 +27,19 @@ class LocalVandermondes(object):
         self.__mesh = mesh
         self.__elttobasis = elttobasis
         self.__quadpoints = quadpoints
-        self.__cache = [None] * mesh.nfaces if usecache else None 
-        self.__numbases = [sum([b.n for b in elttobasis[face[0]]]) for face in mesh.faces]     
+        self.__cache = {} if usecache else None 
+        self.__numbases = [sum([b.n for b in elttobasis[e]]) for e in mesh.ftoe]     
         
     def getVandermondes(self, faceid):
         """ Returns a tuple of (values, derivatives, weights) for functions on the face indexed by faceid """
          
-        vandermondes = None if self.__cache is None else self.__cache[faceid] 
+        vandermondes = None if self.__cache is None else self.__cache.get(faceid) 
         if vandermondes==None:       
-            face = self.__mesh.faces[faceid]
+            e = self.__mesh.ftoe[faceid]
             normal = self.__mesh.normals[faceid]
             points = self.__quadpoints(faceid)
-            vals = numpy.hstack([b.values(points, normal) for b in self.__elttobasis[face[0]]])
-            derivs = numpy.hstack([b.derivs(points, normal) for b in self.__elttobasis[face[0]]])
+            vals = numpy.hstack([b.values(points, normal) for b in self.__elttobasis[e]])
+            derivs = numpy.hstack([b.derivs(points, normal) for b in self.__elttobasis[e]])
             vandermondes = (vals,derivs)
             if self.__cache is not None: self.__cache[faceid] = vandermondes 
             
@@ -52,7 +52,7 @@ class LocalVandermondes(object):
         return self.getVandermondes(faceid)[1]
 
     def getCachesize(self):
-        return 0 if self.__cache is None else len(self.__cache) - self.__cache.count(None)
+        return 0 if self.__cache is None else len(self.__cache)
         
     numbases = property(lambda self: self.__numbases)
 

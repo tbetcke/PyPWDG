@@ -8,10 +8,26 @@ from pypwdg.core.vandermonde import LocalVandermondes
 from pypwdg.utils.timing import print_timing
 from pypwdg.core.assembly import Assembly
 from pypwdg.core.bases import EmptyBasis
+import pypwdg.mesh.structure as pms
 
 from pypwdg.parallel.decorate import parallel, tuplesum
 
 import numpy
+
+@parallel(None, reduceop=tuplesum)
+@print_timing
+def assemble(mesh, k, quadrule, elttobasis, bnddata, params):
+        
+    stiffassembly,loadassemblies=init_assembly(mesh,quadrule,elttobasis,bnddata,usecache=True)
+    
+    S=assemble_int_faces(mesh, k, stiffassembly, params)
+    f=0
+    
+    for (id, bdycondition), loadassembly in zip(bnddata.items(), loadassemblies):
+        (Sb,fb)=assemble_bnd(mesh, k, id, bdycondition, stiffassembly, loadassembly, params)
+        S=S+Sb
+        f=f+fb
+    return S, f
 
 def init_assembly(mesh,localquads,elttobasis,bnddata,usecache=True):
 
@@ -20,13 +36,13 @@ def init_assembly(mesh,localquads,elttobasis,bnddata,usecache=True):
     stiffassembly = Assembly(lv, lv, mqs.quadweights) 
     
     loadassemblies = []
-    for (entityid, data) in bnddata.items():
+    for data in bnddata.values():
         bndv = LocalVandermondes(mesh, [[data]] * mesh.nelements, mqs.quadpoints)        
         loadassemblies.append(Assembly(lv, bndv, mqs.quadweights))
 
     return (stiffassembly,loadassemblies)
 
-def assemble_int_faces(mesh, SM, k, stiffassembly, params):
+def assemble_int_faces(mesh, k, stiffassembly, params):
     "Assemble the stiffness matrix for the interior faces"
 
     print "Mesh has %s elements"%mesh.nelements
@@ -40,13 +56,15 @@ def assemble_int_faces(mesh, SM, k, stiffassembly, params):
     jk = 1j * k
     jki = 1/jk
     #mqs = MeshQuadratures(mesh, localquads)
-    #lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)      
-    SI = stiffassembly.assemble(numpy.array([[jk * alpha * SM.JD,   -SM.AN], 
-                                             [SM.AD,                -beta*jki * SM.JN]]))
+    #lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)  
+    AJ = pms.AveragesAndJumps(mesh)    
+    SI = stiffassembly.assemble(numpy.array([[jk * alpha * AJ.JD,   -AJ.AN], 
+                                             [AJ.AD,                -beta*jki * AJ.JN]]))
     
-    return SM.sumfaces(SI)
+    
+    return pms.sumfaces(mesh,SI)
 
-def assemble_bnd(mesh, SM, k, id, bnd_condition, stiffassembly, loadassembly, params):
+def assemble_bnd(mesh, k, id, bnd_condition, stiffassembly, loadassembly, params):
     
     #mqs = MeshQuadratures(mesh, localquads)
     #lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)
@@ -57,31 +75,23 @@ def assemble_bnd(mesh, SM, k, id, bnd_condition, stiffassembly, loadassembly, pa
 
     l_coeffs=bnd_condition.l_coeffs
     r_coeffs=bnd_condition.r_coeffs
-    print SM.BE[id].get_shape()
+    
+    B = mesh.entityfaces[id]
         
-    SB = stiffassembly.assemble(numpy.array([[l_coeffs[0]*(1-delta) * SM.BE[id], (-1+(1-delta)*l_coeffs[1])*SM.BE[id]],
-                                             [(1-delta*l_coeffs[0]) * SM.BE[id],      -delta * l_coeffs[1]*SM.BE[id]]]))
+    SB = stiffassembly.assemble(numpy.array([[l_coeffs[0]*(1-delta) * B, (-1+(1-delta)*l_coeffs[1])*B],
+                                             [(1-delta*l_coeffs[0]) * B,      -delta * l_coeffs[1]*B]]))
         
 
     # todo - check the cross terms.  Works okay with delta = 1/2.  
-    GB = loadassembly.assemble(numpy.array([[-(1-delta) *r_coeffs[0]* SM.BE[id],  -(1-delta) * r_coeffs[1]*SM.BE[id]], 
-                                            [delta*r_coeffs[0]* SM.BE[id],          delta * r_coeffs[1]*SM.BE[id]]]))
+    GB = loadassembly.assemble(numpy.array([[-(1-delta) *r_coeffs[0]* B,  -(1-delta) * r_coeffs[1]*B], 
+                                            [delta*r_coeffs[0]* B,          delta * r_coeffs[1]*B]]))
         
-    S = SM.sumfaces(SB)     
-    G = SM.sumrhs(GB)
+    S = pms.sumfaces(mesh,SB)     
+    G = pms.sumrhs(mesh,GB)
     return S,G    
 
-
-# is this ugly.  However, the right way to do it is to distribute the SM object ... coming soon.
-def impsysscatter(n):
-    def splitargs(mesh, SM,k, g, localquads, elttobasis, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
-        mesh.partition(n)    
-        return [((mesh, SM.withFP(facepart), k, g, localquads, elttobasis, usecache, alpha, beta, delta),{}) for facepart in mesh.facepartitions]
-    return splitargs
-
-@parallel(impsysscatter, reduceop=tuplesum)
-
-def impedanceSystem(mesh, SM, k, g, localquads, elttobasis, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
+@parallel(None, reduceop=tuplesum)
+def impedanceSystem(mesh, k, g, localquads, elttobasis, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
     """ Assemble the stiffness and load matrices for the PW DG method with UWVF parameters
     
         k: wave number
@@ -98,14 +108,17 @@ def impedanceSystem(mesh, SM, k, g, localquads, elttobasis, usecache=True, alpha
     jki = 1/jk
     mqs = MeshQuadratures(mesh, localquads)
     lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)
+    AJ = pms.AveragesAndJumps(mesh)
     stiffassembly = Assembly(lv, lv, mqs.quadweights)        
-    SI = stiffassembly.assemble(numpy.array([[jk * alpha * SM.JD,   -SM.AN], 
-                                             [SM.AD,                -beta*jki * SM.JN]]))
+    SI = stiffassembly.assemble(numpy.array([[jk * alpha * AJ.JD,   -AJ.AN], 
+                                             [AJ.AD,                -beta*jki * AJ.JN]]))
+#    print "SI13,75 ",SI.tocsr()[13,75]
     
     # now for the boundary contribution
     #impedance boundary conditions
-    SB = stiffassembly.assemble(numpy.array([[jk * (1-delta) * SM.B, -delta * SM.B],
-                                             [(1-delta) * SM.B,      -delta * jki * SM.B]]))
+    B = mesh.boundary
+    SB = stiffassembly.assemble(numpy.array([[jk * (1-delta) * B, -delta * B],
+                                             [(1-delta) * B,      -delta * jki * B]]))
         
     print "Cached vandermondes %s"%lv.getCachesize()
     
@@ -114,10 +127,10 @@ def impedanceSystem(mesh, SM, k, g, localquads, elttobasis, usecache=True, alpha
     
     loadassembly = Assembly(lv, gv, mqs.quadweights)
     # todo - check the cross terms.  Works okay with delta = 1/2.  
-    GB = loadassembly.assemble(numpy.array([[jk * (1-delta) * SM.B,  (1-delta) * SM.B], 
-                                            [-delta * SM.B,          -delta * jki * SM.B]]))
+    GB = loadassembly.assemble(numpy.array([[jk * (1-delta) * B,  (1-delta) * B], 
+                                            [-delta * B,          -delta * jki * B]]))
         
-    S = SM.sumfaces(SI + SB)     
-    G = SM.sumrhs(GB)
-        
+    S = pms.sumfaces(mesh,SI + SB)     
+    G = pms.sumrhs(mesh,GB)
+#    print "S 4,25",S.tocsr()[4,25]    
     return S,G    

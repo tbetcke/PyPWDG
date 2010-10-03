@@ -11,6 +11,10 @@ def createproxy(klass, id, *args, **kwargs):
     subject = klass(*args, **kwargs)
     workerobjects[id] = subject
 
+def registerproxy(id, subject):
+    workerobjects[id] = subject
+    
+
 class Proxy(object):
     """ A Proxy object delegates calls to an underlying subject.
         

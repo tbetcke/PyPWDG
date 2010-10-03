@@ -35,27 +35,25 @@ class generic_boundary_data(object):
     """
     
     
-    def __init__(self,l_coeffs,r_coeffs=None,g=None,dg=None):
-        
-        if g is None: g=lambda x: numpy.zeros(x.shape[0])
-        if dg is None: dg= lambda x,n: numpy.zeros(x.shape[0])
+    def __init__(self,l_coeffs,r_coeffs=None,g=None,dg=None):        
         if r_coeffs is None: r_coeffs=[0, 0]
-        self.__l_coeffs=l_coeffs
-        self.__r_coeffs=r_coeffs
+        self.l_coeffs=l_coeffs
+        self.r_coeffs=r_coeffs
         self.__g=g
         self.__dg=dg
+        self.n = 1
         
     def values(self,x,n=None):
-        return self.__g(x)
+        return numpy.zeros(x.shape[0]) if self.__g is None else self.__g(x)
     
     def derivs(self,x,n):
-        return self.__dg(x,n)
+        return numpy.zeros(x.shape[0]) if self.__dg is None else self.__dg(x,n)
             
-    g=property(lambda self: self.__g)
-    dg=property(lambda self: self.__dg)
-    r_coeffs=property(lambda self: self.__r_coeffs)
-    l_coeffs=property(lambda self: self.__l_coeffs)
-    n=property(lambda self: 1)
+#    g=property(lambda self: lambda x: numpy.zeros(x.shape[0]) if self.__g is None else self.__g)
+#    dg=property(lambda self: lambda x,n: numpy.zeros(x.shape[0]) if self.__dg is None else self.__dg)
+#    r_coeffs=property(lambda self: self.__r_coeffs)
+#    l_coeffs=property(lambda self: self.__l_coeffs)
+#    n=property(lambda self: 1)
     
     
     

@@ -7,13 +7,12 @@ import pypwdg.parallel.main
 
 from scipy.sparse.linalg.dsolve.linsolve import spsolve 
 from pypwdg.mesh.gmsh_reader import gmsh_reader
-from pypwdg.mesh.mesh import gmshMesh
+from pypwdg.mesh.mesh import gmshMesh, MeshPart
 from pypwdg.core.physics import impedanceSystem
-from pypwdg.core.bases import circleDirections,  PlaneWaves
+from pypwdg.core.bases import circleDirections,  PlaneWaves, FourierBessel
 from pypwdg.utils.quadrature import legendrequadrature
 from pypwdg.utils.timing import print_timing
 from pypwdg.core.evaluation import Evaluator
-from pypwdg.mesh.structure import StructureMatrices
 from pypwdg.output.vtk_output import VTKStructuredPoints
 from pypwdg.output.vtk_output import VTKGrid
 
@@ -25,21 +24,31 @@ squaremesh=gmshMesh(mesh_dict,dim=2)
 vtkgrid=VTKGrid(squaremesh)
 vtkgrid.write('test2d.vtu')
 
-boundaryentities = []
-SM = StructureMatrices(squaremesh, boundaryentities)
+#boundaryentities = []
+#SM = StructureMatrices(squaremesh, boundaryentities)
+
+#meshpart = MeshPart(squaremesh)
 
 k = 20
 Nq = 20
 Np = 12
 dirs = circleDirections(Np)
 elttobasis = [[PlaneWaves(dirs, k)]] * squaremesh.nelements
+#elttobasis = [[FourierBessel(numpy.zeros((2,)), numpy.array([0]), k)]] * squaremesh.nelements
 
 g = PlaneWaves(numpy.array([[3.0/5,4.0/5]]), k)
 
-S,G = print_timing(impedanceSystem)(squaremesh, SM, k, g, legendrequadrature(Nq), elttobasis)
+S,G = print_timing(impedanceSystem)(squaremesh, k, g, legendrequadrature(Nq), elttobasis)
 
-X = print_timing(spsolve)(S.tocsr(), G)
+X = print_timing(spsolve)(S.tocsr(), G.tocsr())
+print "S sum: ",numpy.sum(S.tocsr().data)
 
+#print S.tocsr()[4]
+#print S.tocsr()[25]
+#print S.tocsr().indptr
+#print S.tocsr().indices
+#print G.tocsr()
+#print X
 
 def eval_fun(points):
     E = Evaluator(squaremesh,elttobasis,points[:,:2])

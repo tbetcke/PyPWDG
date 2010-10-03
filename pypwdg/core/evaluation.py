@@ -5,20 +5,19 @@ Created on Aug 11, 2010
 '''
 
 from pypwdg.core.vandermonde import ElementVandermondes
-from pypwdg.mesh.structure import StructureMatrices
 from pypwdg.utils.geometry import pointsToElementBatch
 from pypwdg.utils.timing import print_timing
 from pypwdg.parallel.decorate import npconcat, parallelmethod, distribute, partitionlist
 
 import numpy
 
-@distribute(lambda n: lambda mesh,eltobasis,points : [((mesh,eltobasis,pp),{}) for pp in partitionlist(n,points)])
+@distribute()
 class Evaluator(object):
+    @print_timing
     def __init__(self, mesh, elttobasis, points):
         self.mesh = mesh
         self.points = points
-        SM = StructureMatrices(mesh)
-        ptoe = pointsToElementBatch(points, mesh, SM, 5000)
+        ptoe = pointsToElementBatch(points, mesh, 5000)
         # could use sparse matrix classes to speed this up, but it's a bit clearer like this
         # pointsToElement returns -1 for elements which have no point
         self.etop = [[] for e in range(mesh.nelements+1)] 
@@ -27,7 +26,8 @@ class Evaluator(object):
         
         self.v = ElementVandermondes(mesh, elttobasis, lambda e: points[self.etop[e+1]])
     
-    @parallelmethod(None, npconcat)
+    @parallelmethod()
+    @print_timing
     def evaluate(self, x):
         vals = numpy.zeros(len(self.points), dtype=numpy.complex128)
         n = 0

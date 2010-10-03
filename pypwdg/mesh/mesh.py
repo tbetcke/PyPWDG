@@ -5,10 +5,10 @@ Created on Jul 27, 2010
 '''
 import numpy
 import numpy as np
-from pypwdg.mesh.gmsh_reader import gmsh_reader
-from pypwdg.utils.timing import *
+import numpy.ma as ma
 import pymeshpart.mesh
 import scipy.sparse as ss
+import pypwdg.parallel.decorate as ppd
 
 def gmshMesh(gmsh_dict, dim):
     ''' Construct a Mesh from a gmsh dictionary '''
@@ -30,7 +30,7 @@ def gmshMesh(gmsh_dict, dim):
     boundaries = map(lambda f: (f['physEntity'], tuple(sorted(f['nodes']))), filter(lambda e : e['type']==gmsh_face_key, gmsh_dict['elements'].values()))
     return Mesh(nodes, elements, boundaries, dim)
         
-
+@ppd.immutable
 class Mesh(object):
     """Mesh - The structure of a simplicial mesh
        
@@ -41,8 +41,14 @@ class Mesh(object):
            boundaries: a sequence of tuples, each of the form (id, nodes), identifying the physical objects in the mesh produced by the mesh generator
            dim: the dimension of the mesh (2 or 3, although other numbers probably work too)
            
+       Conceptually, a Mesh has three different types of property:
+       1) Global properties are the same in each process - they are serialised normally.  
+       2) Partition properties describe the partition of this Mesh held in the current process.  
+       3) Masked properties are notionally global, but incomplete.  Only the data relevant
+       to this process are held (the others are masked)   
+       In the master process, partition and masked properties are not accessible
        
-       Properties:
+       Global properties:
 
             faces         - For each face-element pair, a tuple of vertices.  The ordering reflects the ordering of elements.  Each internal face appears twice
             nonfacevertex - For each face-element pair, the element vertex which does not appear on that face
@@ -57,14 +63,18 @@ class Mesh(object):
             elements      - List of elements
             nelements     - Number of elements
             dim           - Dimension of problem (dim=2,3)
-
-            normals       - Numpy array of dimension (self.nfaces,self.dim). self.normals[ind] contains the normal
-                            direction of the face with index ind.
-            dets          - Numpy array of dimension self.nfaces, containing the absolute value of the cross product of the
-                            partial derivatives for the map from the unit triangle (or unit line in 2d) to the face
             etof          - List of lists of faces for each element
-            facepartitions- Partitioning of the faces (created by mesh.partitions)
-            elempartitions- Partitioning of the elements (created by mesh.partitions)
+            
+        Partition properties:
+            fs            - The faces in this partition
+            connectivity  - The connectivity of the faces in this partition (note that this will reference faces in other partitions) 
+            internal      - Pull out the internal faces for this partition
+            boundary      - Pull out the boundary faces for this partition
+            entityfaces   - A dictionary of physical entity -> the corresponding faces in this partition            
+
+        Masked properties:
+            directions, normals, dets 
+                          - see MeshPart.__compute_facedata
             
             
     The elements and faces of a mesh are given a canonical ordering by self.__faces and self.__elements   
@@ -84,43 +94,27 @@ class Mesh(object):
         nev = dim+1
         
         # The vertices associated with each face
-        faces = [tuple(e[0:i]+e[i+1:nev]) for e in elements for i in range(0,nev)]
+        faces = numpy.array([tuple(e[0:i]+e[i+1:nev]) for e in elements for i in range(0,nev)])
         self.faces = faces
         # The "opposite" vertex for each face    
-        self.nonfacevertex = [e[i] for e in elements for i in range(0,nev)]    
-#        self.ftoe = np.repeat(np.arange(self.nelements), nev)
+        self.nonfacevertex = numpy.array([e[i] for e in elements for i in range(0,nev)])    
+        self.ftoe = np.repeat(np.arange(self.nelements), nev)
         
         self.nfaces=len(faces)
         self.etof = np.arange(self.nfaces).reshape((-1,nev))
         
-        ftov = ss.csr_matrix((numpy.ones(self.nfaces * dim), numpy.concatenate(faces), np.arange(0, self.nfaces+1)*dim), dtype=int)
+        ftov = ss.csr_matrix((numpy.ones(self.nfaces * dim), faces.ravel(), np.arange(0, self.nfaces+1)*dim), dtype=int)
         ftov2=(ftov*ftov.transpose()).tocsr() # Multiply to get connectivity.
-        ftof = ss.csr_matrix((ftov2.data / dim, ftov2.indices, ftov2.indptr))
-        self.connectivity = ftof # It's an integer matrix, so dividing by dim means we're left with matching faces        
-        self.connectivity.setdiag(np.zeros(self.nfaces), 0)
-        self.connectivity.eliminate_zeros()
-        self.internal = self.connectivity **2
-        self.boundary = ss.eye(self.nfaces, self.nfaces) - self.internal
-        boundaryids = self.boundary.diagonal().nonzero()[0]
-        self.faceentities = np.array([None] * self.nfaces)
-        entities = set()
+        ftof = ss.csr_matrix((ftov2.data / dim, ftov2.indices, ftov2.indptr))  # ftov2 contains integer data, so dividing by dim means we're left with matching faces
         
-        for entityid, bnodes in boundaries:
-            entities.add(entityid)
-            for i, fid in enumerate(boundaryids):                
-                if faces[fid] == bnodes: self.faceentities[i] = entityid 
-        
-        self.entityfaces = dict([(entity, ss.spdiags((self.faceentities == entity) * 1, [0], self.nfaces, self.nfaces)) for entity in entities])
-        
-        bdyunassigned = len(boundaryids) - len(self.faceentities.nonzero())        
-        if bdyunassigned:
-            print "Warning: %s non-internal faces not assigned to physical entities"%bdyunassigned
-        
-        # Now generate direction vectors     
-        self.__compute_directions()
-        
-        # Compute normals
-        self.__compute_normals_and_dets()     
+        self._connectivity = ftof     
+        self._connectivity.setdiag(np.zeros(self.nfaces), 0)
+        self._connectivity.eliminate_zeros()
+        self._internal = self._connectivity **2
+        self._boundary = ss.eye(self.nfaces, self.nfaces) - self._internal
+
+        self.elttofaces = ss.csr_matrix((numpy.ones(self.nfaces), numpy.concatenate(self.etof), numpy.cumsum([0] + map(len, self.etof))))
+        self.meshpart = MeshPart(self)
     
     def partitions(self,nparts):
         """ Return a partition of the elements of the mesh into nparts parts """ 
@@ -134,75 +128,58 @@ class Mesh(object):
                 elemtype=2
                
             (epart,npart,edgecut)=pymeshpart.mesh.part_mesh_dual(self.elements,self.nnodes,elemtype,nparts)
-            return epart
-        
+            return [np.arange(self.nelements)[epart == p] for p in range(nparts)]   
+    
+#    es = property(lambda self: self.meshpart.es) 
+    fs = property(lambda self: self.meshpart.fs)
+    connectivity = property(lambda self: self.meshpart.fp * self._connectivity) 
+    internal = property(lambda self: self.meshpart.fp * self._internal)
+    boundary = property(lambda self: self.meshpart.fp * self._boundary)
+    entityfaces = property(lambda self: self.meshpart.entityfaces)
+    directions = property(lambda self: self.meshpart.directions)
+    normals = property(lambda self: self.meshpart.normals)
+    dets = property(lambda self: self.meshpart.dets)
 
-    def __compute_directions(self):
-        """ Compute direction vectors for all faces 
-        
-            The following private variables are created
-            
-            self.directions - three dimensional array, such that self.directions[ind] returns
-                                a matrix:
-                                    row 0 is the coordinate vector of the vertex v0. 
-                                    rows 1:dim are the offsets to the other vertices of the face
-                                    rows dim is the offset to the non-face vertex in the element 
-        
-        """
-        # vertices is a 3-tensor.  For each (double sided) face, it contains a matrix of dim+1 coordinates.  The first dim of these
-        # are on the face, the final one is the non-face vertex for the corresponding element
-        vertices = numpy.array([[self.nodes[fv] for fv in fvs] + [self.nodes[otherv]] for fvs, otherv in zip(self.faces, self.nonfacevertex)])
-        # M picks out the first coord and the differences to the others
-        M = numpy.bmat([[numpy.mat([[1]]), numpy.zeros((1,self.dim))], [numpy.ones((self.dim,1))*-1, numpy.eye(self.dim)]])
-        # Apply the differencing matrix to each set of coordinates
-        dirs = numpy.tensordot(vertices, M, ([1],[1]))
-        # Ensure that the directions live in the last dimension
-        self.directions = numpy.transpose(dirs, (0,2,1))
-        
-        # Set Partitions to None
-        self.__facepartitions=None
-        self.__elempartitions=None
-            
-#    @print_timing
-    def __compute_normals_and_dets(self):
-        """ Compute normal directions and determinants for all faces 
-        
-            The following private variables are created
-            
-            self.normals - Numpy array of dimension (self.nfaces,self.dim). self.normals[ind] contains the normal
-                             direction of the face with index ind.
-            self.dets    - Numpy array of dimension self.nfaces, containing the absolute value of the cross product of the
-                             partial derivatives for the map from the unit triangle (or line in 2d) to the face
-        
-        """
-        
-        self.normals=numpy.zeros((self.nfaces,self.dim))
-        
-        if self.dim==2:
-            # Put normal vectors 
-            self.normals[:,0]=self.directions[:,1,1]
-            self.normals[:,1]=-self.directions[:,1,0]
-        else:
-            self.normals[:,0]=self.directions[:,1,1]*self.directions[:,2,2]-self.directions[:,2,1]*self.directions[:,1,2]
-            self.normals[:,1]=self.directions[:,1,2]*self.directions[:,2,0]-self.directions[:,1,0]*self.directions[:,2,2]
-            self.normals[:,2]=self.directions[:,1,0]*self.directions[:,2,1]-self.directions[:,2,0]*self.directions[:,1,1]
-
-        # this is 100x faster than applying numpy.linalg.norm to each entry
-        self.dets = numpy.sqrt(numpy.sum(self.normals * self.normals, axis = 1))
-                
-        self.normals *= (-numpy.sign(numpy.sum(self.normals * self.directions[:,-1,:], axis = 1)) / self.dets ).reshape((-1,1))
-                
- 
+@ppd.distribute(lambda n: lambda mesh: [((mesh, partition),{}) for partition in mesh.partitions(n)]) 
 class MeshPart(object):
-    """ A part of a mesh"""
-    def __init__(self, mesh, eltpartition):
+    """ The Partition-specific data for a mesh"""
+    def __init__(self, mesh, eltpartition=None):
+        if eltpartition == None: eltpartition = mesh.partitions(1)[0]
+        print eltpartition
         self.mesh = mesh
         self.es = eltpartition
-        self.faces = [mesh.faces[f] for e in eltpartition for f in mesh.etof[e]]
-        self.nodes = mesh.nodes
+        self.fs = mesh.etof[eltpartition].ravel()
+        fpindex = np.zeros((mesh.nfaces,))
+        fpindex[self.fs] = 1
+        self.fp = ss.spdiags(fpindex, [0], mesh.nfaces, mesh.nfaces)
+        
+        boundaryids = (self.fp * mesh._boundary).diagonal().nonzero()[0]
+        
+        entities = set()
+        faceentities = np.array([None] * mesh.nfaces)
+        
+        for entityid, bnodes in mesh.boundaries:
+            entities.add(entityid)
+            faceentities[boundaryids[(mesh.faces[boundaryids]==bnodes).all(axis=1)]] = entityid
+        
+        self.entityfaces = dict([(entity, ss.spdiags((faceentities == entity) * 1, [0], mesh.nfaces, mesh.nfaces)) for entity in entities])
+        
+        bdyunassigned = len(boundaryids) - len(faceentities.nonzero()[0])        
+        if bdyunassigned:
+            print "Warning: %s non-internal faces not assigned to physical entities"%bdyunassigned
+            print [self.faces[id] for id in boundaryids if faceentities[id]==None]
+
+        self.directions = ma.masked_all((mesh.nfaces, mesh.dim+1, mesh.dim))
+        self.normals = ma.masked_all((mesh.nfaces, mesh.dim))
+        self.dets = ma.masked_all((mesh.nfaces))
+        
+        relevantfaces = ((mesh._connectivity + ss.eye(mesh.nfaces, mesh.nfaces)) * fpindex).nonzero()[0]      
+        self.__compute_facedata(relevantfaces)
+#        print "connectivity, ", self.connectivity
+        
     
-    def __compute_directions(self):
-        """ Compute direction vectors for all faces 
+    def __compute_facedata(self, relevantfaces):
+        """ Compute directions, normals and determinants for all faces 
         
             The following private variables are created
             
@@ -211,85 +188,40 @@ class MeshPart(object):
                                     row 0 is the coordinate vector of the vertex v0. 
                                     rows 1:dim are the offsets to the other vertices of the face
                                     rows dim is the offset to the non-face vertex in the element 
-        
-        """
-        # vertices is a 3-tensor.  For each (double sided) face, it contains a matrix of dim+1 coordinates.  The first dim of these
-        # are on the face, the final one is the non-face vertex for the corresponding element
-        vertices = numpy.array([[self.nodes[fv] for fv in fvs] + [self.nodes[otherv]] for fvs, otherv in zip(self.faces, self.nonfacevertex)])
-        # M picks out the first coord and the differences to the others
-        M = numpy.bmat([[numpy.mat([[1]]), numpy.zeros((1,self.dim))], [numpy.ones((self.dim,1))*-1, numpy.eye(self.dim)]])
-        # Apply the differencing matrix to each set of coordinates
-        dirs = numpy.tensordot(vertices, M, ([1],[1]))
-        # Ensure that the directions live in the last dimension
-        self.directions = numpy.transpose(dirs, (0,2,1))
-        
-        # Set Partitions to None
-        self.__facepartitions=None
-        self.__elempartitions=None
-            
-#    @print_timing
-    def __compute_normals_and_dets(self):
-        """ Compute normal directions and determinants for all faces 
-        
-            The following private variables are created
-            
             self.normals - Numpy array of dimension (self.nfaces,self.dim). self.normals[ind] contains the normal
                              direction of the face with index ind.
             self.dets    - Numpy array of dimension self.nfaces, containing the absolute value of the cross product of the
                              partial derivatives for the map from the unit triangle (or line in 2d) to the face
         
         """
+        # vertices is a 3-tensor.  For each (double sided) face, it contains a matrix of dim+1 coordinates.  The first dim of these
+        # are on the face, the final one is the non-face vertex for the corresponding element
+        vertices = numpy.array([[self.mesh.nodes[fv] for fv in fvs] + [self.mesh.nodes[otherv]] for fvs, otherv in zip(self.mesh.faces[relevantfaces], self.mesh.nonfacevertex[relevantfaces])])
+        # M picks out the first coord and the differences to the others
+        M = numpy.bmat([[numpy.mat([[1]]), numpy.zeros((1,self.mesh.dim))], [numpy.ones((self.mesh.dim,1))*-1, numpy.eye(self.mesh.dim)]])
+        # Apply the differencing matrix to each set of coordinates
+        dirs = numpy.tensordot(vertices, M, ([1],[1]))
+        # Ensure that the directions live in the last dimension
+        directions = numpy.transpose(dirs, (0,2,1))
         
-        self.normals=numpy.zeros((self.nfaces,self.dim))
+        normals=numpy.zeros((len(relevantfaces),self.mesh.dim))
         
-        if self.dim==2:
+        if self.mesh.dim==2:
             # Put normal vectors 
-            self.normals[:,0]=self.directions[:,1,1]
-            self.normals[:,1]=-self.directions[:,1,0]
+            normals[:,0]=directions[:,1,1]
+            normals[:,1]=-directions[:,1,0]
         else:
-            self.normals[:,0]=self.directions[:,1,1]*self.directions[:,2,2]-self.directions[:,2,1]*self.directions[:,1,2]
-            self.normals[:,1]=self.directions[:,1,2]*self.directions[:,2,0]-self.directions[:,1,0]*self.directions[:,2,2]
-            self.normals[:,2]=self.directions[:,1,0]*self.directions[:,2,1]-self.directions[:,2,0]*self.directions[:,1,1]
+            normals[:,0]=directions[:,1,1]*directions[:,2,2]-directions[:,2,1]*directions[:,1,2]
+            normals[:,1]=directions[:,1,2]*directions[:,2,0]-directions[:,1,0]*directions[:,2,2]
+            normals[:,2]=directions[:,1,0]*directions[:,2,1]-directions[:,2,0]*directions[:,1,1]
 
         # this is 100x faster than applying numpy.linalg.norm to each entry
-        self.dets = numpy.sqrt(numpy.sum(self.normals * self.normals, axis = 1))
+        dets = numpy.sqrt(numpy.sum(normals * normals, axis = 1))
                 
-        self.normals *= (-numpy.sign(numpy.sum(self.normals * self.directions[:,-1,:], axis = 1)) / self.dets ).reshape((-1,1))
-                
- 
-            
-   
-        
-        
-            
-    elempartitions=property(lambda self: self.__elempartitions)
-    facepartitions=property(lambda self: self.__facepartitions)
-
-
-    
-
-if __name__ == "__main__":
-
-    print 'Import 2D mesh'
-    import time
-    t1=time.time()
-    mesh_dict=gmsh_reader('../../examples/2D/square.msh')
-    squaremesh=Mesh(mesh_dict,dim=2)
-    t2=time.time()
-    print 'Import took %0.3f seconds for mesh with %i elements' % (t2-t1,squaremesh.nelements)
-
-
-    
-    print 'Import 3D mesh'
-    import time
-    t1=time.time()
-    mesh_dict=gmsh_reader('../../examples/3D/cube.msh')
-    cubemesh=Mesh(mesh_dict,dim=3)
-    t2=time.time()
-    print 'Import took %0.3f seconds for mesh with %i elements' % (t2-t1,cubemesh.nelements)
-
-
-    
+        normals *= (-numpy.sign(numpy.sum(normals * directions[:,-1,:], axis = 1)) / dets ).reshape((-1,1))
+        self.directions[relevantfaces] = directions
+        self.normals[relevantfaces] = normals
+        self.dets[relevantfaces] = dets
 
         
     

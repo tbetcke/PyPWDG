@@ -24,7 +24,7 @@ def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
     csr.sort_indices()
     zipip = zip(csr.indptr[:-1], csr.indptr[1:])
     coords = [(i,j) for i,p in enumerate(zipip) for j in csr.indices[p[0]:p[1]] ]
-    data = numpy.array([mat.data[n] * numpy.mat(blocks(i,j)) for n, (i,j) in enumerate(coords)])
+    data = numpy.array([csr.data[n] * numpy.mat(blocks(i,j)) for n, (i,j) in enumerate(coords)])
     s = csr.get_shape()
     if bsizerows is None: bsizerows = [None]*s[0]
     if bsizecols is None: bsizecols = [None]*s[1]
@@ -170,7 +170,6 @@ class vbsr_matrix(object):
                 indices.append(j)                
             indptr.append(len(indices))
          
-         
         return vbsr_matrix(data, indices, indptr, lsizes, rsizes) 
     
     def _scalarmul(self, x):
@@ -187,7 +186,8 @@ class vbsr_matrix(object):
             idx = self.indices[ip0:ip1]
             
             if len(idx) > 0 : data.append(sum(self.blocks[ip0:ip1] * x.reshape(-1,1,1)[idx], axis=0) )
-            else: data.append(zeros((self.bsizei[i], self.bsizej[0]))) 
+            else:
+                data.append(zeros((self.bsizei[i], self.bsizej[0]))) 
         ret = vstack(data) * self.scalar
         return ret
     
@@ -207,13 +207,14 @@ class vbsr_matrix(object):
             
         
     def _calculatesizes(self, csr, bsize):
-        from scipy.sparse import csr_matrix
-        from numpy import ones, divide
-        csro = csr_matrix((ones(len(csr.data)), csr.indices, csr.indptr), shape = csr.get_shape())
-        # number of entries in each row:
-        ne = csro * ones(len(bsize))
-        
-        return divide(csro * bsize, ne)
+        sizes = [bsize[csr.indices[i0:i1]] for i0,i1 in zip(csr.indptr[:-1], csr.indptr[1:])]
+        nonempty = filter(len, sizes)
+        minsizes = map(min, nonempty)
+        maxsizes = map(max, nonempty)
+        if minsizes != maxsizes: raise ValueError("Incompatible block sizes")
+        asizes = np.zeros((len(sizes)))
+        asizes[np.array(map(len, sizes)) > 0] = maxsizes
+        return asizes 
 
 #    @print_timing    
     def __mul__(self, other):
@@ -241,6 +242,8 @@ class vbsr_matrix(object):
         if numpy.isscalar(other): return self._scalarmul(other)
         if not issparse(other): return NotImplemented
         lcsr = other.tocsr()
+        lcsr.eliminate_zeros()
+        lcsr.sort_indices()
         rowsizes = self._calculatesizes(lcsr, self.bsizei)
         return self._mul(lcsr.indices, lcsr.indptr, lcsr.data, lcsr.get_shape(), rowsizes, \
                          self.indices, self.indptr, self.blocks, (len(self.bsizei), len(self.bsizej)), self.bsizej, 1.0,  numpy.multiply)
@@ -255,7 +258,9 @@ class vbsr_matrix(object):
         from numpy import mat, array_equal
         if other==0: return self
         sizeinonzero = np.logical_and(other.bsizei != 0, self.bsizei !=0) 
-        if not array_equal(other.bsizei[sizeinonzero], self.bsizei[sizeinonzero]): raise ValueError("Incompatible block sizes")
+        if not array_equal(other.bsizei[sizeinonzero], self.bsizei[sizeinonzero]):
+            print other.bsizei[sizeinonzero], self.bsizei[sizeinonzero] 
+            raise ValueError("Incompatible block sizes")
         sizejnonzero = np.logical_and(other.bsizej != 0, self.bsizej !=0) 
         if not array_equal(other.bsizej[sizejnonzero], self.bsizej[sizejnonzero]): raise ValueError("Incompatible block sizes")
         
@@ -285,7 +290,7 @@ class vbsr_matrix(object):
                 indices.append(j)
                 blocks.append(mat(ab))
             indptr.append(len(indices))
-        
+#        print "sparse.add ", np.sum(self.blocks), np.sum(other.blocks), np.sum(blocks)
         return vbsr_matrix(blocks, indices, indptr, np.amax((self.bsizei, other.bsizei), axis=0), np.amax((self.bsizej,other.bsizej),axis=0))
     
     def __sub__(self, other):

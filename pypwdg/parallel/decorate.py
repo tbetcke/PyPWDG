@@ -107,7 +107,7 @@ def parallel(scatterargs, reduceop = operator.add):
     return buildparallelwrapper
 
 
-def distribute(scatterargs):
+def distribute(scatterargs=None):
     """ decorator that effectively distributes a class across worker processes.
     
         If we're in an mpi context then the __new__ method is replaced so that on the master process,
@@ -133,7 +133,10 @@ def distribute(scatterargs):
             @functools.wraps(klass)            
             def new(klass, *args, **kwargs):
                 id = uuid.uuid4()
-                scatteredargs = [((klass, id) + s[0], s[1]) for s in scatterargs(mpi.world.size-1)(*args, **kwargs)]
+                if scatterargs is None:
+                    scatteredargs = [((klass, id) + args,kwargs)]*(mpi.world.size-1)
+                else:
+                    scatteredargs = [((klass, id) + s[0], s[1]) for s in scatterargs(mpi.world.size-1)(*args, **kwargs)]
                 scatterfncall(ppp.createproxy, scatteredargs)
                 proxy = ppp.Proxy(klass, id)
                 for name, m in inspect.getmembers(klass, inspect.ismethod):
@@ -156,13 +159,30 @@ def distribute(scatterargs):
 
 parallelmethods = {}
 
-def parallelmethod(scatterargs, reduceop):
+def parallelmethod(scatterargs = None, reduceop = operator.add):
     """ Decorator that marks an instance method for parallelisation"""
     def registermethod(fn): 
         if mpi.world.size > 1 and mpi.world.rank ==0:
             parallelmethods[fn] = (scatterargs, reduceop)
         return fn           
     return registermethod
+
+def immutable(klass):
+    """ Marking a klass as immutable allows us to serialise it a lot more efficiently 
+    
+        On instantiation, a copy of the object is placed in each process and wrapped by a Proxy   
+    """
+    
+    if mpi.world.size>1 and mpi.world.rank == 0:      
+        @functools.wraps(klass)            
+        def new(klass, *arg, **kw):
+            obj = object.__new__(klass)
+            obj.__init__(*arg, **kw)
+            id = uuid.uuid4()
+            scatterfncall(ppp.registerproxy, [((id, obj),{})] * (mpi.world.size-1))
+            return ppp.Proxy(klass, id, obj) 
+        klass.__new__ = staticmethod(new)
+    return klass
 
         
 def partitionlist(numparts, l):
