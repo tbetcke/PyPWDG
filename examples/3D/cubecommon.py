@@ -9,7 +9,7 @@ import math
 k = 3
 
 def g(x):
-    return PlaneWaves(numpy.array([[1,0]])/math.sqrt(1), k).values(x)
+    return PlaneWaves(numpy.array([[1,0,0]])/math.sqrt(1), k).values(x)
 
 
 import pypwdg.parallel.main
