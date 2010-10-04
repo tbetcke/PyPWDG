@@ -8,6 +8,9 @@ import numpy
 import math
 k = 40
 
+# This has to be before pypwdg.parallel.main because we're serialising it to the workers.
+# If it occurs later, the workers can't deserialise it.  It's a bit hacky, but I expect
+# that we'll be moving this out of here soon anyway when we do the general start scripts.
 def g(x):
     return PlaneWaves(numpy.array([[1,0]])/math.sqrt(1), k).values(x)
 
