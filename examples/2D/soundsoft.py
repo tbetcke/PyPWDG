@@ -6,7 +6,7 @@ Created on Aug 30, 2010
 from pypwdg.core.bases import circleDirections, PlaneWaves
 import numpy
 import math
-k = 40
+k = 80 
 
 # This has to be before pypwdg.parallel.main because we're serialising it to the workers.
 # If it occurs later, the workers can't deserialise it.  It's a bit hacky, but I expect
@@ -42,7 +42,7 @@ boundaryentities = [10,11]
 #SM = StructureMatrices(mesh, boundaryentities)
 
 Nq = 20
-Np = 20
+Np = 60
 dirs = circleDirections(Np)
 elttobasis = [[PlaneWaves(dirs, k)]] * mesh.nelements
 
@@ -55,7 +55,20 @@ S, f = assemble(mesh, k, legendrequadrature(Nq), elttobasis, bnddata, params)
 
 print "Solving system"
 
-X = print_timing(spsolve)(S.tocsr(), f.tocsr())
+
+from pymklpardiso.linsolve import solve
+
+S=S.tocsr()
+f=numpy.array(f.todense())
+f=f.squeeze()
+(X,error)=solve(S,f)
+
+
+#S=S.tocsr()
+#f=f.tocsr()
+#X = print_timing(spsolve)(S, f)
+
+print "Residual: %e: " % numpy.linalg.norm(S*X-f) 
 
 #print X
 
