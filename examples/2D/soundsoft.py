@@ -27,6 +27,8 @@ from pypwdg.core.evaluation import Evaluator, EvalElementError
 #from pypwdg.mesh.structure import StructureMatrices
 from pypwdg.output.vtk_output import VTKStructuredPoints
 from pypwdg.output.vtk_output import VTKGrid
+from pypwdg.mesh.meshutils import MeshQuadratures
+from pypwdg.core.vandermonde import LocalVandermondes
 
 
 mesh_dict=gmsh_reader('../../examples/2D/squarescatt.msh')
@@ -40,7 +42,7 @@ boundaryentities = [10,11]
 #SM = StructureMatrices(mesh, boundaryentities)
 
 Nq = 20
-Np = 20
+Np = 15
 dirs = circleDirections(Np)
 elttobasis = [[PlaneWaves(dirs, k)]] * mesh.nelements
 
@@ -49,8 +51,18 @@ params={'alpha':.5, 'beta':.5,'delta':.5}
 bnddata={11:dirichlet(g), 
          10:zero_impedance(k)}
 
+
 quad=legendrequadrature(Nq)
-S, f, vandermondes, bndv = assemble(mesh, k, quad, elttobasis, bnddata, params)
+mqs = MeshQuadratures(mesh, quad)
+lv = LocalVandermondes(mesh, elttobasis, mqs, usecache=True)
+bndvs=[]
+for data in bnddata.values():
+    bndv = LocalVandermondes(mesh, [[data]] * mesh.nelements, mqs)        
+    bndvs.append(bndv)
+
+
+quad=legendrequadrature(Nq)
+S, f = assemble(mesh, k, lv, bndvs, mqs, elttobasis, bnddata, params)
 
 print "Solving system"
 
@@ -72,7 +84,7 @@ print "Residual: %e: " % numpy.linalg.norm(S*X-f)
 #print X
 
 
-EvalError=EvalElementError(mesh,elttobasis,quad, bnddata, vandermondes, bndv)
+EvalError=EvalElementError(mesh,elttobasis,quad, bnddata, lv, bndvs)
 (ed,en,eb)=EvalError.evaluate(X)
 print numpy.linalg.norm(ed),numpy.linalg.norm(en),numpy.linalg.norm(eb)
 

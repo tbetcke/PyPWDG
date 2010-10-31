@@ -15,9 +15,9 @@ import numpy
 
 @parallel(None, reduceop=tuplesum)
 @print_timing
-def assemble(mesh, k, quadrule, elttobasis, bnddata, params):
+def assemble(mesh, k, lv, bndvs, mqs, elttobasis, bnddata, params):
         
-    stiffassembly,loadassemblies,vandermondes, bndvs=init_assembly(mesh,quadrule,elttobasis,bnddata,usecache=True)
+    stiffassembly,loadassemblies=init_assembly(mesh,lv, bndvs, mqs,elttobasis,bnddata)
     
     S=assemble_int_faces(mesh, k, stiffassembly, params)
     f=0
@@ -26,22 +26,17 @@ def assemble(mesh, k, quadrule, elttobasis, bnddata, params):
         (Sb,fb)=assemble_bnd(mesh, k, id, bdycondition, stiffassembly, loadassembly, params)
         S=S+Sb
         f=f+fb
-    return S, f, vandermondes, bndvs
+    return S, f
 
-def init_assembly(mesh,localquads,elttobasis,bnddata,usecache=True):
+def init_assembly(mesh,lv,bndvs, mqs,elttobasis,bnddata):
 
-    mqs = MeshQuadratures(mesh, localquads)
-    lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)
     stiffassembly = Assembly(lv, lv, mqs.quadweights) 
     
     loadassemblies = []
-    bndvs=[]
-    for data in bnddata.values():
-        bndv = LocalVandermondes(mesh, [[data]] * mesh.nelements, mqs.quadpoints)        
+    for bndv in bndvs:
         loadassemblies.append(Assembly(lv, bndv, mqs.quadweights))
-        bndvs.append(bndv)
 
-    return (stiffassembly,loadassemblies,lv,bndvs)
+    return (stiffassembly,loadassemblies)
 
 def assemble_int_faces(mesh, k, stiffassembly, params):
     "Assemble the stiffness matrix for the interior faces"
