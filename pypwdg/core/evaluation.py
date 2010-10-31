@@ -41,6 +41,10 @@ class Evaluator(object):
 
 @distribute()
 class EvalElementError(object):
+    """Object to evaluate the jump of the Dirichlet and Neumann data on the internal interfaces 
+       and the boundary error
+    """
+       
     def __init__(self,mesh,elttobasis, localquads, bnddata,vandermondes, bndvs):
         self.mesh=mesh
         self.v=vandermondes            
@@ -54,6 +58,10 @@ class EvalElementError(object):
         
     @parallelmethod(reduceop=tuplesum)
     def evaluate(self, x):
+        """Returns a triple (ed,en,eb), where ed is the jump of the Dirichlet data in the interior,
+           en the jump of the Neumann data, and eb the error on the boundary
+        """
+        
         elem_error_dirichlet=numpy.zeros(self.mesh.nelements)
         elem_error_neumann=numpy.zeros(self.mesh.nelements)
         

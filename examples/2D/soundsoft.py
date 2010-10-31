@@ -88,7 +88,7 @@ EvalError=EvalElementError(mesh,elttobasis,quad, bnddata, lv, bndvs)
 (ed,en,eb)=EvalError.evaluate(X)
 print numpy.linalg.norm(ed),numpy.linalg.norm(en),numpy.linalg.norm(eb)
 
-vtkgrid=VTKGrid(mesh,scalars=en)
+vtkgrid=VTKGrid(mesh,scalars=ed)
 vtkgrid.write('soundsoft.vtu')
 
 
