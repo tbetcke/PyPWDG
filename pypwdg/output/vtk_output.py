@@ -50,7 +50,7 @@ class VTKStructuredPoints(object):
 class VTKGrid(object):
     """Store Mesh in a VTK DataType"""
     
-    def __init__(self, mesh):
+    def __init__(self, mesh,scalars=None):
         self.__points = vtk.vtkPoints()
         self.__elems = []
         self.__grid = vtk.vtkUnstructuredGrid()
@@ -89,13 +89,12 @@ class VTKGrid(object):
         for elem in self.__elems:
             self.__grid.InsertNextCell(elem.GetCellType(), elem.GetPointIds())
             
-#        if mesh.elempartitions is not None:
-#            pdata=self.__grid.GetCellData()
-#            data=vtk.vtkDoubleArray()
-#            data.SetNumberOfValues(nelems)
-#            elemp=mesh.elempartitions
-#            for i,p in enumerate(elemp): data.SetValue(i,p)
-#            pdata.SetScalars(data)
+        if scalars is not None:
+            pdata=self.__grid.GetCellData()
+            data=vtk.vtkDoubleArray()
+            data.SetNumberOfValues(nelems)
+            for i,p in enumerate(scalars): data.SetValue(i,p)
+            pdata.SetScalars(data)
                           
            
            

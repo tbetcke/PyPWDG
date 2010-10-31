@@ -6,7 +6,7 @@ Created on Aug 30, 2010
 from pypwdg.core.bases import circleDirections, PlaneWaves
 import numpy
 import math
-k = 80 
+k = 10
 
 # This has to be before pypwdg.parallel.main because we're serialising it to the workers.
 # If it occurs later, the workers can't deserialise it.  It's a bit hacky, but I expect
@@ -23,7 +23,7 @@ from pypwdg.core.physics import assemble
 from pypwdg.core.boundary_data import zero_impedance, dirichlet
 from pypwdg.utils.quadrature import legendrequadrature
 from pypwdg.utils.timing import print_timing
-from pypwdg.core.evaluation import Evaluator
+from pypwdg.core.evaluation import Evaluator, EvalElementError
 #from pypwdg.mesh.structure import StructureMatrices
 from pypwdg.output.vtk_output import VTKStructuredPoints
 from pypwdg.output.vtk_output import VTKGrid
@@ -34,15 +34,13 @@ mesh=gmshMesh(mesh_dict,dim=2)
 
 #mesh.partition(4)
 #print cubemesh.nodes
-vtkgrid=VTKGrid(mesh)
-vtkgrid.write('soundsoft.vtu')
     
 
 boundaryentities = [10,11]
 #SM = StructureMatrices(mesh, boundaryentities)
 
 Nq = 20
-Np = 60
+Np = 20
 dirs = circleDirections(Np)
 elttobasis = [[PlaneWaves(dirs, k)]] * mesh.nelements
 
@@ -51,7 +49,8 @@ params={'alpha':.5, 'beta':.5,'delta':.5}
 bnddata={11:dirichlet(g), 
          10:zero_impedance(k)}
 
-S, f = assemble(mesh, k, legendrequadrature(Nq), elttobasis, bnddata, params)
+quad=legendrequadrature(Nq)
+S, f, vandermondes, bndv = assemble(mesh, k, quad, elttobasis, bnddata, params)
 
 print "Solving system"
 
@@ -71,6 +70,15 @@ f=f.squeeze()
 print "Residual: %e: " % numpy.linalg.norm(S*X-f) 
 
 #print X
+
+
+EvalError=EvalElementError(mesh,elttobasis,quad, bnddata, vandermondes, bndv)
+(ed,en,eb)=EvalError.evaluate(X)
+print numpy.linalg.norm(ed),numpy.linalg.norm(en),numpy.linalg.norm(eb)
+
+vtkgrid=VTKGrid(mesh,scalars=en)
+vtkgrid.write('soundsoft.vtu')
+
 
 print "Evaluating solution"
 
