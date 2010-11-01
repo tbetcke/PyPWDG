@@ -42,7 +42,7 @@ boundaryentities = [10,11]
 #SM = StructureMatrices(mesh, boundaryentities)
 
 Nq = 20
-Np = 20
+Np = 60
 dirs = circleDirections(Np)
 elttobasis = [[PlaneWaves(dirs, k)]] * mesh.nelements
 
