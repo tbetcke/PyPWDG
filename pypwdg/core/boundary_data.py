@@ -44,10 +44,10 @@ class generic_boundary_data(object):
         self.n = 1
         
     def values(self,x,n=None):
-        return numpy.zeros(x.shape[0]) if self.__g is None else self.__g(x)
+        return numpy.zeros((x.shape[0],1)) if self.__g is None else self.__g(x)
     
     def derivs(self,x,n):
-        return numpy.zeros(x.shape[0]) if self.__dg is None else self.__dg(x,n)
+        return numpy.zeros((x.shape[0],1)) if self.__dg is None else self.__dg(x,n)
             
 #    g=property(lambda self: lambda x: numpy.zeros(x.shape[0]) if self.__g is None else self.__g)
 #    dg=property(lambda self: lambda x,n: numpy.zeros(x.shape[0]) if self.__dg is None else self.__dg)
@@ -97,7 +97,14 @@ class dirichlet(generic_boundary_data):
     def __init__(self,g):
         super(dirichlet,self).__init__([1,0],[1,0],g)
         
+class neumann(generic_boundary_data):
+    """ Neumann boundary conditions u_n=g
 
+        bnd_data=neumann(g)
+        
+    """
+    def __init__(self,g):
+        super(neumann,self).__init__([0,1],[0,1],g)
         
         
     

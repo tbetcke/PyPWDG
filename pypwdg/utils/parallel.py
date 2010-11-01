@@ -14,11 +14,9 @@ class MPIStructure(object):
     
     def __init__(self, mesh):
         facepartitions=None
-        print mpi.rank
         if mpi.rank==0:
             mesh.partition(mpi.size)
             facepartitions=mesh.facepartitions
-            print map(len, facepartitions)
             #partitions = [(p * mesh.nfaces) / mpi.size for p in range(0,mpi.size+1)]
             #facepartitions = [range(p0,p1) for p0,p1 in zip(partitions[:-1], partitions[1:])]
         self.facepartition = mpi.scatter(comm=mpi.world, values=facepartitions, root=0)

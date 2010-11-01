@@ -41,8 +41,6 @@ def init_assembly(mesh,lv,bndvs, mqs,elttobasis,bnddata):
 def assemble_int_faces(mesh, k, stiffassembly, params):
     "Assemble the stiffness matrix for the interior faces"
 
-    print "Mesh has %s elements"%mesh.nelements
-    print "k = %s"%k
     #print "%s basis functions"%sum([b.n for bs in elttobasis for b in bs ])
     #print "%s quadrature points"%len(localquads[1])
     

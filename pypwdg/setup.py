@@ -136,7 +136,7 @@ class computation(object):
         
         if self.x is None: self.solve()
         
-        "Print Evaluate Solution and Write to File"
+        print "Evaluate Solution and Write to File"
         
         bounds=numpy.array(bounds,dtype='d')
         if realdata:

@@ -144,7 +144,6 @@ class MeshPart(object):
     """ The Partition-specific data for a mesh"""
     def __init__(self, mesh, eltpartition=None):
         if eltpartition == None: eltpartition = mesh.partitions(1)[0]
-        print eltpartition
         self.mesh = mesh
         self.es = eltpartition
         self.fs = mesh.etof[eltpartition].ravel()

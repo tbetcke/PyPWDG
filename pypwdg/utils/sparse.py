@@ -216,7 +216,6 @@ class vbsr_matrix(object):
         asizes[np.array(map(len, sizes)) > 0] = maxsizes
         return asizes 
 
-#    @print_timing    
     def __mul__(self, other):
         """ Multiply this variable block sparse matrix by a sparse matrix at the structure level
         
