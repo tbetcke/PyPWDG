@@ -7,7 +7,6 @@ from pypwdg.mesh.meshutils import MeshQuadratures
 from pypwdg.core.vandermonde import LocalVandermondes
 from pypwdg.utils.timing import print_timing
 from pypwdg.core.assembly import Assembly
-from pypwdg.core.bases import EmptyBasis
 import pypwdg.mesh.structure as pms
 
 from pypwdg.parallel.decorate import parallel, tuplesum
@@ -16,9 +15,9 @@ import numpy
 
 @parallel(None, reduceop=tuplesum)
 @print_timing
-def assemble(mesh, k, quadrule, elttobasis, bnddata, params):
+def assemble(mesh, k, lv, bndvs, mqs, elttobasis, bnddata, params):
         
-    stiffassembly,loadassemblies=init_assembly(mesh,quadrule,elttobasis,bnddata,usecache=True)
+    stiffassembly,loadassemblies=init_assembly(mesh,lv, bndvs, mqs,elttobasis,bnddata)
     
     S=assemble_int_faces(mesh, k, stiffassembly, params)
     f=0
@@ -29,15 +28,12 @@ def assemble(mesh, k, quadrule, elttobasis, bnddata, params):
         f=f+fb
     return S, f
 
-def init_assembly(mesh,localquads,elttobasis,bnddata,usecache=True):
+def init_assembly(mesh,lv,bndvs, mqs,elttobasis,bnddata):
 
-    mqs = MeshQuadratures(mesh, localquads)
-    lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)
     stiffassembly = Assembly(lv, lv, mqs.quadweights) 
     
     loadassemblies = []
-    for data in bnddata.values():
-        bndv = LocalVandermondes(mesh, [[data]] * mesh.nelements, mqs.quadpoints)        
+    for bndv in bndvs:
         loadassemblies.append(Assembly(lv, bndv, mqs.quadweights))
 
     return (stiffassembly,loadassemblies)
@@ -83,8 +79,8 @@ def assemble_bnd(mesh, k, id, bnd_condition, stiffassembly, loadassembly, params
         
 
     # todo - check the cross terms.  Works okay with delta = 1/2.  
-    GB = loadassembly.assemble(numpy.array([[-(1-delta) *r_coeffs[0]* B,  -(1-delta) * r_coeffs[1]*B], 
-                                            [delta*r_coeffs[0]* B,          delta * r_coeffs[1]*B]]))
+    GB = loadassembly.assemble(numpy.array([[(1-delta) *r_coeffs[0]* B,  (1-delta) * r_coeffs[1]*B], 
+                                            [-delta*r_coeffs[0]* B,          -delta * r_coeffs[1]*B]]))
         
     S = pms.sumfaces(mesh,SB)     
     G = pms.sumrhs(mesh,GB)

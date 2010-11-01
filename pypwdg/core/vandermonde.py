@@ -5,7 +5,9 @@ Created on Jul 14, 2010
 '''
 
 import numpy
+from pypwdg.parallel.decorate import distribute, parallelmethod, immutable
 
+@distribute()
 class LocalVandermondes(object):
     """ Calculate Vandermonde matrices for each face in a mesh.
             
@@ -16,17 +18,17 @@ class LocalVandermondes(object):
             numbases: list of the number of basis functions on each face
     """
     
-    def __init__(self, mesh, elttobasis, quadpoints, usecache=True):
+    def __init__(self, mesh, elttobasis, quadrule, usecache=True):
         """ Initialise the Vandermondes (nothing serious is calculated yet)
         
         mesh: the mesh.
         elttobasis: a list of lists of Basis objects (see .core.bases.PlaneWaves).  Order should correspond to 
-        quadpoints: callable that returns quadrature points for each face
+        quadrule: Object containing a quadrature rule
         usecache: cache vandermondes (disable to save memory)
         """
         self.__mesh = mesh
         self.__elttobasis = elttobasis
-        self.__quadpoints = quadpoints
+        self.__quadpoints = quadrule.quadpoints
         self.__cache = {} if usecache else None 
         self.__numbases = [sum([b.n for b in elttobasis[e]]) for e in mesh.ftoe]     
         
@@ -44,7 +46,6 @@ class LocalVandermondes(object):
             if self.__cache is not None: self.__cache[faceid] = vandermondes 
             
         return vandermondes
-        
     def getValues(self, faceid):
         return self.getVandermondes(faceid)[0]
     

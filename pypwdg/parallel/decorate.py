@@ -63,10 +63,11 @@ def scatterfncall(fn, args, reduceop=None):
         reduceop: reduction operator to apply to results (can be None)        
     """
     mpi.broadcast(mpi.world, root=0)
-    print fn
+    
     tasks = [None] # task 0 goes to this process, which we want to remain idle.       
     # generate the arguments for the scattered functions     
-    r = Reducer(reduceop)    
+    r = Reducer(reduceop)
+    
     for a in args:
         tasks.append((fn, a[0], a[1], r))
     mpi.scatter(comm=mpi.world, values = tasks, root=0)
@@ -137,6 +138,7 @@ def distribute(scatterargs=None):
                     scatteredargs = [((klass, id) + args,kwargs)]*(mpi.world.size-1)
                 else:
                     scatteredargs = [((klass, id) + s[0], s[1]) for s in scatterargs(mpi.world.size-1)(*args, **kwargs)]
+
                 scatterfncall(ppp.createproxy, scatteredargs)
                 proxy = ppp.Proxy(klass, id)
                 for name, m in inspect.getmembers(klass, inspect.ismethod):

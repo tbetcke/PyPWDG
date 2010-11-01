@@ -55,8 +55,6 @@ class Mesh(object):
             nfaces        - Number of faces = len(self.faces). Faces are counted twice if they are between two elements
             nnodes        - Number of nodes
             nodes         - List of nodes
-            facemap       - face1 is adjacent face2 if self.facemap[face1]=face2. If self.facemap[face1]==face1 the
-                            face is on the boundary. face1,face2 are indices into the self.faces list
             intfaces      - List of indices of faces in the interior
             bndfaces      - List of indices of faces on the boundary
             boundaries    - a sequence of tuples, each of the form (id, nodes), identifying the physical objects in the mesh
