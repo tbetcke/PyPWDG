@@ -9,8 +9,9 @@ import numpy.ma as ma
 import pymeshpart.mesh
 import scipy.sparse as ss
 import pypwdg.parallel.decorate as ppd
+from pypwdg.mesh.gmsh_reader import gmsh_reader
 
-def gmshMesh(gmsh_dict, dim):
+def gmshMesh(fname, dim):
     ''' Construct a Mesh from a gmsh dictionary '''
     
     if dim==2:
@@ -19,6 +20,8 @@ def gmshMesh(gmsh_dict, dim):
     elif dim==3:
         gmsh_elem_key=4 # Key for tetrahedal element in Gmsh
         gmsh_face_key=2 # Key for triangle element in Gmsh
+    
+    gmsh_dict=gmsh_reader(fname)
     
     # Pick out the coordinates of the vertices that we actually need
     nodes = gmsh_dict['nodes'][:,0:dim]
