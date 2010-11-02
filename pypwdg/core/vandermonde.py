@@ -95,7 +95,7 @@ class LocalInnerProducts(object):
         # It should be the case that weights(i) = weights(j), otherwise the
         # inner product makes no sense.
         p = self.__cache.get((i,j))
-        if p == None:
+        if p is None:
             p = numpy.dot(numpy.multiply(self.__vleft(i).conj().transpose(),self.__weights(i).flatten()), self.__vright(j))    
             self.__cache[(i,j)] = p
         

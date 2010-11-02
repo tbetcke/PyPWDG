@@ -7,18 +7,25 @@ Created on Sep 12, 2010
 @author: joel
 '''
 
-try:
-    import boostmpi as mpi
-except:    
-    import boost.mpi as mpi
 
+mpiloaded = False
+try:
+    import boostmpi as mpi    
+    mpiloaded = mpi.world.size > 1
+except ImportError:    
+    try:
+        import boost.mpi as mpi
+        mpiloaded = mpi.world.size > 1
+    except:
+        pass
+    
 import os
 import atexit
 import sys
 import time
 import multiprocessing
 
-if mpi.world.size > 1:
+if mpiloaded:
     # mpi things are happening.
     if mpi.world.rank == 0:
         # when the boss goes home, the workers should too 

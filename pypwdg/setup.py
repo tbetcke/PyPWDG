@@ -121,15 +121,23 @@ class computation(object):
         self.assembledmatrix=self.assembledmatrix.tocsr()
         self.rhs=numpy.array(self.rhs.todense()).squeeze()
         
-        if solver=="pardiso":
-            from pymklpardiso.linsolve import solve
-            (self.x,error)=solve(self.assembledmatrix,self.rhs)
-            if not error==0: raise Exception("Pardiso Error")
-        elif solver=="umfpack":
+        usepardiso = solver=="pardiso"
+        useumfpack = solver=="umfpack"
+        
+        if not (usepardiso or useumfpack): raise Exception("Solver not known")
+        
+        if usepardiso:
+            try:            
+                from pymklpardiso.linsolve import solve
+                (self.x,error)=solve(self.assembledmatrix,self.rhs)
+                if not error==0: raise Exception("Pardiso Error")
+            except ImportError:
+                useumfpack = True
+                
+        if useumfpack:
             from scipy.sparse.linalg.dsolve.linsolve import spsolve as solve
             self.x=solve(self.assembledmatrix,self.rhs)
-        else:
-            raise Exception("Solver not known")
+        
         
         
     def writeSolution(self,bounds,npoints,realdata=True,fname='solution.vti'):

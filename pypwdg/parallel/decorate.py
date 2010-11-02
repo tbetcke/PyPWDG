@@ -4,11 +4,17 @@ Created on Sep 12, 2010
 @author: joel
 '''
 
+mpiloaded = False
 try:
-    import boostmpi as mpi
-except:    
-    import boost.mpi as mpi
-
+    import boostmpi as mpi    
+    mpiloaded = mpi.world.size > 1
+except ImportError:    
+    try:
+        import boost.mpi as mpi
+        mpiloaded = mpi.world.size > 1
+    except:
+        pass
+    
 import functools
 import pypwdg.parallel.proxy as ppp
 import uuid
@@ -94,7 +100,7 @@ def parallel(scatterargs, reduceop = operator.add):
     
     def buildparallelwrapper(fn):
         # Check that there's mpi happening and that we're not already in a worker process 
-        if mpi.world.size>1 and mpi.world.rank == 0:
+        if mpiloaded and mpi.world.rank == 0:
             @functools.wraps(fn)
             def parallelwrapper(*arg, **kw):
                 if scatterargs is None:
@@ -130,7 +136,7 @@ def distribute(scatterargs=None):
     def proxifynew(klass): 
         
         # Check that there's mpi happening and that we're not already in a worker process 
-        if mpi.world.size>1 and mpi.world.rank == 0:      
+        if mpiloaded and mpi.world.rank == 0:      
             @functools.wraps(klass)            
             def new(klass, *args, **kwargs):
                 id = uuid.uuid4()
@@ -164,7 +170,7 @@ parallelmethods = {}
 def parallelmethod(scatterargs = None, reduceop = operator.add):
     """ Decorator that marks an instance method for parallelisation"""
     def registermethod(fn): 
-        if mpi.world.size > 1 and mpi.world.rank ==0:
+        if mpiloaded and mpi.world.rank ==0:
             parallelmethods[fn] = (scatterargs, reduceop)
         return fn           
     return registermethod
@@ -175,7 +181,7 @@ def immutable(klass):
         On instantiation, a copy of the object is placed in each process and wrapped by a Proxy   
     """
     
-    if mpi.world.size>1 and mpi.world.rank == 0:      
+    if mpiloaded and mpi.world.rank == 0:      
         @functools.wraps(klass)            
         def new(klass, *arg, **kw):
             obj = object.__new__(klass)
