@@ -17,7 +17,7 @@ class VTKStructuredPoints(object):
     def create_vtk_structured_points(self, bounds, npoints):
         origin = bounds[:, 0]
         spacing = (bounds[:, 1] - bounds[:, 0]) * 1.0 / (npoints-1)
-                      
+        spacing[numpy.isnan(spacing)] = 0
         data = vtk.vtkImageData()
         data.SetDimensions(npoints[0], npoints[1], npoints[2])
         data.SetSpacing(spacing[0], spacing[1], spacing[2])
