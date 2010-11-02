@@ -3,6 +3,8 @@ Created on Sep 9, 2010
 
 @author: joel
 '''
+import pypwdg.parallel.main
+
 from scipy.sparse.linalg.dsolve.linsolve import spsolve 
 from pypwdg.mesh.gmsh_reader import gmsh_reader
 from pypwdg.mesh.mesh import Mesh
@@ -42,7 +44,7 @@ dirs = circleDirections(Np)
 #fb = FourierBessel(numpy.zeros(2), numpy.arange(0,1), k)
 elttobasis = [[FourierBessel(c, numpy.arange(-Nfb,Nfb+1), k), PlaneWaves(dirs, k)] for c in eltcentres]
 
-#g = PlaneWaves(numpy.array([[3.0/5,4.0/5]]), k)
+g = PlaneWaves(numpy.array([[3.0/5,4.0/5]]), k)
 #g = FourierBessel(numpy.array([-2,-1]), numpy.array([3]),k)
 #g = FourierHankel(numpy.array([-0.5,-0.2]), numpy.array([0]),k)
 

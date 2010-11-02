@@ -51,9 +51,12 @@ class PlaneWaves(object):
         The return value is a m x self.n array
         """
         return 1j*self.__k*numpy.multiply(numpy.dot(n, self.directions), self.values(x,n))
+<<<<<<< HEAD
     
     def __str__(self):
         return "PW "+ str(self.directions)
+=======
+>>>>>>> master
     
     """ the number of functions """
     n=property(lambda self: self.directions.shape[1])
@@ -93,19 +96,36 @@ class FourierHankelBessel(object):
     
     n=property(lambda self: self.__orders.shape[1])
 
+class EmptyBasis(object):
+    
+    def __init__(self,n):
+        """Create an empty placeholder basis that returns size n"""
+        
+        self.__n=n
+        
+    n=property(lambda self: self.__n)
+ 
+
 class FourierBessel(FourierHankelBessel):
     
     def __init__(self, origin, orders, k):
         FourierHankelBessel.__init__(self, origin, orders, k)
-        self.rfn = ss.jn
-        self.rfnd = ss.jvp
+
+    def rfn(self, n, x):
+        return ss.jn(n,x)
+    def rfnd(self, n, x, d):
+        return ss.jvp(n,x,d)
         
 class FourierHankel(FourierHankelBessel):
     
     def __init__(self, origin, orders, k):
         FourierHankelBessel.__init__(self, origin, orders, k)
-        self.rfn = ss.hankel1
-        self.rfnd = ss.h1vp
+        
+    def rfn(self, n, x):
+        return ss.hankel1(n,x)
+    def rfnd(self, n, x, d):
+        return ss.h1vp(n,x,d)        
+
 
 class BasisReduce(object):
     """ Reduce a basis object to return just one function """

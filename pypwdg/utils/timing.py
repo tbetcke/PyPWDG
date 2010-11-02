@@ -4,9 +4,11 @@ Created on Aug 6, 2010
 @author: joel
 '''
 import time
+import functools
 
 def print_timing(func):
     """ timing utility function.  Use @print_timing """
+    @functools.wraps(func)
     def wrapper(*arg, **kwds):
         t1 = time.time()
         res = func(*arg, **kwds)

@@ -52,7 +52,7 @@ class Assembly(object):
         self.numleft = lv.numbases
         self.numright = rv.numbases
     
-    @print_timing    
+#    @print_timing    
     def assemble(self, structures):
         """ Given a 2x2 array of structure matrices, return an assembled variable block sparse matrix
         

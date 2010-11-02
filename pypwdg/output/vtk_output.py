@@ -50,7 +50,7 @@ class VTKStructuredPoints(object):
 class VTKGrid(object):
     """Store Mesh in a VTK DataType"""
     
-    def __init__(self, mesh):
+    def __init__(self, mesh,scalars=None):
         self.__points = vtk.vtkPoints()
         self.__elems = []
         self.__grid = vtk.vtkUnstructuredGrid()
@@ -67,18 +67,18 @@ class VTKGrid(object):
             def create_cell(elem):
                 triangle = vtk.vtkTriangle()
                 ids = triangle.GetPointIds()
-                ids.SetId(0, elem['nodes'][0])
-                ids.SetId(1, elem['nodes'][1])
-                ids.SetId(2, elem['nodes'][2])
+                ids.SetId(0, elem[0])
+                ids.SetId(1, elem[1])
+                ids.SetId(2, elem[2])
                 return triangle
         else:
             def create_cell(elem):
                 tetra = vtk.vtkTetra()
                 ids = tetra.GetPointIds()
-                ids.SetId(0, elem['nodes'][0])
-                ids.SetId(1, elem['nodes'][1])
-                ids.SetId(2, elem['nodes'][2])
-                ids.SetId(3, elem['nodes'][3])
+                ids.SetId(0, elem[0])
+                ids.SetId(1, elem[1])
+                ids.SetId(2, elem[2])
+                ids.SetId(3, elem[3])
                 return tetra
             
         elements = mesh.elements
@@ -89,12 +89,11 @@ class VTKGrid(object):
         for elem in self.__elems:
             self.__grid.InsertNextCell(elem.GetCellType(), elem.GetPointIds())
             
-        if mesh.elempartitions is not None:
+        if scalars is not None:
             pdata=self.__grid.GetCellData()
             data=vtk.vtkDoubleArray()
             data.SetNumberOfValues(nelems)
-            elemp=mesh.elempartitions
-            for i,p in enumerate(elemp): data.SetValue(i,p)
+            for i,p in enumerate(scalars): data.SetValue(i,p)
             pdata.SetScalars(data)
                           
            

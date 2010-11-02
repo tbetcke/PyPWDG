@@ -5,7 +5,9 @@ Created on Jul 14, 2010
 '''
 
 import numpy
+from pypwdg.parallel.decorate import distribute, parallelmethod, immutable
 
+@distribute()
 class LocalVandermondes(object):
     """ Calculate Vandermonde matrices for each face in a mesh.
             
@@ -16,35 +18,34 @@ class LocalVandermondes(object):
             numbases: list of the number of basis functions on each face
     """
     
-    def __init__(self, mesh, elttobasis, quadpoints, usecache=True):
+    def __init__(self, mesh, elttobasis, quadrule, usecache=True):
         """ Initialise the Vandermondes (nothing serious is calculated yet)
         
         mesh: the mesh.
         elttobasis: a list of lists of Basis objects (see .core.bases.PlaneWaves).  Order should correspond to 
-        quadpoints: callable that returns quadrature points for each face
+        quadrule: Object containing a quadrature rule
         usecache: cache vandermondes (disable to save memory)
         """
         self.__mesh = mesh
         self.__elttobasis = elttobasis
-        self.__quadpoints = quadpoints
-        self.__cache = [None] * mesh.nfaces if usecache else None 
-        self.__numbases = [sum([b.n for b in elttobasis[face[0]]]) for face in mesh.faces]     
+        self.__quadpoints = quadrule.quadpoints
+        self.__cache = {} if usecache else None 
+        self.__numbases = [sum([b.n for b in elttobasis[e]]) for e in mesh.ftoe]     
         
     def getVandermondes(self, faceid):
         """ Returns a tuple of (values, derivatives, weights) for functions on the face indexed by faceid """
          
-        vandermondes = None if self.__cache is None else self.__cache[faceid] 
+        vandermondes = None if self.__cache is None else self.__cache.get(faceid) 
         if vandermondes==None:       
-            face = self.__mesh.faces[faceid]
+            e = self.__mesh.ftoe[faceid]
             normal = self.__mesh.normals[faceid]
             points = self.__quadpoints(faceid)
-            vals = numpy.hstack([b.values(points, normal) for b in self.__elttobasis[face[0]]])
-            derivs = numpy.hstack([b.derivs(points, normal) for b in self.__elttobasis[face[0]]])
+            vals = numpy.hstack([b.values(points, normal) for b in self.__elttobasis[e]])
+            derivs = numpy.hstack([b.derivs(points, normal) for b in self.__elttobasis[e]])
             vandermondes = (vals,derivs)
             if self.__cache is not None: self.__cache[faceid] = vandermondes 
             
         return vandermondes
-        
     def getValues(self, faceid):
         return self.getVandermondes(faceid)[0]
     
@@ -52,7 +53,7 @@ class LocalVandermondes(object):
         return self.getVandermondes(faceid)[1]
 
     def getCachesize(self):
-        return 0 if self.__cache is None else len(self.__cache) - self.__cache.count(None)
+        return 0 if self.__cache is None else len(self.__cache)
         
     numbases = property(lambda self: self.__numbases)
 
@@ -94,7 +95,7 @@ class LocalInnerProducts(object):
         # It should be the case that weights(i) = weights(j), otherwise the
         # inner product makes no sense.
         p = self.__cache.get((i,j))
-        if p == None:
+        if p is None:
             p = numpy.dot(numpy.multiply(self.__vleft(i).conj().transpose(),self.__weights(i).flatten()), self.__vright(j))    
             self.__cache[(i,j)] = p
         
