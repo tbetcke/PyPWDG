@@ -51,10 +51,5 @@ def elementcentres(mesh):
     for fs in mesh.etof: print mesh.directions[fs[0]] 
     
     # pick the first face associated with each element
-<<<<<<< HEAD
     return [np.dot(x,mesh.directions[fs[0]]) for fs in mesh.etof]  
-=======
-    for fs in mesh.etof: yield np.dot(x,mesh.directions[fs[0]])  
 
-
->>>>>>> master

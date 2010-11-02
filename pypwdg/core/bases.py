@@ -51,12 +51,9 @@ class PlaneWaves(object):
         The return value is a m x self.n array
         """
         return 1j*self.__k*numpy.multiply(numpy.dot(n, self.directions), self.values(x,n))
-<<<<<<< HEAD
     
     def __str__(self):
         return "PW "+ str(self.directions)
-=======
->>>>>>> master
     
     """ the number of functions """
     n=property(lambda self: self.directions.shape[1])
