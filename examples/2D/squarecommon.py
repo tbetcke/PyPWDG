@@ -7,13 +7,7 @@ k = 15
 direction=array([[1.0,1.0]])/sqrt(2)
 def g(x):
     return PlaneWaves(direction, k).values(x)
-def gn(x,n):
-    return PlaneWaves(direction, k).derivs(x,n)
 
-impbd = generic_boundary_data([-1j*k,1],[-1j*k,1],g=g,dg=gn)
-
-#bnddata={7:impd), 
-#         8:impd)}
 bnddata={7:dirichlet(g), 
          8:dirichlet(g)}
 

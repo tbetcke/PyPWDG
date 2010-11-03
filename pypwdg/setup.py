@@ -38,15 +38,14 @@ def setup(mesh,k,nquadpoints,nplanewaves,bnddata):
        comp=setup(gmshMesh('myMesh.msh',dim=2),k=5,nquadpoints=10, nplanewaves=3,bnddata={5: dirichlet(g), 6:zero_impedance(k)})
     """
     
-    return computation(mesh,k,nquadpoints,nplanewaves,bnddata)
+    return PWcomputation(mesh,k,nquadpoints,nplanewaves,bnddata)
 
 class computation(object):
     
-    def __init__(self,mesh,k,nquadpoints,nplanewaves,bnddata):
+    def __init__(self,mesh,k,nquadpoints,bnddata):
         self.mesh=mesh
         self.k=k
         self.nquadpoints=nquadpoints
-        self.nplanewaves=nplanewaves
         self.bnddata=bnddata
         self.params=None
         self.usecache=True
@@ -71,24 +70,23 @@ class computation(object):
         else:
             self.quad=trianglequadrature(self.nquadpoints)
         self.mqs=MeshQuadratures(self.mesh,self.quad)
+        self.lv = None
+        self.bndvs = None
         
-        # Setup basis functions
-        
-        if mesh.dim==2:
-            dirs = circleDirections(self.nplanewaves)
-        else:
-            dirs = cubeRotations(cubeDirections(self.nplanewaves))
-        self.addPlaneWaves(dirs)
-        
-        # Setup local Vandermondes
-        
-        self.lv = LocalVandermondes(self.mesh, self.elttobasis, self.mqs, usecache=self.usecache)
-        self.bndvs=[]
-        for data in self.bnddata.values():
-            bndv = LocalVandermondes(mesh, [[data]] * mesh.nelements, self.mqs)        
-            self.bndvs.append(bndv)
-    
+    def vandermondes(self):        
+        # Setup local Vandermondes    
+        if self.lv==None:    
+            self.lv = LocalVandermondes(self.mesh, self.elttobasis, self.mqs, usecache=self.usecache)
+            
+        if self.bndvs == None:
+            self.bndvs=[]
+            for data in self.bnddata.values():
+                bndv = LocalVandermondes(self.mesh, [[data]] * self.mesh.nelements, self.mqs)        
+                self.bndvs.append(bndv)
+            
     def addBasisObject(self,basis,elemlist=None):
+        self.lv = None
+        self.bndvs = None
         if elemlist==None:
             map(lambda f: f.append(basis),self.elttobasis)
         else:
@@ -110,6 +108,7 @@ class computation(object):
             
     def assemble(self):
         print "Assembling system"
+        self.vandermondes() # ensure that the vandermondes have been calculated
         self.assembledmatrix,self.rhs= assemble(self.mesh, self.k, self.lv, self.bndvs, self.mqs, self.elttobasis, self.bnddata, self.params)
     
     def solve(self,solver="pardiso"):
@@ -180,8 +179,15 @@ class computation(object):
         return self.error_combined
             
         
+class PWcomputation(computation):
+    def __init__(self,mesh,k,nquadpoints,nplanewaves,bnddata):    
+        computation.__init__(self,mesh,k,nquadpoints,bnddata)
+        self.nplanewaves=nplanewaves
         
-    
-        
-        
+        if mesh.dim==2:
+            dirs = circleDirections(self.nplanewaves)
+        else:
+            dirs = cubeRotations(cubeDirections(self.nplanewaves))
+        self.addPlaneWaves(dirs)
+
         

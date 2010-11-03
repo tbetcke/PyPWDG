@@ -4,24 +4,52 @@ import scipy.linalg as sl
 import math
 import pypwdg.core.bases as pcb
 import pypwdg.mesh.meshutils as pmmu
-
+import pypwdg.utils.timing as put
 import pypwdg.parallel.decorate as ppd
+
+
+@put.print_timing    
+def optimalbasis2(u, basisgenerator, initialparams, quadrule, extrabasis = None):
+    qp, qw = quadrule
+    qwsqrt = np.sqrt(qw).flatten()
+    urp = u(qp).flatten() * qwsqrt
+    l2urp = math.sqrt(np.vdot(urp,urp))
+
+    def linearopt(basis):
+        basisvals = basis.values(qp) * qwsqrt.reshape(-1,1)
+        coeffs = sl.lstsq(basisvals, urp)[0]
+        err = np.abs(np.dot(basisvals, coeffs).flatten() - urp)/l2urp
+        return coeffs, err
     
+    def nonlinearfn(params, ret = False):
+#        print params
+        basis = basisgenerator(params)
+        coeffs, err = linearopt(basis)
+        return err
+    
+    optparams = so.leastsq(nonlinearfn, initialparams.flatten(), ftol=1e-4)[0]
+    pwbasis = basisgenerator(optparams)
+    basis = pcb.BasisCombine([pwbasis, extrabasis]) if extrabasis is not None else pwbasis
+    return basis, linearopt(basis)
+
+@put.print_timing    
 def optimalbasis(u, basisgenerator, initialparams, quadrule, retcoeffs = False):
     qp, qw = quadrule
     qwsqrt = np.sqrt(qw).flatten()
     urp = u(qp).flatten() * qwsqrt
+    l2urp = math.sqrt(np.vdot(urp,urp))
+    
     def lstsqerr(params, ret=False):
 #        print "params ", params
         basis = basisgenerator(params)
         basisvals = basis.values(qp) * qwsqrt.reshape(-1,1)
         coeffs = sl.lstsq(basisvals, urp)[0]
         err = np.dot(basisvals, coeffs) - urp
-        l2err = math.sqrt(np.vdot(err,err))
+        l2err = math.sqrt(np.vdot(err,err))/l2urp
         if ret: return basis, coeffs, l2err
         else: return l2err         
 
-    optparams = so.fmin_powell(lstsqerr, initialparams, ftol = 1e-2, disp=False)
+    optparams = so.fmin_powell(lstsqerr, initialparams, ftol = 1e-4, disp=False)
     
     if retcoeffs:
         return lstsqerr(optparams, True)
@@ -32,6 +60,17 @@ def pwbasisgeneration(k, npw):
     initialtheta = np.arange(npw).reshape((-1,1)) * 2*math.pi / npw
     generator = lambda theta: pcb.PlaneWaves(np.hstack((np.cos(theta.reshape(-1,1)), np.sin(theta.reshape(-1,1)))), k)
     return generator, initialtheta
+
+def pwfbbasisgeneration(k, origin, npw, nfb):
+    initialtheta = np.arange(npw).reshape((-1,1)) * 2*math.pi / npw
+    def gen(theta):
+        basis = pcb.PlaneWaves(np.hstack((np.cos(theta.reshape(-1,1)), np.sin(theta.reshape(-1,1)))), k)
+        if nfb >= 0:
+            fb = pcb.FourierBessel(origin, np.arange(-nfb, nfb+1), k)
+            basis = pcb.BasisCombine([basis, fb])
+        return basis
+    return gen, initialtheta
+            
 
 def generatebasis(mesh, oldbasis, x, generator, initialparams, refquad, eltoffset):
     indx = 0 # keep track of what we're indexing in x
