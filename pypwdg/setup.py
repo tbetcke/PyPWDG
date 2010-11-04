@@ -131,6 +131,8 @@ class computation(object):
         else:
             raise Exception("Solver not known")
         
+        print "Relative residual: ",numpy.linalg.norm(self.assembledmatrix*self.x-self.rhs)/numpy.linalg.norm(self.x)
+        
         
     def writeSolution(self,bounds,npoints,realdata=True,fname='solution.vti'):
         
