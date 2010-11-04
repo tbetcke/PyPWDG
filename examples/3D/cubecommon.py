@@ -94,4 +94,6 @@ npoints=numpy.array([50,50,50])
 vtk_structure=VTKStructuredPoints(eval_fun)
 vtk_structure.create_vtk_structured_points(bounds,npoints)
 vtk_structure.write_to_file('test.vti')
+t.split("output")
+t.show()
 

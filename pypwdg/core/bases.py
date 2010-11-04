@@ -52,6 +52,9 @@ class PlaneWaves(object):
         """
         return 1j*self.__k*numpy.multiply(numpy.dot(n, self.directions), self.values(x,n))
     
+    def __str__(self):
+        return "PW "+ str(self.directions)
+    
     """ the number of functions """
     n=property(lambda self: self.directions.shape[1])
 

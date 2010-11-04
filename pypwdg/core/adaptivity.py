@@ -56,7 +56,6 @@ def splitbasis(n, bs):
     eltoffsets = np.cumsum([0] + map(len, bspl[:-1]))
     return zip(bspl, zip(idx[:-1],idx[1:]), eltoffsets)
 
-@ppd.parallel(lambda n : lambda m, bs, X, q, k, npw, o: [((m,bb,X[i0:i1],q,k,npw, o+eo),{}) for bb, (i0,i1), eo in splitbasis(n, bs)])
 def generatepwbasis(mesh, oldbasis, X, refquad, k, npws, eltoffset):
     gen, ini = pwbasisgeneration(k, npws)
     return generatebasis(mesh, oldbasis, X, gen, ini, refquad, eltoffset)

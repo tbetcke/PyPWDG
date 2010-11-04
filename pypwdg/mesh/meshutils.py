@@ -47,8 +47,9 @@ class MeshElementQuadratures(object):
 
 def elementcentres(mesh):
     # add the first direction to the average of the others (the offsets)
-    x = np.concatenate([[1], np.ones(mesh.dim)*1.0/mesh.dim])
+    x = np.concatenate([[1], np.ones(mesh.dim)*1.0/(mesh.dim+1)])
+    for fs in mesh.etof: print mesh.directions[fs[0]] 
+    
     # pick the first face associated with each element
-    for fs in mesh.etof: yield np.dot(x,mesh.directions[fs[0]])  
-
+    return [np.dot(x,mesh.directions[fs[0]]) for fs in mesh.etof]  
 

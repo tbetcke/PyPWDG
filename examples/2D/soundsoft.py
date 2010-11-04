@@ -18,7 +18,5 @@ runParallel()
 bounds=array([[-2,2],[-2,2],[0,0]],dtype='d')
 npoints=array([200,200,1])
 
-comp=setup(gmshMesh('squarescatt.msh',dim=2),k=10,nquadpoints=40,nplanewaves=15,bnddata=bnddata)
-comp.solve()
 comp.writeSolution(bounds,npoints,fname='soundsoft.vti')
 comp.writeMesh(fname='soundsoft.vtu',scalars=comp.combinedError())
