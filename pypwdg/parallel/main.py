@@ -6,34 +6,33 @@ Created on Sep 12, 2010
 
 @author: joel
 '''
-
+import logging
 
 mpiloaded = False
 try:
-    import boostmpi as mpi    
+    import mpi4py as mpi    
     mpiloaded = mpi.world.size > 1
 except ImportError:    
-    try:
-        import boost.mpi as mpi
-        mpiloaded = mpi.world.size > 1
-    except:
-        pass
-    
+    logging.info("Failed to import mpi4py")
+
 import os
 import atexit
 import sys
 import time
 import multiprocessing
 
+print "MPI loaded: ",mpiloaded
+
 if mpiloaded:
     # mpi things are happening.
-    if mpi.world.rank == 0:
+    comm = mpi.COMM_WORLD
+    if comm.rank == 0:
         # when the boss goes home, the workers should too 
         def freeTheWorkers():
             # wake them up:
-            mpi.broadcast(comm=mpi.world, root=0)
+            comm.bcast(root=0)
             # and send them home
-            mpi.scatter(comm=mpi.world, values=[(sys.exit, [], {}, None)]*mpi.world.size, root=0)
+            comm.scatter(values=[(sys.exit, [], {}, None)]*comm.size, root=0)
             
         atexit.register(freeTheWorkers)
     else:
