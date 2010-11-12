@@ -22,7 +22,7 @@ if mpiloaded:
             # wake them up:
 #            comm.bcast(root=0)
             # and send them home
-            comm.scatter([(sys.exit, [], {}, None)]*comm.size, root=0)
+            comm.scatter([(sys.exit, [], {})]*comm.size, root=0)
             
         atexit.register(freeTheWorkers)
     else:
@@ -46,7 +46,7 @@ if mpiloaded:
 #                time.sleep(0.001)            
             
             task = comm.scatter(root=0)
-            fn, args, kwargs, reduceop = task
+            fn, args, kwargs = task
             res = fn(*args, **kwargs) 
-            comm.reduce(res, op=reduceop, root=0)
+            comm.gather(res, root=0)
 #            mpi.gather(comm=mpi.world, value=res, root=0)

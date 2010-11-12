@@ -64,15 +64,12 @@ def scatterfncall(fn, args, reduceop=None):
 #    mpi.broadcast(mpi.world, root=0)
     
     tasks = [None] # task 0 goes to this process, which we want to remain idle.       
-    # generate the arguments for the scattered functions     
-    r = Reducer(reduceop)
-    
+    # generate the arguments for the scattered functions         
     for a in args:
-        tasks.append((fn, a[0], a[1], r))
+        tasks.append((fn, a[0], a[1]))
     comm.scatter(tasks, root=0)
-    ret = comm.reduce(op = r, root = 0)
-#    values = mpi.gather(comm=mpi.world, root=0)
-#    ret = reduce(r, values)
+    values = comm.gather(root = 0)
+    ret = values if reduceop is None else reduce(reduceop, values[1:])
     return ret
              
 
