@@ -5,6 +5,7 @@ Created on Sep 12, 2010
 '''
 
 from pypwdg.parallel.mpiload import *
+import pypwdg.parallel.messaging as ppm
 
 import functools
 import pypwdg.parallel.proxy as ppp
@@ -13,7 +14,6 @@ import sys
 import inspect
 import types
 import operator
-
   
 class methodwrapper(object):
     """ A pickable version of an instance method"""
@@ -39,39 +39,7 @@ class functionwrapper(object):
 
 def wrapfn(fn):
     if type(fn) is types.FunctionType: return functionwrapper(fn)
-    return fn
-    
-class Reducer:
-    """ Need a class rather than a lambda fn because needs to be picklable"""
-    def __init__(self,reduceop):
-        self.reduceop = reduceop
-    
-    def __call__(self, x, y):
-        if self.reduceop is None: return None
-        if x is None: return y
-        if y is None: return x
-        return self.reduceop(x,y)
-
-def scatterfncall(fn, args, reduceop=None):
-    """ Scatter function calls to the worker processes
-    
-        fn: function to be scattered (must be picklable)
-        args: list of (*args, *kwargs) pairs - same length as number of workers
-        reduceop: reduction operator to apply to results (can be None)        
-    """
-    comm = mpi.COMM_WORLD
-
-#    mpi.broadcast(mpi.world, root=0)
-    
-    tasks = [None] # task 0 goes to this process, which we want to remain idle.       
-    # generate the arguments for the scattered functions         
-    for a in args:
-        tasks.append((fn, a[0], a[1]))
-    comm.scatter(tasks, root=0)
-    values = comm.gather(root = 0)
-    ret = values if reduceop is None else reduce(reduceop, values[1:])
-    return ret
-             
+    return fn             
 
 def parallel(scatterargs, reduceop = operator.add):     
     """ A decorator that will parallelise a function (in some circumstances)
@@ -97,7 +65,7 @@ def parallel(scatterargs, reduceop = operator.add):
                     scatteredargs = [(arg,kw)]*(comm.size-1)
                 else:
                     scatteredargs = scatterargs(comm.size-1)(*arg, **kw) 
-                return scatterfncall(wrapfn(fn), scatteredargs, reduceop)
+                return ppm.scatterfncall(wrapfn(fn), scatteredargs, reduceop)
             return parallelwrapper
         else:
             return fn
@@ -135,7 +103,7 @@ def distribute(scatterargs=None):
                 else:
                     scatteredargs = [((klass, id) + s[0], s[1]) for s in scatterargs(comm.size-1)(*args, **kwargs)]
 
-                scatterfncall(ppp.createproxy, scatteredargs)
+                ppm.scatterfncall(ppp.createproxy, scatteredargs)
                 proxy = ppp.Proxy(klass, id)
                 for name, m in inspect.getmembers(klass, inspect.ismethod):
                     pmdata = parallelmethods.get(m.im_func)
@@ -146,7 +114,7 @@ def distribute(scatterargs=None):
                                 scatteredargs = [(margs,mkwargs)]*(comm.size-1)
                             else:
                                 scatteredargs = mscatterargs(comm.size-1)(*margs, **mkwargs)
-                            return scatterfncall(methodwrapper(m.im_func), scatteredargs, reduceop)
+                            return ppm.scatterfncall(methodwrapper(m.im_func), scatteredargs, reduceop)
                         proxy.__setattr__(name, types.MethodType(memberwrapper, proxy, ppp.Proxy))
                             
                 return proxy
@@ -177,7 +145,7 @@ def immutable(klass):
             obj = object.__new__(klass)
             obj.__init__(*arg, **kw)
             id = uuid.uuid4()
-            scatterfncall(ppp.registerproxy, [((id, obj),{})] * (comm.size-1))
+            ppm.scatterfncall(ppp.registerproxy, [((id, obj),{})] * (comm.size-1))
             return ppp.Proxy(klass, id, obj) 
         klass.__new__ = staticmethod(new)
     return klass

@@ -11,6 +11,7 @@ try:
     comm = mpi.COMM_WORLD
     mpiloaded = comm.size > 1
 except ImportError:    
+    print "Failed to import mpi4py"
     logging.info("Failed to import mpi4py")
 
 

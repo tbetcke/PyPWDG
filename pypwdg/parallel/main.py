@@ -8,11 +8,15 @@ Created on Sep 12, 2010
 '''
 from pypwdg.parallel.mpiload import *
 
+import pypwdg.parallel.messaging as ppm
+
 import os
 import atexit
 import sys
 import time
 import multiprocessing
+import cStringIO
+import cPickle
 
 if mpiloaded:
     # mpi things are happening.
@@ -22,7 +26,7 @@ if mpiloaded:
             # wake them up:
 #            comm.bcast(root=0)
             # and send them home
-            comm.scatter([(sys.exit, [], {})]*comm.size, root=0)
+            ppm.mastersend([(sys.exit, [], {})]*comm.size)
             
         atexit.register(freeTheWorkers)
     else:
@@ -34,19 +38,4 @@ if mpiloaded:
         nt = max(multiprocessing.cpu_count() / comm.size, 1)
              
         os.putenv('OMP_NUM_THREADS', nt.__str__())
-        while True:
-            
-            # For some unclear reason, the developers of openmpi think that it's acceptable for a thread to use 100% CPU
-            # while waiting at a barrier.  I guess that for a symmetric algorithm with very small work packets, that might
-            # be true, but our algorithm is not symmetric (master slave) and the work packets are not small (because
-            # we don't expect miracles from mult-processing).  So it's vastly more efficient for our threads to poll
-            # every 1ms to see if there's any work to do.    
-#            mpi.world.irecv(source=0)
-#            while(request.test() is None):
-#                time.sleep(0.001)            
-            
-            task = comm.scatter(root=0)
-            fn, args, kwargs = task
-            res = fn(*args, **kwargs) 
-            comm.gather(res, root=0)
-#            mpi.gather(comm=mpi.world, value=res, root=0)
+        ppm.workerloop()
