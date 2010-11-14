@@ -8,6 +8,7 @@ from pypwdg.parallel.mpiload import *
 import numpy as np
 import cPickle
 import cStringIO
+import time
 
 import operator
 
@@ -75,9 +76,15 @@ class ArrayHandler(object):
         self.id, self.dtype, self.minlen, self.source, self.sids, self.shapes, self.nexthandler = state  
 
 def mastersend(objs):
+    buf = np.empty(0)
+    comm.Bcast(buf, root=0)
     comm.scatter(objs, root=0)
 
 def workerrecv():
+    status = mpi.Status()
+    buf = np.empty(0)
+    while(comm.Irecv(buf, source=0, tag=mpi.ANY_TAG)==False):
+        time.sleep(0.001)
     obj = comm.scatter(root=0)
     return obj
 
@@ -128,7 +135,7 @@ def workerloop():
 #            mpi.world.irecv(source=0)
 #            while(request.test() is None):
 #                time.sleep(0.001)            
-    while True:        
+    while True:
         task = workerrecv()
         fn, args, kwargs = task
         result = fn(*args, **kwargs) 
