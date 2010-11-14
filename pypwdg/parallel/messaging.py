@@ -81,7 +81,13 @@ def mastersend(objs):
     comm.scatter(objs, root=0)
 
 def workerrecv():
-    comm.recv()
+    buf = np.array([0])
+    req = comm.Irecv(buf)
+    while(True):
+        s = mpi.Status()
+        req.Get_status(s)
+        if s.Get_source()==0: break
+        time.sleep(0.001)
     obj = comm.scatter(root=0)
     return obj
 
