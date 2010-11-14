@@ -76,15 +76,12 @@ class ArrayHandler(object):
         self.id, self.dtype, self.minlen, self.source, self.sids, self.shapes, self.nexthandler = state  
 
 def mastersend(objs):
-    buf = np.empty(0)
-    comm.Bcast(buf, root=0)
+    for dest in range(1,comm.size):
+        comm.send(None, dest)
     comm.scatter(objs, root=0)
 
 def workerrecv():
-    status = mpi.Status()
-    buf = np.empty(0)
-    while(comm.Irecv(buf, source=0, tag=mpi.ANY_TAG)==False):
-        time.sleep(0.001)
+    comm.recv()
     obj = comm.scatter(root=0)
     return obj
 
