@@ -14,6 +14,8 @@ import operator
 
 comm = mpi.COMM_WORLD
 
+typedict = {np.float: mpi.REAL, np.complex:mpi.COMPLEX}
+
 class ArrayHandler(object):
     """ An ArrayHandler is used in conjunction with the pickle persistency mechanism to collect numpy arrays so that they
         may be sent over MPI using the native serialisation.
@@ -88,13 +90,18 @@ class ArrayHandler(object):
             if self.nexthandler is not None:
                 obj = self.nexthandler.lookup(sid)
         return obj
+
+    def _appendmpitype(self, a):
+        """ For some reason, on some systems, mpi4py can guess the array type and on others it cannot."""
+        mpitype = typedict.get(self.dtype)
+        return a if mpitype is None else [a, mpitype]
     
     def send(self, dest):
         """ Send the array data to dest.  Also tells nexthandler to send"""
         if len(self.sids):
             a = np.concatenate(map(np.ravel,[self.sidtoobj[sid] for sid in self.sids]))
-            print "sending %s array of length %s"%(self.dtype, len(a))
-            comm.Send(a,dest)
+            print "sending %s array of length %s"%(self.dtype, len(a))            
+            comm.Send(self._appendmpitype(a),dest)
         if self.nexthandler is not None: self.nexthandler.send(dest)
     
     def receive(self):
@@ -104,7 +111,7 @@ class ArrayHandler(object):
             totallen = sum(sizes)
             print "receiving %s array of length %s"%(self.dtype, totallen)
             a = np.empty(totallen, dtype = self.dtype)
-            comm.Recv(a, self.source)
+            comm.Recv(self._appendmpitype(a), self.source)
             ixs = np.cumsum([0]+sizes)     
             self.sidtoobj = dict([(sid, a[i0:i1].reshape(shape)) for sid, i0,i1,shape in zip(self.sids, ixs[:-1],ixs[1:],self.shapes)])
         else:

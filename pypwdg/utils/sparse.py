@@ -24,7 +24,7 @@ def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
     csr.sort_indices()
     zipip = zip(csr.indptr[:-1], csr.indptr[1:])
     coords = [(i,j) for i,p in enumerate(zipip) for j in csr.indices[p[0]:p[1]] ]
-    data = numpy.array([csr.data[n] * numpy.mat(blocks(i,j)) for n, (i,j) in enumerate(coords)])
+    data = numpy.array([csr.data[n] * numpy.array(blocks(i,j)) for n, (i,j) in enumerate(coords)])
     s = csr.get_shape()
     if bsizerows is None: bsizerows = [None]*s[0]
     if bsizecols is None: bsizecols = [None]*s[1]
@@ -88,11 +88,12 @@ class vbsr_matrix(object):
         for i,(p0,p1) in enumerate(zip(self.indptr[:-1], self.indptr[1:])):
             for ii in range(self.bsizei[i]):
                 for b,j in bj[p0:p1]:
-                    csrdata.append(b[ii,:].A.flatten() * self.scalar)
+                    csrdata.append(b[ii,:].ravel() * self.scalar)
                     csrind.append(range(b.shape[1])+self.bindj[j])
                     cptr += b.shape[1]
                 csrptr.append(cptr)
         naind = array(concatenate(csrind),dtype=int) # for some reason, get a warning about non-ints from sparse if don't make this explicit
+        print b.shape, type(b), naind.shape, concatenate(csrdata).shape, len(csrptr)
         return csr_matrix((concatenate(csrdata), naind, csrptr), shape=(len(csrptr)-1, self.bindj[-1]))
     
     def todense(self):
@@ -166,7 +167,7 @@ class vbsr_matrix(object):
                     if ak <= bk: pa+=1
                     if bk <= ak: pb+=1
                 if (lsizes[i], rsizes[j]) != ab.shape: raise ValueError("Incompatible block sizes %s, %s"%((lsizes[i], rsizes[j]), ab.shape)) 
-                data.append(mat(ab) * otherscalar * self.scalar) 
+                data.append(ab * otherscalar * self.scalar) 
                 indices.append(j)                
             indptr.append(len(indices))
          
@@ -287,7 +288,7 @@ class vbsr_matrix(object):
                     bp0+=1
                 
                 indices.append(j)
-                blocks.append(mat(ab))
+                blocks.append(ab)
             indptr.append(len(indices))
 #        print "sparse.add ", np.sum(self.blocks), np.sum(other.blocks), np.sum(blocks)
         return vbsr_matrix(blocks, indices, indptr, np.amax((self.bsizei, other.bsizei), axis=0), np.amax((self.bsizej,other.bsizej),axis=0))

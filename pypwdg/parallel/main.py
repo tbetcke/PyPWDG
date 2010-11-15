@@ -6,27 +6,24 @@ Created on Sep 12, 2010
 
 @author: joel
 '''
-from pypwdg.parallel.mpiload import *
-
-import pypwdg.parallel.messaging as ppm
+from pypwdg.parallel.mpiload import  mpiloaded, comm
 
 import os
 import atexit
 import sys
 import time
 import multiprocessing
-import cStringIO
-import cPickle
 
 if mpiloaded:
     # mpi things are happening.
     if comm.rank == 0:
         # when the boss goes home, the workers should too 
         def freeTheWorkers():
+            from pypwdg.parallel.messaging import mastersend
             # wake them up:
 #            comm.bcast(root=0)
             # and send them home
-            ppm.mastersend([(sys.exit, [], {})]*comm.size)
+            mastersend([(sys.exit, [], {})]*comm.size)
             
         atexit.register(freeTheWorkers)
     else:
@@ -41,4 +38,5 @@ if mpiloaded:
         os.putenv('OMP_NUM_THREADS', nt.__str__())
 
 def runParallel():
-    if mpiloaded and comm.rank!=0: ppm.workerloop()
+    from pypwdg.parallel.messaging import workerloop
+    if mpiloaded and comm.rank!=0: workerloop()

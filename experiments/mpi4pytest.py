@@ -54,3 +54,12 @@ else:
 #    aa = up.load()
 #    print len(aa)
 #    comm.gather(None,root=0)
+
+
+if comm.rank==0:
+    a = np.arange(50, dtype=complex)
+    comm.Send([a, mpi.COMPLEX], 1)
+elif comm.rank==1:
+    a = np.empty(50, dtype=complex)
+    comm.Recv([a, mpi.COMPLEX], 0)
+    print a
