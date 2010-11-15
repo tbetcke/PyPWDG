@@ -121,6 +121,8 @@ class computation(object):
         self.assembledmatrix=self.assembledmatrix.tocsr()
         self.rhs=numpy.array(self.rhs.todense()).squeeze()
         
+        print "Finished .tocsr"
+        
         usepardiso = solver=="pardiso"
         useumfpack = solver=="umfpack"
         
