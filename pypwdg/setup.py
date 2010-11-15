@@ -3,6 +3,7 @@ Created on 1 Nov 2010
 
 @author: tbetcke
 '''
+import pypwdg.parallel.main
 
 import numpy
 from pypwdg.core.bases import circleDirections, PlaneWaves, cubeDirections, cubeRotations, FourierBessel
@@ -12,11 +13,10 @@ from pypwdg.core.vandermonde import LocalVandermondes
 from pypwdg.core.physics import assemble
 from pypwdg.core.evaluation import Evaluator, EvalElementError
 from pypwdg.output.vtk_output import VTKStructuredPoints
-from pypwdg.output.vtk_output import VTKGrid
+from pypwdg.output.vtk_output import VTKGrid    
 
-def runParallel():
-    import pypwdg.parallel.main
-    
+#def runParallel():
+#    import pypwdg.parallel.main 
 
 def setup(mesh,k,nquadpoints,nplanewaves,bnddata):
     """Returns a 'computation' object that contains everything necessary for a PWDG computation.

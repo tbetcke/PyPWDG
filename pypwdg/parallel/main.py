@@ -37,5 +37,8 @@ if mpiloaded:
         # todo: create a wrapper for it.   
         nt = max(multiprocessing.cpu_count() / comm.size, 1)
              
+        os.putenv('MKL_NUM_THREADS', nt.__str__())
         os.putenv('OMP_NUM_THREADS', nt.__str__())
-        ppm.workerloop()
+
+def runParallel():
+    if mpiloaded and comm.rank!=0: ppm.workerloop()
