@@ -93,7 +93,6 @@ class vbsr_matrix(object):
                     cptr += b.shape[1]
                 csrptr.append(cptr)
         naind = array(concatenate(csrind),dtype=int) # for some reason, get a warning about non-ints from sparse if don't make this explicit
-        print b.shape, type(b), naind.shape, concatenate(csrdata).shape, len(csrptr)
         return csr_matrix((concatenate(csrdata), naind, csrptr), shape=(len(csrptr)-1, self.bindj[-1]))
     
     def todense(self):
