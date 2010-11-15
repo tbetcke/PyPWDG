@@ -15,7 +15,38 @@ import operator
 comm = mpi.COMM_WORLD
 
 class ArrayHandler(object):
-    def __init__(self, uid, dtype, minlen, nexthandler):
+    """ An ArrayHandler is used in conjunction with the pickle persistency mechanism to collect numpy arrays so that they
+        may be sent over MPI using the native serialisation.
+        
+        uid: Arrays are replaced with a persistent id.  uid is the prefix.
+        dtype: Type of array to look for
+        minlen: It's probably not worth doing this for short arrays (although I haven't verified this).  Anything shorter than minlen is ignored
+        nexthandler: ArrayHandlers may be chained together (e.g. so that arrays of more than one datatype can be extracted)
+        
+        The ArrayHandler handles both ends of the communication.  Strategy for use:
+            
+            // On sending process (N):
+            myhandler = ArrayHandler("myuid", dtype, minlen, someotherhandler)    
+            
+            buf = ...
+            p = cPickle.Pickler(buf, ...)
+            p.persistent_id = myhandler.process
+            p.dump(obj) // obj is the object tree that we're sending                                        
+            comm.send((buf.getvalue(), myhandler), dest=M)  // or whatever you want to do to send the main message.  Note that only 
+                                                            // one handler needs to be sent explicitly.  Any chained handlers will 
+                                                            // automatically be serialised.
+            myhandler.send(N) // sends the arrays that we extracted from obj
+            
+            // On receiving process:
+            bufvalue, myhandler = comm.receive(N)
+            myhandler.receive() // receives the array data, reconstructs all the arrays (Note that the handler knows which process it was send from)
+            buf = ... create a buffer out of bufvalue
+            up = cPickle.Unpickler(buf)
+            up.persistent_load = myhandler.lookup
+            obj = up.load()
+             
+    """
+    def __init__(self, uid, dtype, minlen, nexthandler = None):
         self.id = 0
         self.uid = uid
         self.dtype = dtype
@@ -27,7 +58,15 @@ class ArrayHandler(object):
         self.sids = []
         self.shapes = []
     
-    def process(self, obj):        
+    def process(self, obj):    
+        """ This is the persistent_id method
+        
+            If obj matches the criteria for this ArrayHandler, a unique id will be returned instead.  
+            arrays are remembered, but this is just done at an object level so a and a.ravel() will be serialised
+            as two separate objects.  
+            
+            If obj does not match and there's a nexthandler, returns nexthandler.process(obj), otherwise returns None
+        """
         if isinstance(obj, np.ndarray):
             if obj.dtype == self.dtype and obj.size >= self.minlen:
                 sid = self.objtosid.get(id(obj))
@@ -42,6 +81,8 @@ class ArrayHandler(object):
         return None if self.nexthandler is None else self.nexthandler.process(obj) 
     
     def lookup(self, sid):
+        """ This is the persistent_loopup method.  If sid is recognised, the appropriate array is returned"""
+        
         obj = self.sidtoobj.get(sid)
         if obj is None:
             if self.nexthandler is not None:
@@ -49,6 +90,7 @@ class ArrayHandler(object):
         return obj
     
     def send(self, dest):
+        """ Send the array data to dest.  Also tells nexthandler to send"""
         if len(self.sids):
             a = np.concatenate(map(np.ravel,[self.sidtoobj[sid] for sid in self.sids]))
             print "sending %s array of length %s"%(self.dtype, len(a))
@@ -56,10 +98,11 @@ class ArrayHandler(object):
         if self.nexthandler is not None: self.nexthandler.send(dest)
     
     def receive(self):
+        """ Receive the array data from self.source."""
         if len(self.sids):
             sizes = [reduce(operator.mul, shape) for shape in self.shapes]
             totallen = sum(sizes)
-            print "received %s array of length %s"%(self.dtype, totallen)
+            print "receiving %s array of length %s"%(self.dtype, totallen)
             a = np.empty(totallen, dtype = self.dtype)
             comm.Recv(a, self.source)
             ixs = np.cumsum([0]+sizes)     
