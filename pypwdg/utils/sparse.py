@@ -74,8 +74,12 @@ class vbsr_matrix(object):
         self.scalar = scalar
         self.shape = (sum(self.bsizei), sum(self.bsizej))
 
-            
-        
+    def nnz(self):
+	'''Return number of nonzeros in blocks'''
+	nelems=0
+	for b in self.blocks: nelems+=b.shape[0]*b.shape[1]
+	return nelems
+                     
     def tocsr(self):
         ''' Return this matrix in csr format '''
         from numpy import concatenate, array

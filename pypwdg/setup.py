@@ -18,7 +18,7 @@ def runParallel():
     import pypwdg.parallel.main
     
 
-def setup(mesh,k,nquadpoints,nplanewaves,bnddata):
+def setup(mesh, k, nquadpoints, nplanewaves, bnddata,usecache=True):
     """Returns a 'computation' object that contains everything necessary for a PWDG computation.
     
        INPUT Parameters:
@@ -38,27 +38,27 @@ def setup(mesh,k,nquadpoints,nplanewaves,bnddata):
        comp=setup(gmshMesh('myMesh.msh',dim=2),k=5,nquadpoints=10, nplanewaves=3,bnddata={5: dirichlet(g), 6:zero_impedance(k)})
     """
     
-    return computation(mesh,k,nquadpoints,nplanewaves,bnddata)
+    return computation(mesh, k, nquadpoints, nplanewaves, bnddata,usecache)
 
 class computation(object):
     
-    def __init__(self,mesh,k,nquadpoints,nplanewaves,bnddata):
-        self.mesh=mesh
-        self.k=k
-        self.nquadpoints=nquadpoints
-        self.nplanewaves=nplanewaves
-        self.bnddata=bnddata
-        self.params=None
-        self.usecache=True
-        self.assembledmatrix=None
-        self.rhs=None
-        self.error_dirichlet=None
-        self.error_neumann=None
-        self.error_boundary=None
-        self.error_combined=None
-        self.x=None
+    def __init__(self, mesh, k, nquadpoints, nplanewaves, bnddata, usecache=True):
+        self.mesh = mesh
+        self.k = k
+        self.nquadpoints = nquadpoints
+        self.nplanewaves = nplanewaves
+        self.bnddata = bnddata
+        self.params = None
+        self.usecache = usecache
+        self.assembledmatrix = None
+        self.rhs = None
+        self.error_dirichlet = None
+        self.error_neumann = None
+        self.error_boundary = None
+        self.error_combined = None
+        self.x = None
         
-        self.elttobasis=[list() for _ in range(mesh.nelements)]
+        self.elttobasis = [list() for _ in range(mesh.nelements)]
         
         # Set DG Parameters
         
@@ -66,15 +66,15 @@ class computation(object):
         
         # Setup quadrature rules
         
-        if mesh.dim==2:
-            self.quad=legendrequadrature(self.nquadpoints)
+        if mesh.dim == 2:
+            self.quad = legendrequadrature(self.nquadpoints)
         else:
-            self.quad=trianglequadrature(self.nquadpoints)
-        self.mqs=MeshQuadratures(self.mesh,self.quad)
+            self.quad = trianglequadrature(self.nquadpoints)
+        self.mqs = MeshQuadratures(self.mesh, self.quad)
         
         # Setup basis functions
         
-        if mesh.dim==2:
+        if mesh.dim == 2:
             dirs = circleDirections(self.nplanewaves)
         else:
             dirs = cubeRotations(cubeDirections(self.nplanewaves))
@@ -83,87 +83,87 @@ class computation(object):
         # Setup local Vandermondes
         
         self.lv = LocalVandermondes(self.mesh, self.elttobasis, self.mqs, usecache=self.usecache)
-        self.bndvs=[]
+        self.bndvs = []
         for data in self.bnddata.values():
-            bndv = LocalVandermondes(mesh, [[data]] * mesh.nelements, self.mqs)        
+            bndv = LocalVandermondes(mesh, [[data]] * mesh.nelements, self.mqs,usecache=self.usecache)        
             self.bndvs.append(bndv)
     
-    def addBasisObject(self,basis,elemlist=None):
-        if elemlist==None:
-            map(lambda f: f.append(basis),self.elttobasis)
+    def addBasisObject(self, basis, elemlist=None):
+        if elemlist == None:
+            map(lambda f: f.append(basis), self.elttobasis)
         else:
             for i in elemlist: self.elttobasis[i].append(basis)
         
-    def addPlaneWaves(self,dirs,elemlist=None):
-        self.addBasisObject(PlaneWaves(dirs,self.k))
+    def addPlaneWaves(self, dirs, elemlist=None):
+        self.addBasisObject(PlaneWaves(dirs, self.k))
 
-    def addBessels(self,orders,elemlist=None,origin=None):
+    def addBessels(self, orders, elemlist=None, origin=None):
         
-        if not self.mesh.dim==2: raise Exception("Bessel functions are only defined in 2D.")
-        if elemlist==None: elemlist=range(self.mesh.nelements)
+        if not self.mesh.dim == 2: raise Exception("Bessel functions are only defined in 2D.")
+        if elemlist == None: elemlist = range(self.mesh.nelements)
         for elem in elemlist:
-            origin=self.mesh.nodes[self.mesh.elements[elem][0]]
-            self.addBasisObject(FourierBessel(origin,orders,self.k),elem)
+            origin = self.mesh.nodes[self.mesh.elements[elem][0]]
+            self.addBasisObject(FourierBessel(origin, orders, self.k), elem)
         
-    def setParams(self,alpha=0.5,beta=0.5,delta=0.5):
-        self.params={'alpha':alpha,'beta':beta,'delta':delta}
+    def setParams(self, alpha=0.5, beta=0.5, delta=0.5):
+        self.params = {'alpha':alpha, 'beta':beta, 'delta':delta}
             
     def assemble(self):
         print "Assembling system"
-        self.assembledmatrix,self.rhs= assemble(self.mesh, self.k, self.lv, self.bndvs, self.mqs, self.elttobasis, self.bnddata, self.params)
+        self.assembledmatrix, self.rhs = assemble(self.mesh, self.k, self.lv, self.bndvs, self.mqs, self.elttobasis, self.bnddata, self.params)
     
-    def solve(self,solver="pardiso"):
+    def solve(self, solver="pardiso"):
 
         if self.assembledmatrix is None: self.assemble()
 
         print "Solve linear system of equations"
 
-        self.assembledmatrix=self.assembledmatrix.tocsr()
-        self.rhs=numpy.array(self.rhs.todense()).squeeze()
+        self.assembledmatrix = self.assembledmatrix.tocsr()
+        self.rhs = numpy.array(self.rhs.todense()).squeeze()
         
-        usepardiso = solver=="pardiso"
-        useumfpack = solver=="umfpack"
+        usepardiso = solver == "pardiso"
+        useumfpack = solver == "umfpack"
         
         if not (usepardiso or useumfpack): raise Exception("Solver not known")
         
         if usepardiso:
             try:            
                 from pymklpardiso.linsolve import solve
-                (self.x,error)=solve(self.assembledmatrix,self.rhs)
-                if not error==0: raise Exception("Pardiso Error")
+                (self.x, error) = solve(self.assembledmatrix, self.rhs)
+                if not error == 0: raise Exception("Pardiso Error")
             except ImportError:
                 useumfpack = True
                 
         if useumfpack:
             from scipy.sparse.linalg.dsolve.linsolve import spsolve as solve
-            self.x=solve(self.assembledmatrix,self.rhs)
+            self.x = solve(self.assembledmatrix, self.rhs)
         
         
-        print "Relative residual: ",numpy.linalg.norm(self.assembledmatrix*self.x-self.rhs)/numpy.linalg.norm(self.x)
+        print "Relative residual: ", numpy.linalg.norm(self.assembledmatrix * self.x - self.rhs) / numpy.linalg.norm(self.x)
         
         
-    def writeSolution(self,bounds,npoints,realdata=True,fname='solution.vti'):
+    def writeSolution(self, bounds, npoints, realdata=True, fname='solution.vti'):
         
         if self.x is None: self.solve()
         
         print "Evaluate Solution and Write to File"
         
-        bounds=numpy.array(bounds,dtype='d')
+        bounds = numpy.array(bounds, dtype='d')
         if realdata:
-            filt=numpy.real
+            filt = numpy.real
         else:
-            filt=numpy.imag
-        if self.mesh.dim==2:
-            t=2
+            filt = numpy.imag
+        if self.mesh.dim == 2:
+            t = 2
         else:
-            t=3
-        eval_fun=lambda points: filt(Evaluator(self.mesh,self.elttobasis,points[:,:t]).evaluate(self.x))
-        vtk_structure=VTKStructuredPoints(eval_fun)
-        vtk_structure.create_vtk_structured_points(bounds,npoints)
+            t = 3
+        eval_fun = lambda points: filt(Evaluator(self.mesh, self.elttobasis, points[:, :t]).evaluate(self.x))
+        vtk_structure = VTKStructuredPoints(eval_fun)
+        vtk_structure.create_vtk_structured_points(bounds, npoints)
         vtk_structure.write_to_file(fname)
         
-    def writeMesh(self,fname='mesh.vtu',scalars=None):
-        vtkgrid=VTKGrid(self.mesh,scalars)
+    def writeMesh(self, fname='mesh.vtu', scalars=None):
+        vtkgrid = VTKGrid(self.mesh, scalars)
         vtkgrid.write(fname)
    
     def evalJumpErrors(self):
@@ -171,14 +171,14 @@ class computation(object):
         if self.x is None: self.solve()
         
         print "Evaluate Jumps"
-        EvalError=EvalElementError(self.mesh,self.elttobasis,self.quad, self.bnddata, self.lv, self.bndvs)
-        (self.error_dirichlet,self.error_neumann,self.error_boundary)=EvalError.evaluate(self.x)
+        EvalError = EvalElementError(self.mesh, self.elttobasis, self.quad, self.bnddata, self.lv, self.bndvs)
+        (self.error_dirichlet, self.error_neumann, self.error_boundary) = EvalError.evaluate(self.x)
         
     def combinedError(self):
         
         if self.error_dirichlet is None: self.evalJumpErrors()
-        self.error_combined=self.k**2*self.error_dirichlet**2+self.error_neumann**2+self.error_boundary**2
-        self.error_combined=numpy.sqrt(self.error_combined)
+        self.error_combined = self.k ** 2 * self.error_dirichlet ** 2 + self.error_neumann ** 2 + self.error_boundary ** 2
+        self.error_combined = numpy.sqrt(self.error_combined)
         return self.error_combined
             
         
