@@ -21,7 +21,7 @@ runParallel()
 bounds=array([[0,4],[0,1],[0,.3]],dtype='d')
 npoints=array([100,20,20])
 
-comp=setup(gmshMesh('hole_extrusion.msh',dim=3),k=k,nquadpoints=10,nplanewaves=4,bnddata=bnddata)
+comp=setup(gmshMesh('hole_extrusion.msh',dim=3),k=k,nquadpoints=10,nplanewaves=4,bnddata=bnddata,usecache=False)
 comp.solve()
 comp.writeSolution(bounds,npoints,fname='hole_extrusion.vti')
 comp.writeMesh(fname='hole_extrusion.vtu',scalars=comp.combinedError())
