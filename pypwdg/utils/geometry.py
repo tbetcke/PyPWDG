@@ -7,6 +7,7 @@ Created on Aug 11, 2010
 import numpy
 import scipy.sparse
 import numpy.ma as ma
+import numpy as np
 
 def pointsToElement(points, mesh):
     """ detect which element each point is in """
@@ -45,5 +46,28 @@ def pointsToElement(points, mesh):
 def pointsToElementBatch(points, mesh, batchsize = 5000):    
     return numpy.concatenate([pointsToElement(points[i*batchsize:min(len(points),(i+1)*batchsize)], mesh) for i in range((len(points)-1)/batchsize+1)])        
 
+class StructuredPoints(object):
+    """ Structured points in a hypercube.  
     
+        bounds[0] and bounds[1] should be opposite vertices of the hypercube.
+        npoints is the number of points in each direction
+    """
+    
+    def __init__(self, bounds, npoints):
+        self.lower = np.min(bounds, 0) # self.lower is the most negative vertex
+        self.upper = np.max(bounds, 0) # self.upper is the most positive vertex
+        self.npoints = npoints
+    
+    def getPoints(self, ebounds):
+        """ Returns a tuple (idxs, points) where points are all the points lying within 
+            the hypercube specified by ebounds and idxs are their corresponding global indices""" 
+        intervals = self.npoints - 1    
+        elower = np.max(self.lower, np.min(ebounds,0)) # find the negative vertex of ebounds
+        eupper = np.min(self.upper, np.max(ebounds,0)) # find the positive vertex of ebounds
+        lower = np.floor(intervals * (elower - self.lower) / (self.upper - self.lower)).astype(int)
+        upper = np.ceil(intervals * (eupper - self.lower) / (self.upper - self.lower)).astype(int)+1
+        
+        
+        
+        
     
