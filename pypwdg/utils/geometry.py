@@ -57,15 +57,34 @@ class StructuredPoints(object):
         self.lower = np.min(bounds, 0) # self.lower is the most negative vertex
         self.upper = np.max(bounds, 0) # self.upper is the most positive vertex
         self.npoints = npoints
+        self.strides = np.cumprod(np.concatenate(([1],npoints[:-1])))
+        self.dim = bounds.shape[1]
     
-    def getPoints(self, ebounds):
-        """ Returns a tuple (idxs, points) where points are all the points lying within 
-            the hypercube specified by ebounds and idxs are their corresponding global indices""" 
+    def getPoints(self, vertices):
+        """ Returns a tuple (idxs, points) where points contains all the points that are inside
+            the convex hull of vertices and idxs are their corresponding global indices""" 
         intervals = self.npoints - 1    
-        elower = np.max(self.lower, np.min(ebounds,0)) # find the negative vertex of ebounds
-        eupper = np.min(self.upper, np.max(ebounds,0)) # find the positive vertex of ebounds
+        elower = np.max(self.lower, np.min(vertices,0)) # find the negative vertex of ebounds
+        eupper = np.min(self.upper, np.max(vertices,0)) # find the positive vertex of ebounds
+        
+        # find the lower and upper bounds for the indices that we need
         lower = np.floor(intervals * (elower - self.lower) / (self.upper - self.lower)).astype(int)
         upper = np.ceil(intervals * (eupper - self.lower) / (self.upper - self.lower)).astype(int)+1
+        
+        # We're going to take advantage of numpy array broadcasting and assemble a hypercube.
+        # of indices and points.  The first step is to work out how to reshape the indices in each
+        # axis.        
+        shapes = np.ones((self.dim, self.dim)) - 2*self.eye(self.dim)
+        axisidxs = [np.arange(l,u).reshape(shape) for l,u,shape in zip(lower, upper, shapes)]
+        idxs = sum([axisidx * stride for axisidx, stride in zip(axisidxs, self.strides)])
+        points = np.zeros(idxs.shape + (self.dim,))
+        # A for loop.  Kill me now.
+        for i, l, u in zip(range(self.dim), self.lower, self.upper):
+            points[...,i]+=(idxs*(u-l) + l)
+            
+        return idxs.ravel(), points.reshape((-1,self.dim))
+        
+    def pointsToElement(self, mesh):
         
         
         
