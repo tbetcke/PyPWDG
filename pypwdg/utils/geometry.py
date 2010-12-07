@@ -46,6 +46,7 @@ def pointsToElement(points, mesh):
 def pointsToElementBatch(points, mesh, batchsize = 5000):    
     return numpy.concatenate([pointsToElement(points[i*batchsize:min(len(points),(i+1)*batchsize)], mesh) for i in range((len(points)-1)/batchsize+1)])        
 
+
 class StructuredPoints(object):
     """ Structured points in a hypercube.  
     
@@ -84,8 +85,28 @@ class StructuredPoints(object):
             
         return idxs.ravel(), points.reshape((-1,self.dim))
         
-    def pointsToElement(self, mesh):
+def elementToStructuredPoints(structuredpoints, mesh):
+    def etop(e):
+        vertices = mesh.elements[e]
+        crudeidxs, crudepoints = structuredpoints.getPoints(vertices)
+        fs = mesh.etof[e]
+        normals = mesh.normals[fs]
+        directions = mesh.directions[fs]
+        # take the dot product with each point and the outward normal on each face
+        pointsn = numpy.dot(crudepoints, normals.transpose())
+    
+        # now do the same thing for an (arbitrary) point on each face
+        originsn = numpy.sum(directions[:,0,:] * normals, axis = 1).reshape((1,-1))
         
+        # this gives the distance of each point from each face    
+        offsets = pointsn - originsn
+        
+        # normals point outwards, so detect when the distance is non-positive
+        behindface = offsets <=0
+        if sum(offsets==0) > 0: print "Warning, points on the boundary"
+            
+        
+            
         
         
         
