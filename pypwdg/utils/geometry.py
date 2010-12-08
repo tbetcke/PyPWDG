@@ -104,6 +104,11 @@ def elementToStructuredPoints(structuredpoints, mesh):
         # normals point outwards, so detect when the distance is non-positive
         behindface = offsets <=0
         if sum(offsets==0) > 0: print "Warning, points on the boundary"
+        
+        inelement = (np.sum(behindface, axis=1)==len(fs))
+        
+        return crudeidxs[inelement], crudepoints[inelement]
+    return etop
             
         
             

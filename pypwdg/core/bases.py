@@ -27,6 +27,14 @@ def circleDirections(n):
     theta = numpy.arange(n).reshape((-1,1)) * 2*math.pi / n
     return numpy.hstack((numpy.cos(theta), numpy.sin(theta)))
 
+class ElementToBases(object):
+    def __init__(self, mesh, bases = {}, sizes = {}):
+        self.mesh = mesh
+        self.bases = bases
+        self.indices =  
+        
+    def getBasis(self, e):
+
 class PlaneWaves(object):
     
     def __init__(self, directions, k):
