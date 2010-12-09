@@ -51,7 +51,7 @@ class StructuredPoints(object):
     """ Structured points in a hypercube.  
     
         bounds[0] and bounds[1] should be opposite vertices of the hypercube.
-        npoints is the number of points in each direction
+        npoints is an array containing the number of points in each direction
     """
     
     def __init__(self, bounds, npoints):
@@ -60,6 +60,7 @@ class StructuredPoints(object):
         self.npoints = npoints
         self.strides = np.cumprod(np.concatenate(([1],npoints[:-1])))
         self.dim = bounds.shape[1]
+        self.length = np.prod(npoints)
     
     def getPoints(self, vertices):
         """ Returns a tuple (idxs, points) where points contains all the points that are inside
@@ -85,30 +86,29 @@ class StructuredPoints(object):
             
         return idxs.ravel(), points.reshape((-1,self.dim))
         
-def elementToStructuredPoints(structuredpoints, mesh):
-    def etop(e):
-        vertices = mesh.elements[e]
-        crudeidxs, crudepoints = structuredpoints.getPoints(vertices)
-        fs = mesh.etof[e]
-        normals = mesh.normals[fs]
-        directions = mesh.directions[fs]
-        # take the dot product with each point and the outward normal on each face
-        pointsn = numpy.dot(crudepoints, normals.transpose())
+def elementToStructuredPoints(structuredpoints, mesh, eid):
+    vertices = mesh.elements[eid]
+    crudeidxs, crudepoints = structuredpoints.getPoints(vertices)
+    fs = mesh.etof[eid]
+    normals = mesh.normals[fs]
+    directions = mesh.directions[fs]
+    # take the dot product with each point and the outward normal on each face
+    pointsn = numpy.dot(crudepoints, normals.transpose())
+
+    # now do the same thing for an (arbitrary) point on each face
+    originsn = numpy.sum(directions[:,0,:] * normals, axis = 1).reshape((1,-1))
     
-        # now do the same thing for an (arbitrary) point on each face
-        originsn = numpy.sum(directions[:,0,:] * normals, axis = 1).reshape((1,-1))
-        
-        # this gives the distance of each point from each face    
-        offsets = pointsn - originsn
-        
-        # normals point outwards, so detect when the distance is non-positive
-        behindface = offsets <=0
-        if sum(offsets==0) > 0: print "Warning, points on the boundary"
-        
-        inelement = (np.sum(behindface, axis=1)==len(fs))
-        
-        return crudeidxs[inelement], crudepoints[inelement]
-    return etop
+    # this gives the distance of each point from each face    
+    offsets = pointsn - originsn
+    
+    # normals point outwards, so detect when the distance is non-positive
+    behindface = offsets <=0
+    if sum(offsets==0) > 0: print "Warning, points on the boundary"
+    
+    inelement = (np.sum(behindface, axis=1)==len(fs))
+    
+    return crudeidxs[inelement], crudepoints[inelement]
+    
             
         
             

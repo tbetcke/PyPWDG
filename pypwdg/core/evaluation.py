@@ -5,7 +5,7 @@ Created on Aug 11, 2010
 '''
 
 from pypwdg.core.vandermonde import ElementVandermondes, LocalVandermondes, LocalInnerProducts
-from pypwdg.utils.geometry import pointsToElementBatch
+from pypwdg.utils.geometry import pointsToElementBatch, elementToStructuredPoints
 from pypwdg.utils.timing import print_timing
 from pypwdg.parallel.decorate import npconcat, parallelmethod, distribute, partitionlist, tuplesum
 from pypwdg.mesh.meshutils import MeshQuadratures
@@ -45,26 +45,22 @@ class StructuredPointsEvaluator(object):
     @print_timing
     def __init__(self, mesh, elttobasis, structuredpoints):
         self.mesh = mesh
-        self.points = points
-        ptoe = pointsToElementBatch(points, mesh, 5000)
-        # could use sparse matrix classes to speed this up, but it's a bit clearer like this
-        # pointsToElement returns -1 for elements which have no point
-        self.etop = [[] for e in range(mesh.nelements+1)] 
-        for p,e in enumerate(ptoe):
-            self.etop[e+1].append(p)
-        
-        self.v = ElementVandermondes(mesh, elttobasis, lambda e: points[self.etop[e+1]])
+        self.points = structuredpoints
+        self.etob = elttobasis
     
     @parallelmethod()
     @print_timing
     def evaluate(self, x):
-        vals = numpy.zeros(len(self.points), dtype=numpy.complex128)
-        n = 0
-        for e,p in enumerate(self.etop[1:]):
-            nb = self.v.numbases[e]            
-            vals[p] += numpy.dot(self.v.getVandermonde(e), x[n:n+nb])
-            n+=nb
-        return vals
+        vals = numpy.zeros(self.structuredpoints.length, dtype=numpy.complex128)
+        pointcount = numpy.zeros(self.structuredpoints.length, dtype=int)
+        for e in self.mesh.partition:
+            pointidxs, points = elementToStructuredPoints(self.points, self.mesh, e)
+            if len(pointidxs):
+                v = self.elttobasis.getValues(e, points)
+                vidx = self.elttobasis.getIndex(e)
+                vals += numpy.dot(v, x[vidx - v.shape[1] : vidx])
+                pointcount[pointidxs]+=1
+        return vals, pointcount
 
 
 @distribute()

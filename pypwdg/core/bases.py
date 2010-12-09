@@ -28,12 +28,34 @@ def circleDirections(n):
     return numpy.hstack((numpy.cos(theta), numpy.sin(theta)))
 
 class ElementToBases(object):
-    def __init__(self, mesh, bases = {}, sizes = {}):
+    def __init__(self, mesh):
         self.mesh = mesh
-        self.bases = bases
-        self.indices =  
+        self.etob = {}     
+        self.indices = None   
         
-    def getBasis(self, e):
+    def getValues(self, eid, points):
+        """ Return the values of the basis for element eid at points"""
+        bases = self.etob.get(eid)
+        if bases==None:
+            return numpy.zeros(len(points),0)
+        else:
+            return numpy.hstack([b.values(points, None) for b in bases])
+    
+    def addBasis(self, eid, b):
+        """ Add a basis object to element eid"""
+        bases = self.etob.setdefault(eid, [])
+        bases.append(b)
+        self.indices = None
+    
+    def setEtoB(self, etob = {}):
+        self.etob = etob
+        self.indices = None
+        
+    def getIndex(self, eid):
+        """ Return the global index for element eid"""
+        if self.indices is None:
+            self.indices = numpy.cumsum([0] + [sum([b.n for b in self.etob.get(e,[])]) for e in range(self.mesh.nelements)])
+        return self.indices[eid] 
 
 class PlaneWaves(object):
     
