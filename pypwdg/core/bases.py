@@ -33,13 +33,21 @@ class ElementToBases(object):
         self.etob = {}     
         self.indices = None   
         
-    def getValues(self, eid, points):
+    def getValues(self, eid, points, normal=None):
         """ Return the values of the basis for element eid at points"""
         bases = self.etob.get(eid)
         if bases==None:
             return numpy.zeros(len(points),0)
         else:
-            return numpy.hstack([b.values(points, None) for b in bases])
+            return numpy.hstack([b.values(points, normal) for b in bases])
+    
+    def getDerivs(self, eid, points, normal):
+        """ Return the directional derivatives of the basis for element eid at points"""
+        bases = self.etob.get(eid)
+        if bases==None:
+            return numpy.zeros(len(points),0)
+        else:
+            return numpy.hstack([b.derivs(points, normal) for b in bases])
     
     def addBasis(self, eid, b):
         """ Add a basis object to element eid"""

@@ -5,7 +5,7 @@ Created on 1 Nov 2010
 '''
 
 import numpy
-from pypwdg.core.bases import circleDirections, PlaneWaves, cubeDirections, cubeRotations, FourierBessel
+from pypwdg.core.bases import circleDirections, PlaneWaves, cubeDirections, cubeRotations, FourierBessel, ElementToBases
 from pypwdg.utils.quadrature import trianglequadrature, legendrequadrature
 from pypwdg.mesh.meshutils import MeshQuadratures
 from pypwdg.core.vandermonde import LocalVandermondes
@@ -58,7 +58,7 @@ class computation(object):
         self.error_combined=None
         self.x=None
         
-        self.elttobasis=[list() for _ in range(mesh.nelements)]
+        self.elttobasis=ElementToBases(mesh)
         
         # Set DG Parameters
         
