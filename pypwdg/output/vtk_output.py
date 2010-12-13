@@ -4,20 +4,25 @@ Created on Aug 15, 2010
 @author: tbetcke
 '''
 
+import pypwdg.utils.geometry as pug
+
 import numpy
 import vtk
 
 class VTKStructuredPoints(object):
     """ Store output data into a VTK Structured Points object"""
     
-    def __init__(self, eval_fun):
-        self.__eval_fun = eval_fun
+    def __init__(self, evaluator):
+        self.__evaluator = evaluator
         self.__data = None
 
-    def create_vtk_structured_points(self, bounds, npoints):
+    def create_vtk_structured_points(self, boundsd, npointsd):
+        bounds = numpy.vstack((boundsd, numpy.zeros((3-len(boundsd),2))))
+        npoints = numpy.hstack((npointsd, numpy.zeros(3-len(npointsd), dtype=int)))
+        
         origin = bounds[:, 0]
-        spacing = (bounds[:, 1] - bounds[:, 0]) * 1.0 / (npoints-1)
-        spacing[numpy.isnan(spacing)] = 0
+        spacing = numpy.hstack((numpy.dot(boundsd, [-1.0,1.0]) / (npointsd-1), numpy.ones(3-len(boundsd))))
+                
         data = vtk.vtkImageData()
         data.SetDimensions(npoints[0], npoints[1], npoints[2])
         data.SetSpacing(spacing[0], spacing[1], spacing[2])
@@ -28,11 +33,11 @@ class VTKStructuredPoints(object):
       
         # Create the Data Set
         indices = [[idx, idy, idz] for idx in range(npoints[0]) for idy in range(npoints[1]) for idz in range(npoints[2])]
-        points = numpy.tile(origin, (len(indices), 1)) + numpy.tile(spacing, (len(indices), 1)) * indices
-        vals = self.__eval_fun(points)
-      
+        points = pug.StructuredPoints(boundsd.transpose(), npointsd)
+        vals, counts = self.__evaluator.evaluate(points)
+        print vals
         for i, ind in enumerate(indices):
-            data.SetScalarComponentFromDouble(ind[0], ind[1], ind[2], 0, vals[i])
+            data.SetScalarComponentFromDouble(ind[0], ind[1], ind[2], 0, vals[i] / counts[i])
     
         self.__data = data          
         return data #@IndentOk

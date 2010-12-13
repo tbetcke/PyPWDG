@@ -13,7 +13,7 @@ class generic_boundary_data(object):
     """ Provides an interface for generic boundary data
 
         Initialize with
-        bnd_data=generic_boundary_data(l_coeffs,r_coeffs,g,dg)
+        bnd_data=generic_boundary_data(l_coeffs,r_coeffs,g)
         
         Boundary data has the form:
         
@@ -23,31 +23,27 @@ class generic_boundary_data(object):
         l_coeffs - Input list [xi_1, xi_2]
         r_coeffs - Input list [mu_1, mu_2]
 
-        g(xvals) is a function that takes an m x dim array and returns an array g(x)
-        of length m.
-        dg(xvals,n) takes additionallty a vector n of length dim, which is the normal
-        direction at the face and returns an array of length m of normal derivatives
-        
-        dg does not necessarily have to be the normal derivative of g.
+        g should support the basis interface for one shape function
                 
-        if g=None and dg=None homogeneous boundary conditions are assumed
+        if g=None homogeneous boundary conditions are assumed
         
     """
     
     
-    def __init__(self,l_coeffs,r_coeffs=None,g=None,dg=None):        
+    def __init__(self,l_coeffs,r_coeffs=None,g = None):        
         if r_coeffs is None: r_coeffs=[0, 0]
         self.l_coeffs=l_coeffs
         self.r_coeffs=r_coeffs
-        self.__g=g
-        self.__dg=dg
+        if g is not None:
+            self.values = g.values
+            self.derivs = g.derivs
         self.n = 1
         
     def values(self,x,n=None):
-        return numpy.zeros((x.shape[0],1)) if self.__g is None else self.__g(x)
+        return numpy.zeros((x.shape[0],1))
     
     def derivs(self,x,n):
-        return numpy.zeros((x.shape[0],1)) if self.__dg is None else self.__dg(x,n)
+        return numpy.zeros((x.shape[0],1))
             
 #    g=property(lambda self: lambda x: numpy.zeros(x.shape[0]) if self.__g is None else self.__g)
 #    dg=property(lambda self: lambda x,n: numpy.zeros(x.shape[0]) if self.__dg is None else self.__dg)

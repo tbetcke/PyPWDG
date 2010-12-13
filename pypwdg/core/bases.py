@@ -30,8 +30,10 @@ def circleDirections(n):
 class ElementToBases(object):
     def __init__(self, mesh):
         self.mesh = mesh
-        self.etob = {}     
-        self.indices = None   
+        self.etob = {}
+        self.sizes = None     
+        self.indices = None 
+        self.version = 0  
         
     def getValues(self, eid, points, normal=None):
         """ Return the values of the basis for element eid at points"""
@@ -49,21 +51,39 @@ class ElementToBases(object):
         else:
             return numpy.hstack([b.derivs(points, normal) for b in bases])
     
+    def _reset(self):
+        self.sizes = None     
+        self.indices = None 
+        self.version +=1
+    
     def addBasis(self, eid, b):
         """ Add a basis object to element eid"""
         bases = self.etob.setdefault(eid, [])
         bases.append(b)
-        self.indices = None
+        self._reset()
+        return self
+    
+    def addUniformBasis(self, b):
+        for e in range(self.mesh.nelements):
+            self.addBasis(e, b)   
+        self._reset()
+        return self
     
     def setEtoB(self, etob = {}):
         self.etob = etob
-        self.indices = None
+        self._reset()
+    
+    def getSizes(self):
+        if self.sizes is None:
+            self.sizes = numpy.array([sum([b.n for b in self.etob.get(e,[])]) for e in range(self.mesh.nelements)])
+        return self.sizes
         
-    def getIndex(self, eid):
+    def getIndices(self):
         """ Return the global index for element eid"""
         if self.indices is None:
-            self.indices = numpy.cumsum([0] + [sum([b.n for b in self.etob.get(e,[])]) for e in range(self.mesh.nelements)])
-        return self.indices[eid] 
+            sizes = self.getSizes()
+            self.indices = numpy.cumsum(numpy.concatenate(([0], sizes)))
+        return self.indices 
 
 class PlaneWaves(object):
     

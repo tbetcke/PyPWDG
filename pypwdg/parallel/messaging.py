@@ -11,7 +11,7 @@ import cStringIO
 
 import operator
 
-comm = mpi.COMM_WORLD
+if mpiloaded: comm = mpi.COMM_WORLD
 
 class ArrayHandler(object):
     def __init__(self, uid, dtype, minlen, nexthandler):

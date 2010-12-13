@@ -64,10 +64,11 @@ class StructuredPoints(object):
     
     def getPoints(self, vertices):
         """ Returns a tuple (idxs, points) where points contains all the points that are inside
-            the convex hull of vertices and idxs are their corresponding global indices""" 
+            the convex hull of vertices and idxs are their corresponding global indices
+            """ 
         intervals = self.npoints - 1    
-        elower = np.max(self.lower, np.min(vertices,0)) # find the negative vertex of ebounds
-        eupper = np.min(self.upper, np.max(vertices,0)) # find the positive vertex of ebounds
+        elower = np.max((self.lower, np.amin(vertices,axis = 0)),0) # find the negative vertex of ebounds
+        eupper = np.min((self.upper, np.amax(vertices,0)),0) # find the positive vertex of ebounds
         
         # find the lower and upper bounds for the indices that we need
         lower = np.floor(intervals * (elower - self.lower) / (self.upper - self.lower)).astype(int)
@@ -76,7 +77,7 @@ class StructuredPoints(object):
         # We're going to take advantage of numpy array broadcasting and assemble a hypercube.
         # of indices and points.  The first step is to work out how to reshape the indices in each
         # axis.        
-        shapes = np.ones((self.dim, self.dim)) - 2*self.eye(self.dim)
+        shapes = np.ones((self.dim, self.dim)) - 2*np.eye(self.dim)
         axisidxs = [np.arange(l,u).reshape(shape) for l,u,shape in zip(lower, upper, shapes)]
         idxs = sum([axisidx * stride for axisidx, stride in zip(axisidxs, self.strides)])
         points = np.zeros(idxs.shape + (self.dim,))
@@ -88,10 +89,10 @@ class StructuredPoints(object):
         
 def elementToStructuredPoints(structuredpoints, mesh, eid):
     vertices = mesh.elements[eid]
-    crudeidxs, crudepoints = structuredpoints.getPoints(vertices)
+    crudeidxs, crudepoints = structuredpoints.getPoints(mesh.nodes[vertices])
     fs = mesh.etof[eid]
-    normals = mesh.normals[fs]
-    directions = mesh.directions[fs]
+    normals = np.array([mesh.normals[f] for f in fs])
+    directions = np.array([mesh.directions[f] for f in fs])
     # take the dot product with each point and the outward normal on each face
     pointsn = numpy.dot(crudepoints, normals.transpose())
 
@@ -100,11 +101,9 @@ def elementToStructuredPoints(structuredpoints, mesh, eid):
     
     # this gives the distance of each point from each face    
     offsets = pointsn - originsn
-    
     # normals point outwards, so detect when the distance is non-positive
     behindface = offsets <=0
-    if sum(offsets==0) > 0: print "Warning, points on the boundary"
-    
+    if (offsets==0).any(): print "Warning, points on the boundary"
     inelement = (np.sum(behindface, axis=1)==len(fs))
     
     return crudeidxs[inelement], crudepoints[inelement]

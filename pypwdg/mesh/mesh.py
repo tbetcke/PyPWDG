@@ -168,9 +168,9 @@ class MeshPart(object):
             print "Warning: %s non-internal faces not assigned to physical entities"%bdyunassigned
             print [self.faces[id] for id in boundaryids if faceentities[id]==None]
 
-        self.directions = ma.masked_all((mesh.nfaces, mesh.dim+1, mesh.dim))
-        self.normals = ma.masked_all((mesh.nfaces, mesh.dim))
-        self.dets = ma.masked_all((mesh.nfaces))
+#        self.directions = ma.masked_all((mesh.nfaces, mesh.dim+1, mesh.dim))
+#        self.normals = ma.masked_all((mesh.nfaces, mesh.dim))
+#        self.dets = ma.masked_all((mesh.nfaces))
         
         relevantfaces = ((mesh._connectivity + ss.eye(mesh.nfaces, mesh.nfaces)) * fpindex).nonzero()[0]      
         self.__compute_facedata(relevantfaces)
@@ -218,9 +218,9 @@ class MeshPart(object):
         dets = numpy.sqrt(numpy.sum(normals * normals, axis = 1))
                 
         normals *= (-numpy.sign(numpy.sum(normals * directions[:,-1,:], axis = 1)) / dets ).reshape((-1,1))
-        self.directions[relevantfaces] = directions
-        self.normals[relevantfaces] = normals
-        self.dets[relevantfaces] = dets
+        self.directions = dict(zip(relevantfaces, directions))
+        self.normals = dict(zip(relevantfaces, normals))
+        self.dets = dict(zip(relevantfaces, dets))
 
         
     
