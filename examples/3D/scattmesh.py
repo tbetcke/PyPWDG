@@ -10,7 +10,7 @@ g = PlaneWaves(array([[1,0,0]])/math.sqrt(1), k)
 bnddata={82:zero_impedance(k), 83:dirichlet(g) }
 
 bounds=array([[-2,2],[-2,2],[-2,2]],dtype='d')
-npoints=array([100,100,100])
+npoints=array([200,200,200])
 
 mesh = gmshMesh('scattmesh.msh',dim=3)
 bases = planeWaveBases(mesh, k, 3)
