@@ -4,12 +4,11 @@ Created on Aug 11, 2010
 @author: joel
 '''
 
-from pypwdg.core.vandermonde import ElementVandermondes, LocalVandermondes, LocalInnerProducts
-from pypwdg.utils.geometry import pointsToElementBatch
+from pypwdg.core.vandermonde import LocalInnerProducts
+from pypwdg.utils.geometry import pointsToElementBatch, elementToStructuredPoints
 from pypwdg.utils.timing import print_timing
-from pypwdg.parallel.decorate import npconcat, parallelmethod, distribute, partitionlist, tuplesum
+from pypwdg.parallel.decorate import parallelmethod, distribute, tuplesum
 from pypwdg.mesh.meshutils import MeshQuadratures
-from pypwdg.core.assembly import Assembly
 
 import numpy
 
@@ -25,19 +24,43 @@ class Evaluator(object):
         self.etop = [[] for e in range(mesh.nelements+1)] 
         for p,e in enumerate(ptoe):
             self.etop[e+1].append(p)
-        
-        self.v = ElementVandermondes(mesh, elttobasis, lambda e: points[self.etop[e+1]])
+        self.elttobasis = elttobasis        
+#        self.v = ElementVandermondes(mesh, elttobasis, lambda e: points[self.etop[e+1]])
     
     @parallelmethod()
     @print_timing
     def evaluate(self, x):
         vals = numpy.zeros(len(self.points), dtype=numpy.complex128)
-        n = 0
         for e,p in enumerate(self.etop[1:]):
-            nb = self.v.numbases[e]            
-            vals[p] += numpy.dot(self.v.getVandermonde(e), x[n:n+nb])
-            n+=nb
+            v = self.elttobasis.getValues(e, self.points[p])            
+            (vidx0,vidx1) = self.elttobasis.getIndices()[e:e+2]
+            vals[p] += numpy.dot(v, x[vidx0: vidx1])
         return vals
+
+
+@distribute()
+class StructuredPointsEvaluator(object):
+    @print_timing
+    def __init__(self, mesh, elttobasis, filter, x):
+        self.mesh = mesh
+        self.elttobasis = elttobasis
+        self.filter = filter
+        self.x = x
+    
+    @parallelmethod(None, lambda (v1,c1), (v2,c2) : (v1+v2, c1+c2))
+    @print_timing
+    def evaluate(self, structuredpoints):
+        vals = numpy.zeros(structuredpoints.length, dtype=numpy.complex128)
+        pointcount = numpy.zeros(structuredpoints.length, dtype=int)
+        for e in self.mesh.partition:
+            pointidxs, points = elementToStructuredPoints(structuredpoints, self.mesh, e)
+            if len(pointidxs):
+                v = self.elttobasis.getValues(e, points)
+                (vidx0,vidx1) = self.elttobasis.getIndices()[e:e+2]
+                vals[pointidxs] += numpy.dot(v, self.x[vidx0: vidx1])
+                pointcount[pointidxs]+=1
+        return self.filter(vals), pointcount
+
 
 @distribute()
 class EvalElementError(object):
@@ -52,8 +75,7 @@ class EvalElementError(object):
         self.bndvs=bndvs
         self.mqs = MeshQuadratures(mesh, localquads)
         
-        numbases = [sum([b.n for b in bs]) for bs in elttobasis]
-        self.etoc=numpy.hstack((0,numpy.cumsum(numbases)))
+        self.etoc=elttobasis.getIndices()
         self.facemap=mesh.connectivity*numpy.arange(mesh.nfaces)
         
     @parallelmethod(reduceop=tuplesum)

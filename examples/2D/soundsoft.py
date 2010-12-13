@@ -1,24 +1,21 @@
-from pypwdg import PlaneWaves
-from pypwdg import setup,runParallel,gmshMesh
+from pypwdg import PlaneWaves, planeWaveBases
+from pypwdg import setup, gmshMesh
 from pypwdg import zero_dirichlet,generic_boundary_data 
 from numpy import array,sqrt
 
 k = 15
 direction=array([[1.0,1.0]])/sqrt(2)
-def g(x):
-    return PlaneWaves(direction, k).values(x)
-def gn(x,n):
-    return PlaneWaves(direction, k).derivs(x,n)
+g = PlaneWaves(direction, k)
 
 bnddata={11:zero_dirichlet(),
-         10:generic_boundary_data([-1j*k,1],[-1j*k,1],g=g,dg=gn)}
+         10:generic_boundary_data([-1j*k,1],[-1j*k,1],g=g)}
 
-runParallel()
+bounds=array([[-2,2],[-2,2]],dtype='d')
+npoints=array([200,200])
 
-bounds=array([[-2,2],[-2,2],[0,0]],dtype='d')
-npoints=array([200,200,1])
-
-comp=setup(gmshMesh('squarescatt.msh',dim=2),k=k,nquadpoints=20,nplanewaves=15,bnddata=bnddata)
+mesh = gmshMesh('squarescatt.msh',dim=2)
+bases = planeWaveBases(mesh,k,nplanewaves=15)
+comp=setup(mesh,k,20,bases,bnddata)
 
 comp.writeSolution(bounds,npoints,fname='soundsoft.vti')
 comp.writeMesh(fname='soundsoft.vtu',scalars=comp.combinedError())
