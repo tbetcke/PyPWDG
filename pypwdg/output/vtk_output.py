@@ -35,6 +35,9 @@ class VTKStructuredPoints(object):
         indices = [[idx, idy, idz] for idx in range(npoints[0]) for idy in range(npoints[1]) for idz in range(npoints[2])]
         points = pug.StructuredPoints(boundsd.transpose(), npointsd)
         vals, counts = self.__evaluator.evaluate(points)
+        print vals, counts
+        print numpy.where(counts==0)
+        counts[counts==0] = 1        
         for i, ind in enumerate(indices):
             data.SetScalarComponentFromDouble(ind[0], ind[1], ind[2], 0, vals[i] / counts[i])
     

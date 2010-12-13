@@ -5,7 +5,7 @@ Created on 1 Nov 2010
 '''
 
 import numpy
-from pypwdg.core.bases import circleDirections, PlaneWaves, cubeDirections, cubeRotations, FourierBessel, ElementToBases
+from pypwdg.core.bases import ElementToBases
 from pypwdg.utils.quadrature import trianglequadrature, legendrequadrature
 from pypwdg.mesh.meshutils import MeshQuadratures
 from pypwdg.core.vandermonde import LocalVandermondes
@@ -15,24 +15,6 @@ from pypwdg.output.vtk_output import VTKStructuredPoints
 from pypwdg.output.vtk_output import VTKGrid
 
 import pypwdg.parallel.main
-    
-def planeWaveBasis(mesh, k, nplanewaves):        
-    if mesh.dim==2:
-        dirs = circleDirections(nplanewaves)
-    else:
-        dirs = cubeRotations(cubeDirections(nplanewaves))
-    pw = PlaneWaves(dirs,k)
-    return ElementToBases(mesh).addUniformBasis(pw)
-
-
-def fourierBesselBasis(mesh, k, orders):
-    if not mesh.dim==2: raise Exception("Bessel functions are only defined in 2D.")
-    etob = ElementToBases(mesh)
-    for e in range(mesh.nelements):
-        origin=mesh.nodes[mesh.elements[e][0]]
-        etob.addBasis(e, FourierBessel(origin,orders,k))
-    return etob
-
 
 def setup(mesh,k,nquadpoints,elttobasis,bnddata):
     """Returns a 'computation' object that contains everything necessary for a PWDG computation.

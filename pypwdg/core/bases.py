@@ -27,6 +27,23 @@ def circleDirections(n):
     theta = numpy.arange(n).reshape((-1,1)) * 2*math.pi / n
     return numpy.hstack((numpy.cos(theta), numpy.sin(theta)))
 
+def planeWaveBases(mesh, k, nplanewaves):        
+    if mesh.dim==2:
+        dirs = circleDirections(nplanewaves)
+    else:
+        dirs = cubeRotations(cubeDirections(nplanewaves))
+    pw = PlaneWaves(dirs,k)
+    return ElementToBases(mesh).addUniformBasis(pw)
+
+
+def fourierBesselBases(mesh, k, orders):
+    if not mesh.dim==2: raise Exception("Bessel functions are only defined in 2D.")
+    etob = ElementToBases(mesh)
+    for e in range(mesh.nelements):
+        origin=mesh.nodes[mesh.elements[e][0]]
+        etob.addBasis(e, FourierBessel(origin,orders,k))
+    return etob
+
 class ElementToBases(object):
     def __init__(self, mesh):
         self.mesh = mesh
