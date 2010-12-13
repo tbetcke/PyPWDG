@@ -16,7 +16,7 @@ from pypwdg.output.vtk_output import VTKGrid
 
 import pypwdg.parallel.main
 
-def setup(mesh,k,nquadpoints,elttobasis,bnddata):
+def setup(mesh,k,nquadpoints,elttobasis,bnddata,usecache=False):
     """Returns a 'computation' object that contains everything necessary for a PWDG computation.
     
        INPUT Parameters:
@@ -36,17 +36,17 @@ def setup(mesh,k,nquadpoints,elttobasis,bnddata):
        comp=setup(gmshMesh('myMesh.msh',dim=2),k=5,nquadpoints=10, elttobasis, bnddata={5: dirichlet(g), 6:zero_impedance(k)})
     """
     
-    return computation(mesh,k,nquadpoints,elttobasis,bnddata)
+    return computation(mesh,k,nquadpoints,elttobasis,bnddata,usecache)
 
 class computation(object):
     
-    def __init__(self,mesh,k,nquadpoints,elttobasis,bnddata):
+    def __init__(self,mesh,k,nquadpoints,elttobasis,bnddata,usecache):
         self.mesh=mesh
         self.k=k
         self.nquadpoints=nquadpoints
         self.bnddata=bnddata
         self.params=None
-        self.usecache=True
+        self.usecache=usecache
         self.assembledmatrix=None
         self.rhs=None
         self.error_dirichlet=None
