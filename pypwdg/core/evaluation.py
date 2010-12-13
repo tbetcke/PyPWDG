@@ -47,7 +47,7 @@ class StructuredPointsEvaluator(object):
         self.filter = filter
         self.x = x
     
-    @parallelmethod()
+    @parallelmethod(None, lambda (v1,c1), (v2,c2) : (v1+v2, c1+c2))
     @print_timing
     def evaluate(self, structuredpoints):
         vals = numpy.zeros(structuredpoints.length, dtype=numpy.complex128)

@@ -103,7 +103,7 @@ def elementToStructuredPoints(structuredpoints, mesh, eid):
     offsets = pointsn - originsn
     # normals point outwards, so detect when the distance is non-positive
     behindface = offsets <=0
-    if (offsets==0).any(): print "Warning, points on the boundary"
+#    if (offsets==0).any(): print "Warning, points on the boundary"
     inelement = (np.sum(behindface, axis=1)==len(fs))
     
     return crudeidxs[inelement], crudepoints[inelement]

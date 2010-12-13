@@ -34,16 +34,14 @@ class generic_boundary_data(object):
         if r_coeffs is None: r_coeffs=[0, 0]
         self.l_coeffs=l_coeffs
         self.r_coeffs=r_coeffs
-        if g is not None:
-            self.values = g.values
-            self.derivs = g.derivs
+        self.g = g
         self.n = 1
         
     def values(self,x,n=None):
-        return numpy.zeros((x.shape[0],1))
+        return numpy.zeros((x.shape[0],1)) if self.g is None else self.g.values(x,n)
     
     def derivs(self,x,n):
-        return numpy.zeros((x.shape[0],1))
+        return numpy.zeros((x.shape[0],1)) if self.g is None else self.g.derivs(x,n)
             
 #    g=property(lambda self: lambda x: numpy.zeros(x.shape[0]) if self.__g is None else self.__g)
 #    dg=property(lambda self: lambda x,n: numpy.zeros(x.shape[0]) if self.__dg is None else self.__dg)
