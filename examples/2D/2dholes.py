@@ -2,7 +2,7 @@ from pypwdg import setup,gmshMesh, PlaneWaves, planeWaveBases
 from pypwdg import zero_dirichlet, generic_boundary_data
 from numpy import array
 
-k = 3
+k = 10
 direction=array([[1.0,0]])
 g = PlaneWaves(direction, k)
 
@@ -12,10 +12,10 @@ bnddata={21:zero_dirichlet(),
          19:zero_dirichlet()}
 
 bounds=array([[0,5],[0,1]],dtype='d')
-npoints=array([50,10])
+npoints=array([501,101])
 
 mesh = gmshMesh('2dhole.msh',dim=2)
-bases = planeWaveBases(mesh,k,nplanewaves=10)
+bases = planeWaveBases(mesh,k,nplanewaves=15)
 
 comp=setup(mesh,k,20,bases,bnddata=bnddata)
 comp.solve()

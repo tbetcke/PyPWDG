@@ -58,7 +58,7 @@ class StructuredPoints(object):
         self.lower = np.min(bounds, 0) # self.lower is the most negative vertex
         self.upper = np.max(bounds, 0) # self.upper is the most positive vertex
         self.npoints = npoints
-        self.strides = np.cumprod(np.concatenate(([1],npoints[:-1])))
+        self.strides = [np.prod(npoints[i+1:]) for i in range(len(npoints))]
         self.dim = bounds.shape[1]
         self.length = np.prod(npoints)
     
