@@ -61,11 +61,11 @@ class computation(object):
         
         # Setup quadrature rules
         
-        if mesh.dim==2:
-            self.quad=legendrequadrature(self.nquadpoints)
+        if mesh.dim == 2:
+            self.quad = legendrequadrature(self.nquadpoints)
         else:
-            self.quad=trianglequadrature(self.nquadpoints)
-        self.mqs=MeshQuadratures(self.mesh,self.quad)
+            self.quad = trianglequadrature(self.nquadpoints)
+        self.mqs = MeshQuadratures(self.mesh, self.quad)
         
         # Setup basis functions
         self.elttobasis = elttobasis
@@ -73,7 +73,7 @@ class computation(object):
         # Setup local Vandermondes
         
         self.lv = LocalVandermondes(self.mesh, self.elttobasis, self.mqs, usecache=self.usecache)
-        self.bndvs=[]
+        self.bndvs = []
         for data in self.bnddata.values():
             bndv = LocalVandermondes(self.mesh, ElementToBases(self.mesh).addUniformBasis(data), self.mqs)        
             self.bndvs.append(bndv)
@@ -83,39 +83,39 @@ class computation(object):
             
     def assemble(self):
         print "Assembling system"
-        self.assembledmatrix,self.rhs= assemble(self.mesh, self.k, self.lv, self.bndvs, self.mqs, self.elttobasis, self.bnddata, self.params)
+        self.assembledmatrix, self.rhs = assemble(self.mesh, self.k, self.lv, self.bndvs, self.mqs, self.elttobasis, self.bnddata, self.params)
     
-    def solve(self,solver="pardiso"):
+    def solve(self, solver="pardiso"):
 
         if self.assembledmatrix is None: self.assemble()
 
         print "Solve linear system of equations"
 
-        self.assembledmatrix=self.assembledmatrix.tocsr()
-        self.rhs=numpy.array(self.rhs.todense()).squeeze()
+        self.assembledmatrix = self.assembledmatrix.tocsr()
+        self.rhs = numpy.array(self.rhs.todense()).squeeze()
         
-        usepardiso = solver=="pardiso"
-        useumfpack = solver=="umfpack"
+        usepardiso = solver == "pardiso"
+        useumfpack = solver == "umfpack"
         
         if not (usepardiso or useumfpack): raise Exception("Solver not known")
         
         if usepardiso:
             try:            
                 from pymklpardiso.linsolve import solve
-                (self.x,error)=solve(self.assembledmatrix,self.rhs)
-                if not error==0: raise Exception("Pardiso Error")
+                (self.x, error) = solve(self.assembledmatrix, self.rhs)
+                if not error == 0: raise Exception("Pardiso Error")
             except ImportError:
                 useumfpack = True
                 
         if useumfpack:
             from scipy.sparse.linalg.dsolve.linsolve import spsolve as solve
-            self.x=solve(self.assembledmatrix,self.rhs)
+            self.x = solve(self.assembledmatrix, self.rhs)
         
         
-        print "Relative residual: ",numpy.linalg.norm(self.assembledmatrix*self.x-self.rhs)/numpy.linalg.norm(self.x)
+        print "Relative residual: ", numpy.linalg.norm(self.assembledmatrix * self.x - self.rhs) / numpy.linalg.norm(self.x)
         
         
-    def writeSolution(self,bounds,npoints,realdata=True,fname='solution.vti'):
+    def writeSolution(self, bounds, npoints, realdata=True, fname='solution.vti'):
         
         if self.x is None: self.solve()
         
@@ -128,8 +128,8 @@ class computation(object):
         vtk_structure.create_vtk_structured_points(bounds,npoints)
         vtk_structure.write_to_file(fname)
         
-    def writeMesh(self,fname='mesh.vtu',scalars=None):
-        vtkgrid=VTKGrid(self.mesh,scalars)
+    def writeMesh(self, fname='mesh.vtu', scalars=None):
+        vtkgrid = VTKGrid(self.mesh, scalars)
         vtkgrid.write(fname)
    
     def evalJumpErrors(self):
@@ -137,14 +137,14 @@ class computation(object):
         if self.x is None: self.solve()
         
         print "Evaluate Jumps"
-        EvalError=EvalElementError(self.mesh,self.elttobasis,self.quad, self.bnddata, self.lv, self.bndvs)
-        (self.error_dirichlet,self.error_neumann,self.error_boundary)=EvalError.evaluate(self.x)
+        EvalError = EvalElementError(self.mesh, self.elttobasis, self.quad, self.bnddata, self.lv, self.bndvs)
+        (self.error_dirichlet, self.error_neumann, self.error_boundary) = EvalError.evaluate(self.x)
         
     def combinedError(self):
         
         if self.error_dirichlet is None: self.evalJumpErrors()
-        self.error_combined=self.k**2*self.error_dirichlet**2+self.error_neumann**2+self.error_boundary**2
-        self.error_combined=numpy.sqrt(self.error_combined)
+        self.error_combined = self.k ** 2 * self.error_dirichlet ** 2 + self.error_neumann ** 2 + self.error_boundary ** 2
+        self.error_combined = numpy.sqrt(self.error_combined)
         return self.error_combined
             
         

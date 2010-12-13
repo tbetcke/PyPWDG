@@ -60,5 +60,4 @@ if mpiloaded and comm.rank==0:
             
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()
