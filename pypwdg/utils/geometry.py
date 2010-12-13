@@ -82,8 +82,8 @@ class StructuredPoints(object):
         idxs = sum([axisidx * stride for axisidx, stride in zip(axisidxs, self.strides)])
         points = np.zeros(idxs.shape + (self.dim,))
         # A for loop.  Kill me now.
-        for i, l, u in zip(range(self.dim), self.lower, self.upper):
-            points[...,i]+=(idxs*(u-l) + l)
+        for i, l, u, n in zip(range(self.dim), self.lower, self.upper, self.npoints):
+            points[...,i]+=(axisidxs[i]*(u-l)/n + l)
             
         return idxs.ravel(), points.reshape((-1,self.dim))
         

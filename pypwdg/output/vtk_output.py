@@ -18,10 +18,10 @@ class VTKStructuredPoints(object):
 
     def create_vtk_structured_points(self, boundsd, npointsd):
         bounds = numpy.vstack((boundsd, numpy.zeros((3-len(boundsd),2))))
-        npoints = numpy.hstack((npointsd, numpy.zeros(3-len(npointsd), dtype=int)))
+        npoints = numpy.hstack((npointsd, numpy.ones(3-len(npointsd), dtype=int)))
         
         origin = bounds[:, 0]
-        spacing = numpy.hstack((numpy.dot(boundsd, [-1.0,1.0]) / (npointsd-1), numpy.ones(3-len(boundsd))))
+        spacing = numpy.hstack((numpy.dot(boundsd, [-1.0,1.0]) / (npointsd-1), numpy.zeros(3-len(boundsd))))
                 
         data = vtk.vtkImageData()
         data.SetDimensions(npoints[0], npoints[1], npoints[2])
@@ -35,7 +35,6 @@ class VTKStructuredPoints(object):
         indices = [[idx, idy, idz] for idx in range(npoints[0]) for idy in range(npoints[1]) for idz in range(npoints[2])]
         points = pug.StructuredPoints(boundsd.transpose(), npointsd)
         vals, counts = self.__evaluator.evaluate(points)
-        print vals
         for i, ind in enumerate(indices):
             data.SetScalarComponentFromDouble(ind[0], ind[1], ind[2], 0, vals[i] / counts[i])
     
