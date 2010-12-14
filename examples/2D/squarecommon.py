@@ -3,7 +3,7 @@ from pypwdg import setup, gmshMesh, planeWaveBases
 from pypwdg import generic_boundary_data, dirichlet
 from numpy import array,sqrt
 
-k = 15
+k = 60
 direction=array([[1.0,1.0]])/sqrt(2)
 g = PlaneWaves(direction, k)
 #impbd = generic_boundary_data([-1j*k,1],[-1j*k,1],g)

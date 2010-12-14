@@ -15,7 +15,7 @@ npoints=array([200,200])
 
 mesh = gmshMesh('squarescatt.msh',dim=2)
 bases = planeWaveBases(mesh,k,nplanewaves=15)
-comp=setup(mesh,k,20,bases,bnddata)
+comp=setup(mesh,k,20,bases,bnddata, True)
 
 comp.writeSolution(bounds,npoints,fname='soundsoft.vti')
 comp.writeMesh(fname='soundsoft.vtu',scalars=comp.combinedError())

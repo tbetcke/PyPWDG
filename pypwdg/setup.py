@@ -14,9 +14,11 @@ from pypwdg.core.evaluation import StructuredPointsEvaluator, EvalElementError
 from pypwdg.output.vtk_output import VTKStructuredPoints
 from pypwdg.output.vtk_output import VTKGrid
 
+import pypwdg.core.evaluation as pce
+
 import pypwdg.parallel.main
 
-def setup(mesh,k,nquadpoints,elttobasis,bnddata,usecache=False):
+def setup(mesh,k,nquadpoints,elttobasis,bnddata,usecache=True):
     """Returns a 'computation' object that contains everything necessary for a PWDG computation.
     
        INPUT Parameters:
@@ -139,6 +141,9 @@ class computation(object):
         print "Evaluate Jumps"
         EvalError = EvalElementError(self.mesh, self.elttobasis, self.quad, self.bnddata, self.lv, self.bndvs)
         (self.error_dirichlet, self.error_neumann, self.error_boundary) = EvalError.evaluate(self.x)
+        
+#        error_dirichlet2 = pce.EvalElementError2(self.mesh, self.mqs, self.lv,self.elttobasis.getSizes()).evaluate(self.x)
+#        print numpy.vstack((error_dirichlet2,self.error_dirichlet, error_dirichlet2 / self.error_dirichlet)).transpose()
         
     def combinedError(self):
         
