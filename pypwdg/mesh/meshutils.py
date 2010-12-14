@@ -20,7 +20,8 @@ class MeshQuadratures(object):
     def quadpoints(self, faceid):
         """ return the quadrature points on face faceid"""
         dirs = self.__mesh.directions[faceid]
-        return numpy.tile(dirs[0], (len(self.__qp),1)) + numpy.dot(self.__qp, dirs[1:-1])
+#        return numpy.tile(dirs[0], (len(self.__qp),1)) + numpy.dot(self.__qp, dirs[1:-1])
+        return dirs[0] + numpy.dot(self.__qp, dirs[1:-1])
     
     def quadweights(self, faceid):
         """ return the quadrature weights on face faceid"""

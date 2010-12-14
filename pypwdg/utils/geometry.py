@@ -90,24 +90,26 @@ class StructuredPoints(object):
 def elementToStructuredPoints(structuredpoints, mesh, eid):
     vertices = mesh.elements[eid]
     crudeidxs, crudepoints = structuredpoints.getPoints(mesh.nodes[vertices])
-    fs = mesh.etof[eid]
-    normals = np.array([mesh.normals[f] for f in fs])
-    directions = np.array([mesh.directions[f] for f in fs])
-    # take the dot product with each point and the outward normal on each face
-    pointsn = numpy.dot(crudepoints, normals.transpose())
-
-    # now do the same thing for an (arbitrary) point on each face
-    originsn = numpy.sum(directions[:,0,:] * normals, axis = 1).reshape((1,-1))
+    if len(crudeidxs):
+        fs = mesh.etof[eid]
+        normals = np.array([mesh.normals[f] for f in fs])
+        directions = np.array([mesh.directions[f] for f in fs])
+        # take the dot product with each point and the outward normal on each face
+        pointsn = numpy.dot(crudepoints, normals.transpose())
     
-    # this gives the distance of each point from each face    
-    offsets = pointsn - originsn
-    # normals point outwards, so detect when the distance is non-positive
-    behindface = offsets <=0
-#    if (offsets==0).any(): print "Warning, points on the boundary"
-    inelement = (np.sum(behindface, axis=1)==len(fs))
-    
-    return crudeidxs[inelement], crudepoints[inelement]
-    
+        # now do the same thing for an (arbitrary) point on each face
+        originsn = numpy.sum(directions[:,0,:] * normals, axis = 1).reshape((1,-1))
+        
+        # this gives the distance of each point from each face    
+        offsets = pointsn - originsn
+        # normals point outwards, so detect when the distance is non-positive
+        behindface = offsets <=0
+    #    if (offsets==0).any(): print "Warning, points on the boundary"
+        inelement = (np.sum(behindface, axis=1)==len(fs))
+        
+        return crudeidxs[inelement], crudepoints[inelement]
+    else:
+        return ([], None)
             
         
             

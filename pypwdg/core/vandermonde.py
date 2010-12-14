@@ -96,7 +96,7 @@ class LocalInnerProducts(object):
         # inner product makes no sense.
         p = self.__cache.get((i,j))
         if p is None:
-            p = numpy.dot(numpy.multiply(self.__vleft(i).conj().transpose(),self.__weights(i).flatten()), self.__vright(j))    
+            p = numpy.dot(numpy.multiply(self.__vleft(i).conj().transpose(),self.__weights(i).ravel()), self.__vright(j))    
             self.__cache[(i,j)] = p
         
         return p        
