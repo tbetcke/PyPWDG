@@ -6,10 +6,10 @@ from numpy import array,sqrt
 k = 60
 direction=array([[1.0,1.0]])/sqrt(2)
 g = PlaneWaves(direction, k)
-#impbd = generic_boundary_data([-1j*k,1],[-1j*k,1],g)
+impbd = generic_boundary_data([-1j*k,1],[-1j*k,1],g)
 
-#bnddata={7:impd), 
-#         8:impd)}
+#bnddata={7:impbd, 
+#         8:impbd}
 bnddata={7:dirichlet(g), 
          8:dirichlet(g)}
 

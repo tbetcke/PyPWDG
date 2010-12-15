@@ -30,6 +30,8 @@ class LocalVandermondes(object):
         self.__elttobasis = elttobasis
         self.__quadpoints = quadrule.quadpoints
         self.__cache = {} if usecache else None 
+        self.numbases = elttobasis.getSizes()[mesh.ftoe]
+        self.indices = elttobasis.getIndices()[mesh.ftoe]
         
         
     def getVandermondes(self, faceid):
@@ -54,8 +56,6 @@ class LocalVandermondes(object):
 
     def getCachesize(self):
         return 0 if self.__cache is None else len(self.__cache)
-        
-    numbases = property(lambda self: self.__elttobasis.getSizes()[self.__mesh.ftoe])
 #
 #class ElementVandermondes(object):
 #    """ Calculate vandermonde matrices at the element level.  Clearly there's some duplication with LocalVandermondes ... todo: refactor"""
@@ -97,6 +97,7 @@ class LocalInnerProducts(object):
         p = self.__cache.get((i,j))
         if p is None:
             p = numpy.dot(numpy.multiply(self.__vleft(i).conj().transpose(),self.__weights(i).ravel()), self.__vright(j))    
+            if len(p.shape)==0: p = p.reshape(1,1)
             self.__cache[(i,j)] = p
         
         return p        

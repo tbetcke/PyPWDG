@@ -16,6 +16,7 @@ import pypwdg.mesh.structure as pms
 import pypwdg.utils.sparse as pus
 import scipy.sparse as ss
 import numpy as np
+import pypwdg.core.vandermonde as pcv
 
 
 @distribute()
@@ -68,26 +69,58 @@ class StructuredPointsEvaluator(object):
         return self.filter(vals), pointcount
 
 
+
+
 @distribute()
-class EvalElementError2(object):
-    def __init__(self, mesh, mqs, vandermondes, sizes):
-        self.mesh = mesh
-        self.DD = LocalInnerProducts(vandermondes.getValues, vandermondes.getValues, mqs.quadweights)
-        self.SM = pms.AveragesAndJumps(mesh)
-        self.esizes = sizes
-        self.fsizes = vandermondes.numbases
-        
-    @parallelmethod(reduceop=tuplesum)
+class EvalElementError3(object):
+    def __init__(self, mesh, mqs, vandermondes, bnddata, bndvs):
+        self.mesh = mesh 
+        self.vs = vandermondes
+        self.weights = mqs.quadweights
+        self.bnddata = bnddata
+        self.bndvs = bndvs
+            
+    @parallelmethod(reduceop = tuplesum)
     def evaluate(self, x):
-        # the e-th column of xe contains the coefficients associated with element x
-        xe = ss.csr_matrix((x, np.concatenate([np.ones(s, dtype=int)*e for e,s in enumerate(self.esizes)]), np.arange(len(x)+1, dtype=int)))
-        # SMJD2 is the structure matrix for the squares of jumps of the dirichlet data
-        SMJD2 = self.SM.JD.transpose() * self.SM.JD
-        # JD2 is jumps * jumps
-        JD2 = pms.sumfaces(self.mesh, pus.createvbsr(SMJD2, self.DD.product, self.fsizes, self.fsizes)).tocsr()
-        elem_error_dirichlet = np.abs(xe.conj().transpose() * JD2 * x)
-        return np.sqrt(elem_error_dirichlet)
+        SM = pms.AveragesAndJumps(self.mesh)
+        # number of faces
+        nf = len(self.vs.indices)
+        # coefficients for each (2-sided) face
+        xf = lambda f: x[self.vs.indices[f]:self.vs.indices[f]+self.vs.numbases[f]]
+        # dirichlet values of solution at the quadrature points on each (2-sided) faces                
+        vx = lambda f: np.dot(self.vs.getValues(f),xf(f))
+        # L2 inner product of solns for pairs of 2-sided faces (only makes sense when faces are from same pair)
+        DD = LocalInnerProducts(vx, vx, self.weights)
+        # We're evaluating jumps * jumps
+        SMJD2 = (SM.JD.transpose() * SM.JD).tocsr()
+        # For each face pair, (f1,f2) with solution, (u1,u2), the corresponding 2x2 submatrix
+        # of ipD is 2 * [[<u1,u1>, -<u1,u2>],[-<u2,u1>, <u2,u2>]]
+        ipD = pus.createvbsr(SMJD2, DD.product, np.ones(nf), np.ones(nf))
+        # SM.AD * . sums all the rows in the submatrix for each face and then pms.sumrhs sums all the 
+        # faces for each element.  We could have also done . * SM.AD and used pms.sumfaces and then 
+        # extracted the resulting diagonal, but multiplying by a vector of ones achieves the same
+        # result, so pms.sumrhs is a nice shortcut
+        elem_error_dirichlet = pms.sumrhs(self.mesh, SM.AD * ipD.tocsr()).todense().squeeze()
         
+        dx = lambda f: np.dot(self.vs.getDerivs(f), xf(f))
+        NN = LocalInnerProducts(dx,dx,self.weights)
+        SMJN2 = (SM.JN.transpose() * SM.JN).tocsr()
+        ipN = pus.createvbsr(SMJN2, NN.product, np.ones(nf), np.ones(nf))
+        elem_error_neumann = pms.sumrhs(self.mesh, SM.AD * ipN.tocsr()).todense().squeeze()
+        
+        elem_error_bnd=numpy.zeros(self.mesh.nelements)
+        
+        for (id, bdycondition), bndv in zip(self.bnddata.items(), self.bndvs):
+            lc=bdycondition.l_coeffs
+            rc=bdycondition.r_coeffs
+            # boundary error
+            be = lambda f: lc[0] * vx(f) + lc[1] * dx(f) - (rc[0] * bndv.getValues(f) + rc[1] * bndv.getDerivs(f)).squeeze()
+            # l2norm of boundary error on faces
+            BB = LocalInnerProducts(be,be,self.weights)
+            ipB = pus.createvbsr(self.mesh.entityfaces[id], BB.product, np.ones(nf), np.ones(nf))
+            elem_error_bnd += pms.sumrhs(self.mesh, ipB.tocsr()).todense().A.squeeze()
+        
+        return elem_error_dirichlet.real, elem_error_neumann.real, elem_error_bnd.real
         
 @distribute()
 class EvalElementError(object):
@@ -137,7 +170,8 @@ class EvalElementError(object):
             #Add absolute value of errors since floating point errors can make result negative
             #or complex valued 
 #            elem_error_dirichlet[self.mesh.ftoe[face1]]+=numpy.abs(e11+e22-2*numpy.real(e12))
-            elem_error_dirichlet[self.mesh.ftoe[face1]]+=e11+e22-2*e12
+#            print e11,e22,e12, e11+e22, 2*e12
+            elem_error_dirichlet[self.mesh.ftoe[face1]]+=np.real(e11+e22-2*e12)
             
             n11=numpy.dot(numpy.conj(x1),numpy.dot(NN.product(face1,face1),x1))
             n12=numpy.dot(numpy.conj(x1),numpy.dot(NN.product(face1,face2),x2))
@@ -196,7 +230,8 @@ class EvalElementError(object):
                 elem_error_bnd[e]+= numpy.abs(eDD+eNN+eGG+eGnGn+eND+eGD+eGnD+eGN+eGnN+eGnG)
                 
 #        return (numpy.sqrt(elem_error_dirichlet),numpy.sqrt(elem_error_neumann), numpy.sqrt(elem_error_bnd))
-        return (numpy.sqrt(np.abs(elem_error_dirichlet)),numpy.sqrt(elem_error_neumann), numpy.sqrt(elem_error_bnd))
+#        return (numpy.sqrt(np.abs(elem_error_dirichlet)),numpy.sqrt(elem_error_neumann), numpy.sqrt(elem_error_bnd))
+        return (elem_error_dirichlet,elem_error_neumann, elem_error_bnd)
     
             
               

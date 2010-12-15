@@ -30,6 +30,7 @@ def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
     if bsizerows is None: bsizerows = [None]*s[0]
     if bsizecols is None: bsizecols = [None]*s[1]
     for (i,j), block in zip(coords, data):
+        
         (r,c) = block.shape
         if not bsizerows[i] in [r, None]: raise ValueError("Incompatible block sizes. row:%s, r:%s, bsizerows[i]:%s" %(i,r,bsizerows[i]))  
         if not bsizecols[j] in [c, None]: raise ValueError("Incompatible block sizes. col:%s, c:%s, bsizecols[i]:%s" %(j,c,bsizecols[i]))

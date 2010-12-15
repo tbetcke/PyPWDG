@@ -51,9 +51,9 @@ class computation(object):
         self.usecache=usecache
         self.assembledmatrix=None
         self.rhs=None
-        self.error_dirichlet=None
-        self.error_neumann=None
-        self.error_boundary=None
+        self.error_dirichlet2=None
+        self.error_neumann2=None
+        self.error_boundary2=None
         self.error_combined=None
         self.x=None
                 
@@ -140,16 +140,25 @@ class computation(object):
         
         print "Evaluate Jumps"
         EvalError = EvalElementError(self.mesh, self.elttobasis, self.quad, self.bnddata, self.lv, self.bndvs)
-        (self.error_dirichlet, self.error_neumann, self.error_boundary) = EvalError.evaluate(self.x)
+        (self.error_dirichlet2, self.error_neumann2, self.error_boundary2) = EvalError.evaluate(self.x)
         
 #        error_dirichlet2 = pce.EvalElementError2(self.mesh, self.mqs, self.lv,self.elttobasis.getSizes()).evaluate(self.x)
-#        print numpy.vstack((error_dirichlet2,self.error_dirichlet, error_dirichlet2 / self.error_dirichlet)).transpose()
+        error_dirichlet3, error_neumann3, error_boundary3 = pce.EvalElementError3(self.mesh, self.mqs, self.lv, self.bnddata, self.bndvs).evaluate(self.x)
+        
+#        print numpy.vstack((error_dirichlet3, error_dirichlet2,self.error_dirichlet, error_dirichlet2 / self.error_dirichlet)).transpose()
+        print error_dirichlet3 / self.error_dirichlet2
+        print error_neumann3 / self.error_neumann2
+        
+        beidx = self.error_boundary2 !=0
+        print error_boundary3[beidx] / self.error_boundary2[beidx]
+        print error_boundary3[beidx]
+        print self.error_boundary2[beidx]
         
     def combinedError(self):
         
-        if self.error_dirichlet is None: self.evalJumpErrors()
-        self.error_combined = self.k ** 2 * self.error_dirichlet ** 2 + self.error_neumann ** 2 + self.error_boundary ** 2
-        self.error_combined = numpy.sqrt(self.error_combined)
+        if self.error_dirichlet2 is None: self.evalJumpErrors()
+        error_combined2 = self.k ** 2 * self.error_dirichlet2 + self.error_neumann2 + self.error_boundary2
+        self.error_combined = numpy.sqrt(error_combined2)
         return self.error_combined
             
         
