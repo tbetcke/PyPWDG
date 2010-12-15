@@ -82,31 +82,22 @@ class EvalElementError3(object):
             
     @parallelmethod(reduceop = tuplesum)
     def evaluate(self, x):
+        facemap = self.mesh.connectivity*numpy.arange(self.mesh.nfaces)
         SM = pms.AveragesAndJumps(self.mesh)
-        # number of faces
-        nf = len(self.vs.indices)
-        # coefficients for each (2-sided) face
-        xf = lambda f: x[self.vs.indices[f]:self.vs.indices[f]+self.vs.numbases[f]]
-        # dirichlet values of solution at the quadrature points on each (2-sided) faces                
-        vx = lambda f: np.dot(self.vs.getValues(f),xf(f))
-        # L2 inner product of solns for pairs of 2-sided faces (only makes sense when faces are from same pair)
-        DD = LocalInnerProducts(vx, vx, self.weights)
-        # We're evaluating jumps * jumps
-        SMJD2 = (SM.JD.transpose() * SM.JD).tocsr()
-        # For each face pair, (f1,f2) with solution, (u1,u2), the corresponding 2x2 submatrix
-        # of ipD is 2 * [[<u1,u1>, -<u1,u2>],[-<u2,u1>, <u2,u2>]]
-        ipD = pus.createvbsr(SMJD2, DD.product, np.ones(nf), np.ones(nf))
-        # SM.AD * . sums all the rows in the submatrix for each face and then pms.sumrhs sums all the 
-        # faces for each element.  We could have also done . * SM.AD and used pms.sumfaces and then 
-        # extracted the resulting diagonal, but multiplying by a vector of ones achieves the same
-        # result, so pms.sumrhs is a nice shortcut
-        elem_error_dirichlet = pms.sumrhs(self.mesh, SM.AD * ipD.tocsr()).todense().A.squeeze()
         
-        dx = lambda f: np.dot(self.vs.getDerivs(f), xf(f))
-        NN = LocalInnerProducts(dx,dx,self.weights)
-        SMJN2 = (SM.JN.transpose() * SM.JN).tocsr()
-        ipN = pus.createvbsr(SMJN2, NN.product, np.ones(nf), np.ones(nf))
-        elem_error_neumann = pms.sumrhs(self.mesh, SM.AD * ipN.tocsr()).todense().A.squeeze()
+        nf = len(self.vs.indices) # number of faces        
+        xf = lambda f: x[self.vs.indices[f]:self.vs.indices[f]+self.vs.numbases[f]] # coefficients for each (2-sided) face                        
+        vx = lambda f: np.dot(self.vs.getValues(f),xf(f)) # dirichlet values of solution at the quadrature points on each (2-sided) face        
+        evx = lambda f: vx(f) - vx(facemap[f]) # error on each face        
+        DD = LocalInnerProducts(evx, evx, self.weights) # L2 inner product of solns for pairs of 2-sided faces (only makes sense when faces are from same pair)
+        ipD = pus.createvbsr(self.mesh.internal, DD.product, np.ones(nf), np.ones(nf))
+        elem_error_dirichlet = pms.sumrhs(self.mesh, ipD.tocsr()).todense().A.squeeze()
+        
+        nx = lambda f: np.dot(self.vs.getDerivs(f), xf(f))
+        enx = lambda f: nx(f) + nx(facemap[f])
+        NN = LocalInnerProducts(enx,enx,self.weights)
+        ipN = pus.createvbsr(self.mesh.internal, NN.product, np.ones(nf), np.ones(nf))
+        elem_error_neumann = pms.sumrhs(self.mesh, ipN.tocsr()).todense().A.squeeze()
         
         elem_error_bnd=numpy.zeros(self.mesh.nelements, dtype=complex)
         
@@ -114,7 +105,7 @@ class EvalElementError3(object):
             lc=bdycondition.l_coeffs
             rc=bdycondition.r_coeffs
             # boundary error
-            be = lambda f: lc[0] * vx(f) + lc[1] * dx(f) - (rc[0] * bndv.getValues(f) + rc[1] * bndv.getDerivs(f)).squeeze()
+            be = lambda f: lc[0] * vx(f) + lc[1] * nx(f) - (rc[0] * bndv.getValues(f) + rc[1] * bndv.getDerivs(f)).squeeze()
             # l2norm of boundary error on faces
             BB = LocalInnerProducts(be,be,self.weights)
             ipB = pus.createvbsr(self.mesh.entityfaces[id], BB.product, np.ones(nf), np.ones(nf))
