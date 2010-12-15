@@ -10,7 +10,7 @@ from pypwdg.utils.quadrature import trianglequadrature, legendrequadrature
 from pypwdg.mesh.meshutils import MeshQuadratures
 from pypwdg.core.vandermonde import LocalVandermondes
 from pypwdg.core.physics import assemble
-from pypwdg.core.evaluation import StructuredPointsEvaluator, EvalElementError
+from pypwdg.core.evaluation import StructuredPointsEvaluator
 from pypwdg.output.vtk_output import VTKStructuredPoints
 from pypwdg.output.vtk_output import VTKGrid
 
@@ -139,19 +139,19 @@ class computation(object):
         if self.x is None: self.solve()
         
         print "Evaluate Jumps"
-#        (self.error_dirichlet2, self.error_neumann2, self.error_boundary2) = pce.EvalElementError3(self.mesh, self.mqs, self.lv, self.bnddata, self.bndvs).evaluate(self.x)
+        (self.error_dirichlet2, self.error_neumann2, self.error_boundary2) = pce.EvalElementError3(self.mesh, self.mqs, self.lv, self.bnddata, self.bndvs).evaluate(self.x)
 
-        EvalError = EvalElementError(self.mesh, self.elttobasis, self.quad, self.bnddata, self.lv, self.bndvs)
-        (self.error_dirichlet2, self.error_neumann2, self.error_boundary2) = EvalError.evaluate(self.x)
-        error_dirichlet3, error_neumann3, error_boundary3 = pce.EvalElementError3(self.mesh, self.mqs, self.lv, self.bnddata, self.bndvs).evaluate(self.x)
-        
-        print error_dirichlet3 / self.error_dirichlet2
-        print error_neumann3 / self.error_neumann2        
-        beidx = self.error_boundary2 !=0
-        print error_boundary3[beidx] / self.error_boundary2[beidx]
-        print error_boundary3[beidx]
-        print self.error_boundary2[beidx]
-        
+#        EvalError = EvalElementError(self.mesh, self.elttobasis, self.quad, self.bnddata, self.lv, self.bndvs)
+#        (self.error_dirichlet2, self.error_neumann2, self.error_boundary2) = EvalError.evaluate(self.x)
+#        error_dirichlet3, error_neumann3, error_boundary3 = pce.EvalElementError3(self.mesh, self.mqs, self.lv, self.bnddata, self.bndvs).evaluate(self.x)
+#        
+#        print error_dirichlet3 / self.error_dirichlet2
+#        print error_neumann3 / self.error_neumann2        
+#        beidx = self.error_boundary2 !=0
+#        print error_boundary3[beidx] / self.error_boundary2[beidx]
+#        print error_boundary3[beidx]
+#        print self.error_boundary2[beidx]
+#        
     def combinedError(self):
         
         if self.error_dirichlet2 is None: self.evalJumpErrors()
