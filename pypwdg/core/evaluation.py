@@ -100,15 +100,15 @@ class EvalElementError3(object):
         # faces for each element.  We could have also done . * SM.AD and used pms.sumfaces and then 
         # extracted the resulting diagonal, but multiplying by a vector of ones achieves the same
         # result, so pms.sumrhs is a nice shortcut
-        elem_error_dirichlet = pms.sumrhs(self.mesh, SM.AD * ipD.tocsr()).todense().squeeze()
+        elem_error_dirichlet = pms.sumrhs(self.mesh, SM.AD * ipD.tocsr()).todense().A.squeeze()
         
         dx = lambda f: np.dot(self.vs.getDerivs(f), xf(f))
         NN = LocalInnerProducts(dx,dx,self.weights)
         SMJN2 = (SM.JN.transpose() * SM.JN).tocsr()
         ipN = pus.createvbsr(SMJN2, NN.product, np.ones(nf), np.ones(nf))
-        elem_error_neumann = pms.sumrhs(self.mesh, SM.AD * ipN.tocsr()).todense().squeeze()
+        elem_error_neumann = pms.sumrhs(self.mesh, SM.AD * ipN.tocsr()).todense().A.squeeze()
         
-        elem_error_bnd=numpy.zeros(self.mesh.nelements)
+        elem_error_bnd=numpy.zeros(self.mesh.nelements, dtype=complex)
         
         for (id, bdycondition), bndv in zip(self.bnddata.items(), self.bndvs):
             lc=bdycondition.l_coeffs
