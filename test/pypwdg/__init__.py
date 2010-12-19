@@ -1,3 +1,3 @@
-from testcore import *
-from testmesh import *
-from testutils import *
+from .core import *
+from .mesh import *
+from .utils import *
