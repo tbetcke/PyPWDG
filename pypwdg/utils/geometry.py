@@ -6,15 +6,13 @@ Created on Aug 11, 2010
 
 import numpy
 import scipy.sparse
-import numpy.ma as ma
 import numpy as np
 
 def pointsToElement(points, mesh):
     """ detect which element each point is in """
     
-    normals = mesh.normals[mesh.fs]
-    directions = mesh.directions[mesh.fs]
-    assert(ma.count_masked(normals)==0)
+    normals = np.array([mesh.normals[f] for f in mesh.fs])
+    directions = np.array([mesh.directions[f] for f in mesh.fs])
 #    normals = numpy.array(normals)
     
     # take the dot product with each point and the outward normal on each face
@@ -30,7 +28,7 @@ def pointsToElement(points, mesh):
     behindface = offsets <=0
     
     # for each element, sum over the neighbouring faces.  detect which point is behind dim+1 faces
-    withinelt = scipy.sparse.csr_matrix((behindface.data * mesh.elttofaces.transpose()[mesh.fs]) == (mesh.dim + 1))
+    withinelt = scipy.sparse.csr_matrix((behindface * mesh.elttofaces.transpose()[mesh.fs]) == (mesh.dim + 1))
     
     if len(withinelt.indices):
         # for each point, pick an element that it's a member of (this is arbitrary for points that lie on faces)
@@ -82,13 +80,13 @@ class StructuredPoints(object):
         idxs = sum([axisidx * stride for axisidx, stride in zip(axisidxs, self.strides)])
         points = np.zeros(idxs.shape + (self.dim,))
         # A for loop.  Kill me now.
-        for i, l, u, n in zip(range(self.dim), self.lower, self.upper, self.npoints):
-            points[...,i]+=(axisidxs[i]*(u-l)/n + l)
+        for i, l, u, n in zip(range(self.dim), self.lower, self.upper, intervals):
+            points[...,i]+=(axisidxs[i]*(u-l)*1.0/n + l)
             
         return idxs.ravel(), points.reshape((-1,self.dim))
         
 def elementToStructuredPoints(structuredpoints, mesh, eid):
-    vertices = mesh.elements[eid]
+    vertices = np.array(mesh.elements[eid])
     crudeidxs, crudepoints = structuredpoints.getPoints(mesh.nodes[vertices])
     if len(crudeidxs):
         fs = mesh.etof[eid]

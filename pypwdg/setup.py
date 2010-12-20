@@ -4,8 +4,10 @@ Created on 1 Nov 2010
 @author: tbetcke
 '''
 
+__all__ = ["setup"]
+
 import numpy
-from pypwdg.core.bases import ElementToBases
+import pypwdg.core.bases as pcb
 from pypwdg.utils.quadrature import trianglequadrature, legendrequadrature
 from pypwdg.mesh.meshutils import MeshQuadratures
 from pypwdg.core.vandermonde import LocalVandermondes
@@ -77,7 +79,7 @@ class computation(object):
         self.lv = LocalVandermondes(self.mesh, self.elttobasis, self.mqs, usecache=self.usecache)
         self.bndvs = []
         for data in self.bnddata.values():
-            bndv = LocalVandermondes(self.mesh, ElementToBases(self.mesh).addUniformBasis(data), self.mqs)        
+            bndv = LocalVandermondes(self.mesh, pcb.ElementToBases(self.mesh).addUniformBasis(data), self.mqs)        
             self.bndvs.append(bndv)
             
     def setParams(self,alpha=0.5,beta=0.5,delta=0.5):

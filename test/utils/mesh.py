@@ -7,11 +7,21 @@ Created on Dec 19, 2010
 import pypwdg.mesh.mesh as pmm
 import numpy as np
 
-import test.utils
+from examples import __path__ as examplepath
 
-def squaremesh():
-    """ Loads in the unstructured mesh given by square.msh"""
-    return pmm.gmshMesh("square.msh", 2)
+def examplemeshes3d():
+    """ Loads in a list of 3D unstructured meshes used in examples"""    
+    return [pmm.gmshMesh(examplepath[0] + "/3D/" + fname, 3) for fname in ["cube.msh", "cube_coarse.msh"]]
+
+def examplemeshes2d():
+    """ Loads in a list of 2D unstructured meshes used in examples"""
+    return [pmm.gmshMesh(examplepath[0] + "/2D/" + fname, 2) for fname in ["square.msh", "squarescatt.msh"]]
+
+def meshes3d():
+    return examplemeshes3d()
+
+def meshes2d():
+    return [regularsquaremesh(n) for n in [1,3,5]] + examplemeshes2d()
 
 def regularsquaremesh(n = 1, bdytag="BDY"):
     """ Returns a mesh object for the unit square composed of n*n squares each sub-divided into 2 triangles"""

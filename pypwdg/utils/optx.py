@@ -28,11 +28,12 @@ def optx(G,m):
         V[1] = gain[i]
     return T[m,:],V[m]
 
-G = np.zeros((3,5));
-G[1,:] = np.random.rand(5);
-G[2,:] = np.random.rand(5);
-x,v = optx(G,6);
-
-print('x = ', x)
-print('v = ', v)
+if __name__ == "main":
+    G = np.zeros((3,5));
+    G[1,:] = np.random.rand(5);
+    G[2,:] = np.random.rand(5);
+    x,v = optx(G,6);
+    
+    print('x = ', x)
+    print('v = ', v)
 
