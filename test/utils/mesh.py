@@ -1,4 +1,6 @@
 '''
+Sample meshes for use in unit tests
+
 Created on Dec 19, 2010
 
 @author: joel
