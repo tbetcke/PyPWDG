@@ -3,8 +3,9 @@ Created on Jul 14, 2010
 
 @author: joel
 '''
-from pypwdg.utils.timing import print_timing
+from pypwdg.utils.timing import print_timing, Timer
 import numpy as np
+import scipy.sparse as ss
 
 def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
     """ Creates a variable block sparse matrix
@@ -24,11 +25,12 @@ def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
     csr.sort_indices()
     zipip = zip(csr.indptr[:-1], csr.indptr[1:])
     coords = [(i,j) for i,p in enumerate(zipip) for j in csr.indices[p[0]:p[1]] ]
-    data = numpy.array([csr.data[n] * numpy.mat(blocks(i,j)) for n, (i,j) in enumerate(coords)])
+    data = numpy.array([csr.data[n] * blocks(i,j) for n, (i,j) in enumerate(coords)])
     s = csr.get_shape()
     if bsizerows is None: bsizerows = [None]*s[0]
     if bsizecols is None: bsizecols = [None]*s[1]
     for (i,j), block in zip(coords, data):
+        
         (r,c) = block.shape
         if not bsizerows[i] in [r, None]: raise ValueError("Incompatible block sizes. row:%s, r:%s, bsizerows[i]:%s" %(i,r,bsizerows[i]))  
         if not bsizecols[j] in [c, None]: raise ValueError("Incompatible block sizes. col:%s, c:%s, bsizecols[i]:%s" %(j,c,bsizecols[i]))
@@ -71,12 +73,41 @@ class vbsr_matrix(object):
         self.bsizei = numpy.array(bsizei, dtype=int)
         self.bsizej = numpy.array(bsizej, dtype=int)
         self.bindj = numpy.concatenate(([0],bsizej)).cumsum()
+        self.bindi = numpy.concatenate(([0],bsizei)).cumsum()
         self.scalar = scalar
-        self.shape = (sum(self.bsizei), sum(self.bsizej))
-
-            
+#        self.shape = (sum(self.bsizei), sum(self.bsizej))
+        self.shape = (self.bindi[-1], self.bindj[-1])
         
+
+    def nnz(self):
+        '''Return number of nonzeros in blocks'''
+        nelems=0
+        for b in self.blocks: nelems+=b.shape[0]*b.shape[1]
+        return nelems
+    
     def tocsr(self):
+        ''' Return this matrix in csr format '''
+        csrdata = []
+        csrind = []
+        rowlengths = np.zeros(self.shape[0],dtype=int)
+        
+        for i, (p0, p1) in enumerate(zip(self.indptr[:-1], self.indptr[1:])):
+            if p1 > p0:
+                csrdata.append(np.hstack(self.blocks[p0:p1]).ravel())
+                rowinds = np.concatenate([np.arange(self.bindj[idx], self.bindj[idx + 1],dtype=int) for idx in self.indices[p0:p1]])
+                csrind.append(np.tile(rowinds, [self.bsizei[i], 1]).ravel())
+                rowlengths[self.bindi[i]:self.bindi[i + 1]] = len(rowinds)
+            else:
+                rowlengths[self.bindi[i]:self.bindi[i + 1]] = 0
+
+        csrptr = np.concatenate(([0], rowlengths)).cumsum()
+        naind = np.concatenate(csrind)
+        d = np.concatenate(csrdata) * self.scalar
+        csr = ss.csr_matrix((d, naind, csrptr), shape=self.shape)
+        return csr
+
+                 
+    def tocsr_old(self):
         ''' Return this matrix in csr format '''
         from numpy import concatenate, array
         from scipy.sparse import csr_matrix
@@ -88,7 +119,7 @@ class vbsr_matrix(object):
         for i,(p0,p1) in enumerate(zip(self.indptr[:-1], self.indptr[1:])):
             for ii in range(self.bsizei[i]):
                 for b,j in bj[p0:p1]:
-                    csrdata.append(b[ii,:].A.flatten() * self.scalar)
+                    csrdata.append(b[ii,:].ravel() * self.scalar)
                     csrind.append(range(b.shape[1])+self.bindj[j])
                     cptr += b.shape[1]
                 csrptr.append(cptr)
@@ -125,7 +156,7 @@ class vbsr_matrix(object):
         sparsity structure.  this might look a bit inefficient, but since all that's done in C++, it's not.
         Caveat refactorer - it's very easy to slow this down.
         """        
-        from numpy import ones, mat
+        from numpy import ones
         from scipy.sparse import csr_matrix
         from scipy import int32
         
@@ -166,7 +197,7 @@ class vbsr_matrix(object):
                     if ak <= bk: pa+=1
                     if bk <= ak: pb+=1
                 if (lsizes[i], rsizes[j]) != ab.shape: raise ValueError("Incompatible block sizes %s, %s"%((lsizes[i], rsizes[j]), ab.shape)) 
-                data.append(mat(ab) * otherscalar * self.scalar) 
+                data.append(ab * otherscalar * self.scalar) 
                 indices.append(j)                
             indptr.append(len(indices))
          
@@ -254,7 +285,7 @@ class vbsr_matrix(object):
     
 #    @print_timing    
     def __add__(self, other):
-        from numpy import mat, array_equal
+        from numpy import array_equal
         if other==0: return self
         sizeinonzero = np.logical_and(other.bsizei != 0, self.bsizei !=0) 
         if not array_equal(other.bsizei[sizeinonzero], self.bsizei[sizeinonzero]):
@@ -287,7 +318,7 @@ class vbsr_matrix(object):
                     bp0+=1
                 
                 indices.append(j)
-                blocks.append(mat(ab))
+                blocks.append(ab)
             indptr.append(len(indices))
 #        print "sparse.add ", np.sum(self.blocks), np.sum(other.blocks), np.sum(blocks)
         return vbsr_matrix(blocks, indices, indptr, np.amax((self.bsizei, other.bsizei), axis=0), np.amax((self.bsizej,other.bsizej),axis=0))

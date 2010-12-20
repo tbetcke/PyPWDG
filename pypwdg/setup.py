@@ -4,21 +4,23 @@ Created on 1 Nov 2010
 @author: tbetcke
 '''
 
+__all__ = ["setup"]
+
 import numpy
-from pypwdg.core.bases import circleDirections, PlaneWaves, cubeDirections, cubeRotations, FourierBessel
+import pypwdg.core.bases as pcb
 from pypwdg.utils.quadrature import trianglequadrature, legendrequadrature
 from pypwdg.mesh.meshutils import MeshQuadratures
 from pypwdg.core.vandermonde import LocalVandermondes
 from pypwdg.core.physics import assemble
-from pypwdg.core.evaluation import Evaluator, EvalElementError
+from pypwdg.core.evaluation import StructuredPointsEvaluator
 from pypwdg.output.vtk_output import VTKStructuredPoints
 from pypwdg.output.vtk_output import VTKGrid
 
-def runParallel():
-    import pypwdg.parallel.main
-    
+import pypwdg.core.evaluation as pce
 
-def setup(mesh,k,nquadpoints,nplanewaves,bnddata):
+import pypwdg.parallel.main
+
+def setup(mesh,k,nquadpoints,elttobasis,bnddata,usecache=True):
     """Returns a 'computation' object that contains everything necessary for a PWDG computation.
     
        INPUT Parameters:
@@ -35,132 +37,103 @@ def setup(mesh,k,nquadpoints,nplanewaves,bnddata):
        
        An example call may take the form
        
-       comp=setup(gmshMesh('myMesh.msh',dim=2),k=5,nquadpoints=10, nplanewaves=3,bnddata={5: dirichlet(g), 6:zero_impedance(k)})
+       comp=setup(gmshMesh('myMesh.msh',dim=2),k=5,nquadpoints=10, elttobasis, bnddata={5: dirichlet(g), 6:zero_impedance(k)})
     """
     
-    return PWcomputation(mesh,k,nquadpoints,nplanewaves,bnddata)
+    return computation(mesh,k,nquadpoints,elttobasis,bnddata,usecache)
 
 class computation(object):
     
-    def __init__(self,mesh,k,nquadpoints,bnddata):
+    def __init__(self,mesh,k,nquadpoints,elttobasis,bnddata,usecache):
         self.mesh=mesh
         self.k=k
         self.nquadpoints=nquadpoints
         self.bnddata=bnddata
         self.params=None
-        self.usecache=True
+        self.usecache=usecache
         self.assembledmatrix=None
         self.rhs=None
-        self.error_dirichlet=None
-        self.error_neumann=None
-        self.error_boundary=None
+        self.error_dirichlet2=None
+        self.error_neumann2=None
+        self.error_boundary2=None
         self.error_combined=None
         self.x=None
-        
-        self.elttobasis=[list() for _ in range(mesh.nelements)]
-        
+                
         # Set DG Parameters
         
         self.setParams()
         
         # Setup quadrature rules
         
-        if mesh.dim==2:
-            self.quad=legendrequadrature(self.nquadpoints)
+        if mesh.dim == 2:
+            self.quad = legendrequadrature(self.nquadpoints)
         else:
-            self.quad=trianglequadrature(self.nquadpoints)
-        self.mqs=MeshQuadratures(self.mesh,self.quad)
-        self.lv = None
-        self.bndvs = None
+            self.quad = trianglequadrature(self.nquadpoints)
+        self.mqs = MeshQuadratures(self.mesh, self.quad)
         
-    def vandermondes(self):        
-        # Setup local Vandermondes    
-        if self.lv==None:    
-            self.lv = LocalVandermondes(self.mesh, self.elttobasis, self.mqs, usecache=self.usecache)
+        # Setup basis functions
+        self.elttobasis = elttobasis
+        
+        # Setup local Vandermondes
+        
+        self.lv = LocalVandermondes(self.mesh, self.elttobasis, self.mqs, usecache=self.usecache)
+        self.bndvs = []
+        for data in self.bnddata.values():
+            bndv = LocalVandermondes(self.mesh, pcb.ElementToBases(self.mesh).addUniformBasis(data), self.mqs)        
+            self.bndvs.append(bndv)
             
-        if self.bndvs == None:
-            self.bndvs=[]
-            for data in self.bnddata.values():
-                bndv = LocalVandermondes(self.mesh, [[data]] * self.mesh.nelements, self.mqs)        
-                self.bndvs.append(bndv)
-            
-    def addBasisObject(self,basis,elemlist=None):
-        self.lv = None
-        self.bndvs = None
-        if elemlist==None:
-            map(lambda f: f.append(basis),self.elttobasis)
-        else:
-            for i in elemlist: self.elttobasis[i].append(basis)
-        
-    def addPlaneWaves(self,dirs,elemlist=None):
-        self.addBasisObject(PlaneWaves(dirs,self.k))
-
-    def addBessels(self,orders,elemlist=None,origin=None):
-        
-        if not self.mesh.dim==2: raise Exception("Bessel functions are only defined in 2D.")
-        if elemlist==None: elemlist=range(self.mesh.nelements)
-        for elem in elemlist:
-            origin=self.mesh.nodes[self.mesh.elements[elem][0]]
-            self.addBasisObject(FourierBessel(origin,orders,self.k),elem)
-        
     def setParams(self,alpha=0.5,beta=0.5,delta=0.5):
         self.params={'alpha':alpha,'beta':beta,'delta':delta}
             
     def assemble(self):
         print "Assembling system"
-        self.vandermondes() # ensure that the vandermondes have been calculated
-        self.assembledmatrix,self.rhs= assemble(self.mesh, self.k, self.lv, self.bndvs, self.mqs, self.elttobasis, self.bnddata, self.params)
+        self.assembledmatrix, self.rhs = assemble(self.mesh, self.k, self.lv, self.bndvs, self.mqs, self.elttobasis, self.bnddata, self.params)
     
-    def solve(self,solver="pardiso"):
+    def solve(self, solver="pardiso"):
 
         if self.assembledmatrix is None: self.assemble()
 
         print "Solve linear system of equations"
 
-        self.assembledmatrix=self.assembledmatrix.tocsr()
-        self.rhs=numpy.array(self.rhs.todense()).squeeze()
+        self.assembledmatrix = self.assembledmatrix.tocsr()
+        self.rhs = numpy.array(self.rhs.todense()).squeeze()
         
-        usepardiso = solver=="pardiso"
-        useumfpack = solver=="umfpack"
+        usepardiso = solver == "pardiso"
+        useumfpack = solver == "umfpack"
         
         if not (usepardiso or useumfpack): raise Exception("Solver not known")
         
         if usepardiso:
             try:            
                 from pymklpardiso.linsolve import solve
-                (self.x,error)=solve(self.assembledmatrix,self.rhs)
-                if not error==0: raise Exception("Pardiso Error")
+                (self.x, error) = solve(self.assembledmatrix, self.rhs)
+                if not error == 0: raise Exception("Pardiso Error")
             except ImportError:
                 useumfpack = True
                 
         if useumfpack:
             from scipy.sparse.linalg.dsolve.linsolve import spsolve as solve
-            self.x=solve(self.assembledmatrix,self.rhs)
+            self.x = solve(self.assembledmatrix, self.rhs)
         
         
+        print "Relative residual: ", numpy.linalg.norm(self.assembledmatrix * self.x - self.rhs) / numpy.linalg.norm(self.x)
         
-    def writeSolution(self,bounds,npoints,realdata=True,fname='solution.vti'):
+        
+    def writeSolution(self, bounds, npoints, realdata=True, fname='solution.vti'):
         
         if self.x is None: self.solve()
         
         print "Evaluate Solution and Write to File"
         
         bounds=numpy.array(bounds,dtype='d')
-        if realdata:
-            filt=numpy.real
-        else:
-            filt=numpy.imag
-        if self.mesh.dim==2:
-            t=2
-        else:
-            t=3
-        eval_fun=lambda points: filt(Evaluator(self.mesh,self.elttobasis,points[:,:t]).evaluate(self.x))
-        vtk_structure=VTKStructuredPoints(eval_fun)
+        filter=numpy.real if realdata else numpy.imag
+
+        vtk_structure=VTKStructuredPoints(StructuredPointsEvaluator(self.mesh, self.elttobasis, filter, self.x))
         vtk_structure.create_vtk_structured_points(bounds,npoints)
         vtk_structure.write_to_file(fname)
         
-    def writeMesh(self,fname='mesh.vtu',scalars=None):
-        vtkgrid=VTKGrid(self.mesh,scalars)
+    def writeMesh(self, fname='mesh.vtu', scalars=None):
+        vtkgrid = VTKGrid(self.mesh, scalars)
         vtkgrid.write(fname)
    
     def evalJumpErrors(self):
@@ -168,26 +141,29 @@ class computation(object):
         if self.x is None: self.solve()
         
         print "Evaluate Jumps"
-        EvalError=EvalElementError(self.mesh,self.elttobasis,self.quad, self.bnddata, self.lv, self.bndvs)
-        (self.error_dirichlet,self.error_neumann,self.error_boundary)=EvalError.evaluate(self.x)
-        
+        (self.error_dirichlet2, self.error_neumann2, self.error_boundary2) = pce.EvalElementError3(self.mesh, self.mqs, self.lv, self.bnddata, self.bndvs).evaluate(self.x)
+
+#        EvalError = EvalElementError(self.mesh, self.elttobasis, self.quad, self.bnddata, self.lv, self.bndvs)
+#        (self.error_dirichlet2, self.error_neumann2, self.error_boundary2) = EvalError.evaluate(self.x)
+#        error_dirichlet3, error_neumann3, error_boundary3 = pce.EvalElementError3(self.mesh, self.mqs, self.lv, self.bnddata, self.bndvs).evaluate(self.x)
+#        
+#        print error_dirichlet3 / self.error_dirichlet2
+#        print error_neumann3 / self.error_neumann2        
+#        beidx = self.error_boundary2 !=0
+#        print error_boundary3[beidx] / self.error_boundary2[beidx]
+#        print error_boundary3[beidx]
+#        print self.error_boundary2[beidx]
+#        
     def combinedError(self):
         
-        if self.error_dirichlet is None: self.evalJumpErrors()
-        self.error_combined=self.k**2*self.error_dirichlet**2+self.error_neumann**2+self.error_boundary**2
-        self.error_combined=numpy.sqrt(self.error_combined)
+        if self.error_dirichlet2 is None: self.evalJumpErrors()
+        error_combined2 = self.k ** 2 * self.error_dirichlet2 + self.error_neumann2 + self.error_boundary2
+        self.error_combined = numpy.sqrt(error_combined2)
         return self.error_combined
             
         
-class PWcomputation(computation):
-    def __init__(self,mesh,k,nquadpoints,nplanewaves,bnddata):    
-        computation.__init__(self,mesh,k,nquadpoints,bnddata)
-        self.nplanewaves=nplanewaves
         
-        if mesh.dim==2:
-            dirs = circleDirections(self.nplanewaves)
-        else:
-            dirs = cubeRotations(cubeDirections(self.nplanewaves))
-        self.addPlaneWaves(dirs)
-
+    
+        
+        
         

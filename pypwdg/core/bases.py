@@ -27,6 +27,81 @@ def circleDirections(n):
     theta = numpy.arange(n).reshape((-1,1)) * 2*math.pi / n
     return numpy.hstack((numpy.cos(theta), numpy.sin(theta)))
 
+def planeWaveBases(mesh, k, nplanewaves):        
+    if mesh.dim==2:
+        dirs = circleDirections(nplanewaves)
+    else:
+        dirs = cubeRotations(cubeDirections(nplanewaves))
+    pw = PlaneWaves(dirs,k)
+    return ElementToBases(mesh).addUniformBasis(pw)
+
+
+def fourierBesselBases(mesh, k, orders):
+    if not mesh.dim==2: raise Exception("Bessel functions are only defined in 2D.")
+    etob = ElementToBases(mesh)
+    for e in range(mesh.nelements):
+        origin=mesh.nodes[mesh.elements[e][0]]
+        etob.addBasis(e, FourierBessel(origin,orders,k))
+    return etob
+
+class ElementToBases(object):
+    def __init__(self, mesh):
+        self.mesh = mesh
+        self.etob = {}
+        self.sizes = None     
+        self.indices = None 
+        self.version = 0  
+        
+    def getValues(self, eid, points, normal=None):
+        """ Return the values of the basis for element eid at points"""
+        bases = self.etob.get(eid)
+        if bases==None:
+            return numpy.zeros(len(points),0)
+        else:
+            return numpy.hstack([b.values(points, normal) for b in bases])
+    
+    def getDerivs(self, eid, points, normal):
+        """ Return the directional derivatives of the basis for element eid at points"""
+        bases = self.etob.get(eid)
+        if bases==None:
+            return numpy.zeros(len(points),0)
+        else:
+            return numpy.hstack([b.derivs(points, normal) for b in bases])
+    
+    def _reset(self):
+        self.sizes = None     
+        self.indices = None 
+        self.version +=1
+    
+    def addBasis(self, eid, b):
+        """ Add a basis object to element eid"""
+        bases = self.etob.setdefault(eid, [])
+        bases.append(b)
+        self._reset()
+        return self
+    
+    def addUniformBasis(self, b):
+        for e in range(self.mesh.nelements):
+            self.addBasis(e, b)   
+        self._reset()
+        return self
+    
+    def setEtoB(self, etob = {}):
+        self.etob = etob
+        self._reset()
+    
+    def getSizes(self):
+        if self.sizes is None:
+            self.sizes = numpy.array([sum([b.n for b in self.etob.get(e,[])]) for e in range(self.mesh.nelements)])
+        return self.sizes
+        
+    def getIndices(self):
+        """ Return the global index for element eid"""
+        if self.indices is None:
+            sizes = self.getSizes()
+            self.indices = numpy.cumsum(numpy.concatenate(([0], sizes)))
+        return self.indices 
+
 class PlaneWaves(object):
     
     def __init__(self, directions, k):
