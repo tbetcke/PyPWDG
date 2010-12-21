@@ -7,7 +7,51 @@ import pypwdg.mesh.meshutils as pmmu
 import pypwdg.utils.timing as put
 import pypwdg.parallel.decorate as ppd
 
+class PWPenaltyBasisGenerator(object):
+    def __init__(self, k, alpha, dim):
+        self.k = k
+        self.alpha = alpha
+        self.dim = dim
+    
+    def genbasis(self, params):
+#        print params
+        return pcb.PlaneWaves(params.reshape(-1,self.dim), self.k)
+    
+    def penalty(self, params):        
+        p = params.reshape(-1, self.dim)        
+        pen = self.alpha * np.log(np.sum(p**2, axis=1))
+        return pen
+    
+    def finalbasis(self, params):
+        p = params.reshape(-1, self.dim)
+        return self.genbasis(p / np.sqrt(np.sum(p**2, axis=1)).reshape(-1,1)) 
 
+class LeastSquaresFit(object):
+    def __init__(self, u, quadrule):
+        self.qp, qw = quadrule
+        self.qwsqrt = np.sqrt(qw).ravel()
+        self.urp = u(self.qp).ravel() * self.qwsqrt
+        self.l2urp = math.sqrt(np.vdot(self.urp,self.urp))
+    
+    def optimise(self, basis):
+        basisvals = basis.values(self.qp) * self.qwsqrt.reshape(-1,1)
+        coeffs = sl.lstsq(basisvals, self.urp)[0]
+        err = np.abs(np.dot(basisvals, coeffs).ravel() - self.urp)/self.l2urp
+        return coeffs, err
+
+@put.print_timing    
+def optimalbasis3(linearopt, basisgenerator, iniparams, penalty = None, finalbasis = None):
+    if finalbasis is None: finalbasis = basisgenerator
+    def nonlinearfn(params):
+#        print params
+        basis = basisgenerator(params)
+        err = linearopt(basis)[1]
+        return err if penalty is None else np.concatenate((err, penalty(params)))
+    
+    optparams = so.leastsq(nonlinearfn, iniparams.flatten())[0]     
+    basis = finalbasis(optparams)
+    return basis, linearopt(basis)
+    
 @put.print_timing    
 def optimalbasis2(u, basisgenerator, initialparams, quadrule, extrabasis = None):
     qp, qw = quadrule
@@ -21,13 +65,13 @@ def optimalbasis2(u, basisgenerator, initialparams, quadrule, extrabasis = None)
         err = np.abs(np.dot(basisvals, coeffs).flatten() - urp)/l2urp
         return coeffs, err
     
-    def nonlinearfn(params, ret = False):
+    def nonlinearfn(params):
 #        print params
         basis = basisgenerator(params)
         coeffs, err = linearopt(basis)
         return err
     
-    optparams = so.leastsq(nonlinearfn, initialparams.flatten(), ftol=1e-4)[0]
+    optparams = so.leastsq(nonlinearfn, initialparams.flatten())[0]
     pwbasis = basisgenerator(optparams)
     basis = pcb.BasisCombine([pwbasis, extrabasis]) if extrabasis is not None else pwbasis
     return basis, linearopt(basis)
