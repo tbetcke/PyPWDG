@@ -34,4 +34,5 @@ def regularsquaremesh(n = 1, bdytag="BDY"):
     bdy1 = np.vstack((np.arange(n), np.arange(1,n1))).transpose()
     bdyfaces = np.vstack((bdy1, bdy1 + n1*n, bdy1*n1, bdy1*n1 + n))
     boundary = [(bdytag, tuple(bf)) for bf in bdyfaces]
-    return pmm.Mesh(points, elements, boundary, 2)
+    geomEntity=[1]*len(elements)
+    return pmm.Mesh(points, elements, geomEntity, boundary, 2)
