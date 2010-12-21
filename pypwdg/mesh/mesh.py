@@ -26,12 +26,17 @@ def gmshMesh(fname, dim):
     # Pick out the coordinates of the vertices that we actually need
     nodes = gmsh_dict['nodes'][:,0:dim]
     
+    els=filter(lambda e : e['type']==gmsh_elem_key, gmsh_dict['elements'].values())
+    
     # This is the element->vertex map.  This establishes a canonical element ordering
-    elements = map(lambda e: sorted(e['nodes']), filter(lambda e : e['type']==gmsh_elem_key, gmsh_dict['elements'].values()))
+    elements = map(lambda e: sorted(e['nodes']), els)
+    
+    # Create a map from the elements to their geometric Identities
+    elemIdentity = map(lambda e: e['geomEntity'], els)
     
     # These are the physical entities in the mesh.
     boundaries = map(lambda f: (f['physEntity'], tuple(sorted(f['nodes']))), filter(lambda e : e['type']==gmsh_face_key, gmsh_dict['elements'].values()))
-    return Mesh(nodes, elements, boundaries, dim)
+    return Mesh(nodes, elements, elemIdentity, boundaries, dim)
         
 @ppd.immutable
 class Mesh(object):
@@ -81,13 +86,14 @@ class Mesh(object):
     The elements and faces of a mesh are given a canonical ordering by self.__faces and self.__elements   
     """
     
-    def __init__(self,nodes, elements, boundaries,dim):
+    def __init__(self,nodes, elements, elemIdentity, boundaries,dim):
         """ Initialize Mesh """
     
         self.elements = elements
         self.nodes = nodes
         self.boundaries = boundaries
         self.dim = dim
+        self.elemIdentity=elemIdentity
         
         self.nnodes=len(nodes)
         self.nelements=len(elements)
