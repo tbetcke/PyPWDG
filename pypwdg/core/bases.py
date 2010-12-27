@@ -7,6 +7,7 @@ All basis classes should have values and derivs methods and a property n giving 
 
 '''
 
+import abc
 import numpy
 import math
 import scipy.special as ss
@@ -33,7 +34,10 @@ def planeWaveBases(mesh, k, nplanewaves):
     else:
         dirs = cubeRotations(cubeDirections(nplanewaves))
     pw = PlaneWaves(dirs,k)
-    return ElementToBases(mesh).addUniformBasis(pw)
+    etob=ElementToBases(mesh)
+    for e in range(mesh.nelements):
+        etob.addBasis(e,PlaneWaves(dirs,k))
+    return etob
 
 
 def fourierBesselBases(mesh, k, orders):
@@ -102,12 +106,51 @@ class ElementToBases(object):
             self.indices = numpy.cumsum(numpy.concatenate(([0], sizes)))
         return self.indices 
 
-class PlaneWaves(object):
+    def setRefractiveElement(self,eid,refr):
+        """Set refractive index of all basis objects on element eid"""
+        bases=self.etob.setdefault(eid,[])
+        for b in bases: b.setRefractive(refr)
+
+
+    def setRefractive(self,geomDict):
+        """Set refractive indices of the elements
+
+           geomDict is a dictionary that maps geometric entities
+           to the corresponding refractive indices.
+        """
+        for eid in range(self.mesh.nelements):
+            self.setRefractiveElement(eid,geomDict[self.mesh.elemIdentity[eid]])
+       
+    def getRefractive(self):
+        for eid in range(self.mesh.nelements):
+            for b in self.etob[eid]:
+                print b.getRefractive()
+
+
+class Basis(object):
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def values(self,x,n=None):
+        pass
+
+    @abc.abstractmethod
+    def derivs(self,x,n):
+        pass
+
+    def setRefractive(self,val):
+        self.refr=val
+
+    def getRefractive(self):
+        return self.refr
+
+class PlaneWaves(Basis):
     
     def __init__(self, directions, k):
         """ directions should be a n x dim array of directions.  k is the wave number """
         self.directions = directions.transpose()
         self.__k = k
+        self.refr=1
     
     def values(self,x,n=None):
         """ return the values of the plane-waves at points x 
@@ -116,7 +159,7 @@ class PlaneWaves(object):
         n is ignored
         The return value is a m x self.n array
         """
-        return numpy.exp(1j * self.__k * numpy.dot(x, self.directions))
+        return numpy.exp(1j * self.__k * self.refr * numpy.dot(x, self.directions))
     
     def derivs(self,x,n):
         """ return the directional derivatives of the plane-waves at points x and direction n 
@@ -125,7 +168,7 @@ class PlaneWaves(object):
         n should be a vector of length dim
         The return value is a m x self.n array
         """
-        return 1j*self.__k*numpy.multiply(numpy.dot(n, self.directions), self.values(x,n))
+        return 1j*self.__k*self.refr*numpy.multiply(numpy.dot(n, self.directions), self.values(x,n))
     
     def __str__(self):
         return "PW "+ str(self.directions)
@@ -134,12 +177,13 @@ class PlaneWaves(object):
     n=property(lambda self: self.directions.shape[1])
 
     
-class FourierHankelBessel(object):
+class FourierHankelBessel(Basis):
     
     def __init__(self, origin, orders, k):
         self.__origin = origin.reshape(1,2)
         self.__orders = orders.reshape(1,-1)
         self.__k = k
+        self.refr=1
 
     def rtheta(self, points):
         r = numpy.sqrt(numpy.sum(points**2, axis=1)).reshape(-1,1)
@@ -150,14 +194,15 @@ class FourierHankelBessel(object):
     def values(self, points, n=None):
         r,theta = self.rtheta(points-self.__origin)
 #        print numpy.hstack((points, points - self.__origin, theta, r, numpy.exp(1j * self.__orders * theta)))
-        return self.rfn(self.__orders,self.__k * r) * numpy.exp(1j * self.__orders * theta)
+        return self.rfn(self.__orders,self.__k * self.refr* r) * numpy.exp(1j * self.__orders * theta)
     
     def derivs(self, points, n):
         poffset = points-self.__origin
         r,theta = self.rtheta(poffset)
         ent = numpy.exp(1j * self.__orders * theta)
-        dr = self.__k * self.rfnd(self.__orders, self.__k * r, 1) * ent
-        du = 1j * self.__orders * self.rfn(self.__orders, self.__k * r) * ent
+        dr = (self.__k * self.refr* self.rfnd(self.__orders, self.__k *
+                self.refr* r, 1) * ent)
+        du = 1j * self.__orders * self.rfn(self.__orders, self.__k *self.refr * r) * ent
         x = poffset[:,0].reshape(-1,1)
         y = poffset[:,1].reshape(-1,1)
         r2 = r**2
@@ -168,7 +213,7 @@ class FourierHankelBessel(object):
     
     n=property(lambda self: self.__orders.shape[1])
 
-class EmptyBasis(object):
+class EmptyBasis(Basis):
     
     def __init__(self,n):
         """Create an empty placeholder basis that returns size n"""
@@ -199,7 +244,7 @@ class FourierHankel(FourierHankelBessel):
         return ss.h1vp(n,x,d)        
 
 
-class BasisReduce(object):
+class BasisReduce(Basis):
     """ Reduce a basis object to return just one function """
     def __init__(self, pw, x):
         self.pw = pw
@@ -212,7 +257,12 @@ class BasisReduce(object):
     def derivs(self, points, n):
         return numpy.dot(self.pw.derivs(points, n), self.x).reshape(-1,1)
 
-class BasisCombine(object):
+    def setRefractive(self,val):
+        self.pw.setRefractive(val)
+
+
+
+class BasisCombine(Basis):
     """ Combine several (reduced) basis objects"""
     def __init__(self, bases, x):
         self.bases = bases
@@ -224,3 +274,9 @@ class BasisCombine(object):
         
     def derivs(self, points, n):
         return numpy.dot(numpy.hstack([b.derivs(points, n) for b in self.bases]), self.x).reshape(-1,1)
+
+    def setRefractive(self,val):
+        for b in self.bases: b.setrefractive(val)
+
+
+

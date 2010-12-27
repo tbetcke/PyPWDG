@@ -70,7 +70,8 @@ class Mesh(object):
             nelements     - Number of elements
             dim           - Dimension of problem (dim=2,3)
             etof          - List of lists of faces for each element
-            
+            elemIdentity  - List of geometric identities of all elements
+
         Partition properties:
             fs            - The faces in this partition
             connectivity  - The connectivity of the faces in this partition (note that this will reference faces in other partitions) 

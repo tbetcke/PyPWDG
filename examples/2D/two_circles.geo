@@ -1,0 +1,30 @@
+Point(1) = {1, 0, 0};
+Point(2) = {0, 1, 0};
+Point(3) = {-1, 0, 0};
+Point(4) = {0, -1, 0};
+
+Point(5) = {4, 0, 0};
+Point(6) = {0, 4, 0};
+Point(7) = {-4, 0, 0};
+Point(8) = {0, -4, 0};
+
+Point(9) = {0,0,0};
+Circle(1) = {1, 9, 2};
+Circle(2) = {2, 9, 3};
+Circle(3) = {3, 9, 4};
+Circle(4) = {4, 9, 1};
+Circle(5) = {5, 9, 6};
+Circle(6) = {6, 9, 7};
+Circle(7) = {7, 9, 8};
+Circle(8) = {8, 9, 5};
+Line Loop(9) = {5, 6, 7, 8};
+Line Loop(10) = {1, 2, 3, 4};
+Plane Surface(11) = {9, 10};
+Plane Surface(12) = {10};
+Physical Surface(13) = {11};
+Physical Surface(14) = {12};
+Physical Line(15) = {5, 6, 7, 8};
+Transfinite Line {1, 2, 3, 4} = 10 Using Progression 1;
+Transfinite Line {5, 6, 7, 8} = 40 Using Progression 1;
+Field[1] = Attractor;
+Delete Field [1];
