@@ -3,7 +3,7 @@ Created on Dec 19, 2010
 
 @author: joel
 '''
-import pypwdg.core.adaptivity as pca
+import pypwdg.utils.optimisation as pca
 import pypwdg.core.bases as pcb
 import pypwdg.utils.quadrature as puq
 
@@ -11,7 +11,7 @@ import unittest
 
 import numpy
         
-class TestAdaptivity(unittest.TestCase):
+class TestOptimisation(unittest.TestCase):
     def testOptimalBasis(self):
         """ Can we find the right direction to approximate a plane wave?"""
         k = 4
