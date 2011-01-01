@@ -17,7 +17,9 @@ npoints=array([200,200,200])
 
 mesh = pmm.gmshMesh('scattmesh.msh',dim=3)
 bases = pcb.planeWaveBases(mesh, k, 3)
-comp=ps.setup(mesh, k,16,bases,bnddata=bnddata,usecache=False)
-comp.solve()
-comp.writeSolution(bounds,npoints,fname='scattmesh.vti')
-comp.writeMesh(fname='scattmesh.vtu',scalars=comp.combinedError())
+
+problem=ps.Problem(mesh,k,16, bnddata)
+solution = ps.Computation(problem, bases).solve()
+solution.writeSolution(bounds,npoints,fname='scattmesh.vti')
+problem.writeMesh(fname='scattmesh.vtu',scalars=solution.combinedError())
+
