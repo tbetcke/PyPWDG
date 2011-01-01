@@ -20,7 +20,8 @@ npoints=array([501,101])
 mesh = pmm.gmshMesh('2dhole.msh',dim=2)
 bases = pcb.planeWaveBases(mesh,k,nplanewaves=15)
 
-comp=ps.setup(mesh,k,20,bases,bnddata=bnddata)
-comp.solve()
-comp.writeSolution(bounds,npoints,fname='2dhole.vti')
-comp.writeMesh(fname='2dhole.vtu',scalars=comp.combinedError())
+
+problem=ps.Problem(mesh,k,20, bnddata)
+solution = ps.Computation(problem, bases).solve()
+solution.writeSolution(bounds,npoints,fname='2dhole.vti')
+problem.writeMesh(fname='2dhole.vtu',scalars=solution.combinedError())

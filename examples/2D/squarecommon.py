@@ -20,7 +20,9 @@ npoints=array([100,100])
 
 mesh = pmm.gmshMesh('square.msh',dim=2)
 bases = pcb.planeWaveBases(mesh,k,nplanewaves=15)
-comp=ps.setup(mesh,k,20, bases, bnddata)
-comp.writeSolution(bounds,npoints,fname='square.vti')
-comp.writeMesh(fname='square.vtu',scalars=comp.combinedError())
+
+problem=ps.Problem(mesh,k,20, bnddata)
+solution = ps.Computation(problem, bases).solve()
+solution.writeSolution(bounds,npoints,fname='square.vti')
+problem.writeMesh(fname='square.vtu',scalars=solution.combinedError())
 

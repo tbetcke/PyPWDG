@@ -171,7 +171,7 @@ class PlaneWaves(Basis):
         return 1j*self.__k*self.refr*numpy.multiply(numpy.dot(n, self.directions), self.values(x,n))
     
     def __str__(self):
-        return "PW "+ str(self.directions)
+        return "PW basis "+ str(self.directions)
     
     """ the number of functions """
     n=property(lambda self: self.directions.shape[1])
@@ -180,8 +180,8 @@ class PlaneWaves(Basis):
 class FourierHankelBessel(Basis):
     
     def __init__(self, origin, orders, k):
-        self.__origin = origin.reshape(1,2)
-        self.__orders = orders.reshape(1,-1)
+        self.__origin = numpy.array(origin).reshape(1,2)
+        self.__orders = numpy.array(orders).reshape(1,-1)
         self.__k = k
         self.refr=1
 
@@ -210,7 +210,10 @@ class FourierHankelBessel(Basis):
         nJs = numpy.sum(n.reshape(-1,1,2,1) * Js, axis=2)        
         dru = numpy.concatenate((dr[:,:,numpy.newaxis], du[:,:,numpy.newaxis]), axis=2)
         return numpy.sum(nJs * dru, axis=2)
-    
+
+    def __str__(self):
+        return "FHB basis "+ str(self.__orders)
+
     n=property(lambda self: self.__orders.shape[1])
 
 class EmptyBasis(Basis):
@@ -249,6 +252,7 @@ class BasisReduce(Basis):
     def __init__(self, pw, x):
         self.pw = pw
         self.x = x
+        assert len(x)==pw.n
         self.n = 1
         
     def values(self, points, n=None):
@@ -260,23 +264,21 @@ class BasisReduce(Basis):
     def setRefractive(self,val):
         self.pw.setRefractive(val)
 
-
-
-class BasisCombine(Basis):
-    """ Combine several (reduced) basis objects"""
-    def __init__(self, bases, x):
+class BasisCombine(object):
+    """ Combine several basis objects"""
+    def __init__(self, bases):
         self.bases = bases
-        self.x = x
-        self.n = 1
+        self.n = sum([b.n for b in bases])
         
     def values(self, points, n=None):
-        return numpy.dot(numpy.hstack([b.values(points, n) for b in self.bases]), self.x).reshape(-1,1)
+        return numpy.hstack([b.values(points, n) for b in self.bases])
         
     def derivs(self, points, n):
-        return numpy.dot(numpy.hstack([b.derivs(points, n) for b in self.bases]), self.x).reshape(-1,1)
+        return numpy.hstack([b.derivs(points, n) for b in self.bases])
 
     def setRefractive(self,val):
         for b in self.bases: b.setrefractive(val)
-
-
+    
+    def __str__(self):
+        return "".join(map(str,self.bases))
 

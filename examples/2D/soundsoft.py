@@ -17,7 +17,9 @@ npoints=array([200,200])
 
 mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 bases = pcb.planeWaveBases(mesh,k,nplanewaves=15)
-comp=ps.setup(mesh,k,20,bases,bnddata, True)
 
-comp.writeSolution(bounds,npoints,fname='soundsoft.vti')
-comp.writeMesh(fname='soundsoft.vtu',scalars=comp.combinedError())
+problem=ps.Problem(mesh,k,20, bnddata)
+solution = ps.Computation(problem, bases).solve()
+solution.writeSolution(bounds,npoints,fname='soundsoft.vti')
+problem.writeMesh(fname='soundsoft.vtu',scalars=solution.combinedError())
+
