@@ -99,11 +99,13 @@ class vbsr_matrix(object):
                 rowlengths[self.bindi[i]:self.bindi[i + 1]] = len(rowinds)
             else:
                 rowlengths[self.bindi[i]:self.bindi[i + 1]] = 0
-
-        csrptr = np.concatenate(([0], rowlengths)).cumsum()
-        naind = np.concatenate(csrind)
-        d = np.concatenate(csrdata) * self.scalar
-        csr = ss.csr_matrix((d, naind, csrptr), shape=self.shape)
+        if len(csrind):
+            csrptr = np.concatenate(([0], rowlengths)).cumsum()
+            naind = np.concatenate(csrind)
+            d = np.concatenate(csrdata) * self.scalar
+            csr = ss.csr_matrix((d, naind, csrptr), shape=self.shape)
+        else:
+            csr = ss.csr_matrix(self.shape)
         return csr
 
                  
