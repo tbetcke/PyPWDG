@@ -6,6 +6,7 @@ Created on 1 Nov 2010
 
 import pypwdg.core.bases as pcb
 import pypwdg.setup as ps
+import pypwdg.utils.optimisation as puo
 
 import numpy as np
 
@@ -51,24 +52,29 @@ class PWFBCreator(object):
 def origin(mesh, e):
     return np.average(mesh.nodes[mesh.elements[e]], axis = 0)
 
-class AdaptiveElementToBasis(object):
+class AdaptiveBasis(object):
     
-    def __init__(self, mesh, k, npw, nfb, etopwfbc = None):
+    def __init__(self, mesh, k, npw, nfb, mqs, etopwfbc = None):
         if etopwfbc is None: 
             self.etopwfbc = dict([(e, PWFBCreator(k, origin(mesh, e), npw, nfb)) for e in range(mesh.nelements)])
         else: self.etopwfbc = etopwfbc
+        self.mqs = mqs
+        self.mesh = mesh
     
-    def getValues(self, eid, points, normal=None):
-        """ Return the values of the basis for element eid at points"""
-        return self.etopwfbbc[eid].getbasis().values(points, normal)
+    def getBases(self):
+        return dict([(e, bc.getbasis()) for (e, bc) in self.etopwfbc.iteritems()])
     
-    def getDerivs(self, eid, points, normal):
-        return self.etopwfbbc[eid].getbasis().derivs(points, normal)
-
-    def 
-    
-    
-origin=np.average(self.mesh.nodes[self.mesh.elements[e]], axis = 0)
+    def testAdaptivity(self, indices, x):
+        
+        for e in self.mesh.partition():
+            bc = self.etopwfbc[e]
+            fs = self.mesh.etof[e]
+            qp = np.vstack([self.mqs.quadpoints(f) for f in fs])
+            qw = np.concatenate([self.mqs.quadweights(f) for f in fs])
+            lsf = puo.LeastSquaresFit(bc.getBasis(), (qp,qw))
+            
+            newbs = bc.nearbybases()
+            
     
 
 class AdaptiveComputation(object):
