@@ -64,16 +64,21 @@ class AdaptiveBasis(object):
     def getBases(self):
         return dict([(e, bc.getbasis()) for (e, bc) in self.etopwfbc.iteritems()])
     
-    def testAdaptivity(self, indices, x):
-        
+    def evaluateNearbyBases(self, indices, x):
+        etonbcs = {}
         for e in self.mesh.partition():
             bc = self.etopwfbc[e]
             fs = self.mesh.etof[e]
             qp = np.vstack([self.mqs.quadpoints(f) for f in fs])
             qw = np.concatenate([self.mqs.quadweights(f) for f in fs])
-            lsf = puo.LeastSquaresFit(bc.getBasis(), (qp,qw))
-            
-            newbs = bc.nearbybases()
+            lsf = puo.LeastSquaresFit(bc.getBasis(), (qp,qw))            
+            nbcs = bc.nearbybases()
+            nearbybases = []
+            for nbc in nbcs:
+                newnbc, (_, l2err) = puo.optimalbasis3(lsf.optimise, nbc.pwbasis, nbc.params, nbc.newparams)
+                nearbybases.append((newnbc, l2err))
+            etonbcs[e] = nbcs
+        return etonbcs 
             
     
 
@@ -81,7 +86,7 @@ class AdaptiveComputation(object):
     
     def __init__(self, problem, initialpw, initialfb):
         self.problem = problem
-        self.basis = initialbasis
+        self.basis = AdaptiveBasis(problem.mesh, )
     
     
     def step(self):
