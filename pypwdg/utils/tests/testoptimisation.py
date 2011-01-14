@@ -46,7 +46,8 @@ class TestOptimisation(unittest.TestCase):
         gen, ini = puo.pwbasisgeneration(k, npw)
         triquad = puq.trianglequadrature(nq)
         linearopt = puo.LeastSquaresFit(g, triquad)
-        basis, (coeffs, l2err) = puo.optimalbasis3(linearopt.optimise, gen, ini)
+        basis = puo.optimalbasis3(linearopt.optimise, gen, ini)
+        (coeffs, l2err) = linearopt.optimise(basis)
         self.assertAlmostEqual(sum(l2err),0)
     
     def testPenalisedOptimisation(self):
@@ -60,7 +61,8 @@ class TestOptimisation(unittest.TestCase):
         triquad = puq.trianglequadrature(nq)
         linearopt = puo.LeastSquaresFit(g, triquad)
         pwpg = puo.PWPenaltyBasisGenerator(k, alpha, 2)
-        basis, (coeffs, l2err) = puo.optimalbasis3(linearopt.optimise, pwpg.genbasis, ini, pwpg.penalty, pwpg.finalbasis)
+        basis = puo.optimalbasis3(linearopt.optimise, pwpg.genbasis, ini, pwpg.penalty, pwpg.finalbasis)
+        (coeffs, l2err) = linearopt.optimise(basis)
         self.assertAlmostEqual(sum(l2err),0)        
         
     def testConstrainedOptimisation(self):
@@ -73,7 +75,8 @@ class TestOptimisation(unittest.TestCase):
         triquad = puq.trianglequadrature(nq)
         linearopt = puo.LeastSquaresFit(g, triquad)
         pwpg = puo.PWPenaltyBasisGenerator(k, 1, 2)
-        basis, (coeffs, l2err) = puo.optimalbasis3(linearopt.optimise, pwpg.finalbasis, ini)
+        basis = puo.optimalbasis3(linearopt.optimise, pwpg.finalbasis, ini)
+        (coeffs, l2err) = linearopt.optimise(basis)        
         self.assertAlmostEqual(sum(l2err),0)        
         
         

@@ -6,7 +6,7 @@ import pypwdg.core.adaptivity as pca
 
 from numpy import array,sqrt
 
-k = 20
+k = 6
 direction=array([[1.0,1.0]])/sqrt(2)
 g = pcb.PlaneWaves(direction, k)
 impbd = pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g)
@@ -21,8 +21,8 @@ npoints=array([100,100])
 
 mesh = pmm.gmshMesh('square.msh',dim=2)
 
-problem=ps.Problem(mesh,k,10, bnddata)
-comp = pca.AdaptiveComputation(problem, 6, 3)
+problem=ps.Problem(mesh,k,6, bnddata)
+comp = pca.AdaptiveComputation(problem, 3, 3)
 solution = comp.solve()
 #solution.writeSolution(bounds,npoints,fname='adaptive.vti')
 err = solution.combinedError()
@@ -31,5 +31,5 @@ print sqrt(sum(err**2))
 for _ in range(5):
     comp.adapt()
     sol = comp.solve()
-    err = solution.combinedError()
+    err = sol.combinedError()
     print sqrt(sum(err**2))
