@@ -15,7 +15,7 @@ import numpy as np
 def augmentparams(params, npw, dim):
     if params==None: params = np.zeros((0,dim))
     if len(params) < npw:
-        params = np.vstack((params, pcb.circleDirections(len(params) - npw)))
+        params = np.vstack((params, pcb.circleDirections(npw - len(params))))
     return params
 
 def normalise(params, npw):
@@ -37,7 +37,7 @@ class PWFBCreator(object):
     def newparams(self, params):
         return PWFBCreator(self.k,self.origin,self.npw,self.nfb,params)
      
-    def getbasis(self):
+    def getBasis(self):
         pwbasis = self.pwbasis(self.params)
         fbbasis = pcb.FourierBessel(self.origin, np.arange(0,self.nfb) - self.nfb/2, self.k)
         return [pwbasis, fbbasis]
@@ -66,19 +66,19 @@ class AdaptiveBasis(object):
         self.mesh = mesh
     
     def getBases(self):
-        return dict([(e, bc.getbasis()) for (e, bc) in self.etopwfbc.iteritems()])
+        return dict([(e, bc.getBasis()) for (e, bc) in self.etopwfbc.iteritems()])
     
     def newBCs(self, etopwfbc):
         return AdaptiveBasis(self.mesh, self.mqs, etopwfbc)
     
     def evaluateNearbyBases(self, indices, x):
         etonbcs = {}
-        for e in self.mesh.partition():
+        for e in self.mesh.partition:
             bc = self.etopwfbc[e]
             fs = self.mesh.etof[e]
             qp = np.vstack([self.mqs.quadpoints(f) for f in fs])
             qw = np.concatenate([self.mqs.quadweights(f) for f in fs])
-            lsf = puo.LeastSquaresFit(bc.getBasis(), (qp,qw))            
+            lsf = puo.LeastSquaresFit(pcb.BasisCombine(bc.getBasis()).values, (qp,qw))            
             nbcs = bc.nearbybases()
             nearbybases = []
             for nbc in nbcs:
