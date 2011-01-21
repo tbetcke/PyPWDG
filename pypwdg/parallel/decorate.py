@@ -72,6 +72,21 @@ def parallel(scatterargs, reduceop = operator.add):
     return buildparallelwrapper
 
 
+class memberwrapper(object):
+
+    def __init__(self, mscatterargs, m, reduceop):
+        self.mscatterargs = mscatterargs
+        self.m = m
+        self.reduceop = reduceop
+        
+    def __call__(self, *margs, **mkwargs):
+        if self.mscatterargs is None:
+            scatteredargs = [(margs,mkwargs)]*(comm.size-1)
+        else:
+            scatteredargs = self.mscatterargs(comm.size-1)(*margs, **mkwargs)
+        return ppm.scatterfncall(methodwrapper(self.m.im_func), scatteredargs, self.reduceop)
+
+
 def distribute(scatterargs=None):
     """ decorator that effectively distributes a class across worker processes.
     
@@ -118,6 +133,8 @@ def distribute(scatterargs=None):
                             return ppm.scatterfncall(methodwrapper(m.im_func), scatteredargs, reduceop)
                         print name, memberwrapper
                         proxy.__setattr__(name, types.MethodType(memberwrapper, proxy, ppp.Proxy))
+#                        mw = memberwrapper(mscatterargs, m, reduceop)
+#                        proxy.__setattr__(name, types.MethodType(mw, proxy, ppp.Proxy))
                             
                 return proxy
             klass.__new__ = staticmethod(new)
