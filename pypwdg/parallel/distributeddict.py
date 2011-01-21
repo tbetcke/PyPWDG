@@ -56,6 +56,9 @@ class ddictmanager(object):
     
     def __init__(self, ddictinfo):
         self.ddict = ddict(ddictinfo)
+        print "unownedkeys: ", self.ddict.getUnownedKeys
+        print "unowneddata: ", self.ddict.setUnownedData
+        
         self.unownedkeys = self.ddict.getUnownedKeys()
         self.datacopy = {}
     
