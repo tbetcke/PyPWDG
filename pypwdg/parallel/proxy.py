@@ -31,8 +31,17 @@ class Proxy(object):
     def __getattr__( self, name ):
         if self.__subject is None:        
             raise AttributeError("This proxy has no subject and no distributed attribute called %s"%name)
-        else:
-            return self.__subject.__getattribute__(name)
+        return self.__subject.__getattribute__(name)
+    
+    def __setitem__(self, key, value):
+        if self.__subject is None:
+            raise TypeError("This proxy has no subject and so does not support item assignment")
+        self.__subject[key] = value
+        
+    def __getitem__(self, key):
+        if self.__subject is None:
+            raise TypeError("This proxy has no subject and so is not subscriptable")
+        return self.__subject[key]
     
     def __getstate__(self):
         return (self.__klass, self.__id)

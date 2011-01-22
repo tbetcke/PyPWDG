@@ -3,6 +3,8 @@ Created on Nov 13, 2010
 
 @author: joel
 '''
+import pypwdg.parallel.decorate
+
 from pypwdg.parallel.mpiload import *
 
 import numpy as np
@@ -171,6 +173,7 @@ def scatterfncall(fn, args, reduceop=None):
     mastersend(tasks)
     values = masterrecv()
     return values if reduceop is None else reduce(reduceop, values)
+
 
 def workerloop():
         # For some unclear reason, the developers of openmpi think that it's acceptable for a thread to use 100% CPU
