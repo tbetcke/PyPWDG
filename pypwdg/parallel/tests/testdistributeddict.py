@@ -46,6 +46,20 @@ if mpiloaded and comm.rank == 0:
             results = checkdict(ddict, a)
             for (a1, a2) in results:
                 np.testing.assert_array_equal(a1,a2)
+            
+            initialisedict(ddict, a)
+            
+        
+        def testDictWithCopy(self):
+            info = MockDictInfo()
+            ld = {}
+            ddm = ppdd.ddictmanager(info, ld)
+            ddict = ddm.getDict()
+            a = 4
+            initialisedict(ddict, a)
+            ddm.sync()
+            for (key, value) in ld.items():
+                self.assertEqual(key+a, value)
 
 
     if __name__ == "__main__":

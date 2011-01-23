@@ -91,7 +91,8 @@ class Computation(object):
         self.lv = LocalVandermondes(problem.mesh, elttobasis, problem.mqs, usecache=usecache)
         self.bndvs = []
         for data in problem.bnddata.values():
-            bndv = LocalVandermondes(problem.mesh, pcb.ElementToBases(problem.mesh).addUniformBasis(data), problem.mqs)        
+            bdyetob = pcb.constructBasis(problem.mesh, pcb.uniformBases(data, problem.mesh))
+            bndv = LocalVandermondes(problem.mesh, bdyetob, problem.mqs)        
             self.bndvs.append(bndv)
         stiffness, rhs = assemble(problem.mesh, problem.k, self.lv, self.bndvs, problem.mqs, self.elttobasis, problem.bnddata, problem.params)
         self.stiffness = stiffness.tocsr()

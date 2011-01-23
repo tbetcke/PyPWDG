@@ -19,7 +19,7 @@ bounds=array([[0,1],[0,1]],dtype='d')
 npoints=array([100,100])
 
 mesh = pmm.gmshMesh('square.msh',dim=2)
-bases = pcb.planeWaveBases(mesh,k,nplanewaves=10)
+bases = pcb.constructBasis(mesh, pcb.planeWaveBases(mesh,k,nplanewaves=10))
 
 problem=ps.Problem(mesh,k,6, bnddata)
 solution = ps.Computation(problem, bases).solve()

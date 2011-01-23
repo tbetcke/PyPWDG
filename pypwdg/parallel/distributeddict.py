@@ -27,6 +27,7 @@ Created on Jan 19, 2011
 @author: joel
 '''
 import pypwdg.parallel.decorate as ppd
+from pypwdg.parallel.mpiload import mpiloaded
 
 class elementddictinfo(object):
     """ Provides the info for a distributed dictionary with mesh elements as keys.
@@ -56,30 +57,20 @@ def combinedict(d1, d2):
     return d1
 
 @ppd.distribute()
-class ddict(object):
-    """ A distributed dictionary.  Doesn't subclass dict because I'm too scared to do that.
+class ddict(dict):
+    """ A distributed dictionary.  
     
-        Currently supports ddict[key] = val and val = ddict[key]. 
+        Keeps track of the values associated with owned keys
     """
     def __init__(self, ddictinfo):
-        self.ownedkeys = set(ddictinfo.getOwnedKeys())
+        self.ownedkeys = ddictinfo.getOwnedKeys()
         self.unownedkeys = ddictinfo.getUnownedKeys()
-        self.changeddata = {}
-        self.owneddata = {}
-        self.unowneddata = {}
-    
-    def __setitem__(self, key, value):
-        assert key in self.ownedkeys
-        self.owneddata[key] = value
-        self.changeddata[key] = value
-        
-    def __getitem__(self, key):
-        return self.owneddata[key] if key in self.ownedkeys else self.unowneddata[key]
-    
+        self.lastsync = [None]*len(self.ownedkeys)
+            
     @ppd.parallelmethod(None, combinedict)
     def getChangedData(self):
-        changeddata = self.changeddata
-        self.changeddata = {}
+        changeddata = dict([(k,self.get(k)) for k,lv in zip(self.ownedkeys, self.lastsync) if self.get(k)!=lv] )
+        self.lastsync = [self.get(k) for k in self.ownedkeys]
         return changeddata
     
     @ppd.parallelmethod(None, None)
@@ -88,20 +79,27 @@ class ddict(object):
     
     @ppd.parallelmethod(prescatteredargs, None)
     def setUnownedData(self, data):
-        self.unowneddata.update(data)
+        self.update(data)
     
 class ddictmanager(object):
-    """ Manage a ddict."""  
+    """ Create and manage a ddict.
     
-    def __init__(self, ddictinfo, mastercopy = False):
-        self.ddict = ddict(ddictinfo)        
+        ddictinfo: An object that, when passed to the worker processes, will tell them
+        what entries they own and what entries they are interested in
+        
+        localcopy: Optional dict that maintains a local copy (on the master process) of
+        all the data.
+    """  
+    
+    def __init__(self, ddictinfo, localcopy = None):
+        self.ddict = ddict(ddictinfo)
         self.unownedkeys = self.ddict.getUnownedKeys()
-        if mastercopy: self.datacopy = {}
-    
+        self.datacopy = localcopy                    
+
     def getDict(self):
         """ Return the managed ddict"""
         return self.ddict
-    
+        
     def sync(self):
         """ Sync the managed ddict across all processes"""
         newdata = self.ddict.getChangedData()
