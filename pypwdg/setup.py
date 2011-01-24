@@ -91,7 +91,7 @@ class Computation(object):
         self.lv = LocalVandermondes(problem.mesh, elttobasis, problem.mqs, usecache=usecache)
         self.bndvs = []
         for data in problem.bnddata.values():
-            bdyetob = pcb.constructBasis(problem.mesh, pcb.uniformBases(data, problem.mesh))
+            bdyetob = pcb.constructBasis(problem.mesh, pcb.UniformBases([data]))
             bndv = LocalVandermondes(problem.mesh, bdyetob, problem.mqs)        
             self.bndvs.append(bndv)
         stiffness, rhs = assemble(problem.mesh, problem.k, self.lv, self.bndvs, problem.mqs, self.elttobasis, problem.bnddata, problem.params)

@@ -32,38 +32,37 @@ def circleDirections(n):
     theta = numpy.arange(n).reshape((-1,1)) * 2*math.pi / n
     return numpy.hstack((numpy.cos(theta), numpy.sin(theta)))
 
-def planeWaveBases(mesh, k, nplanewaves):
-    if mesh.dim==2:
+def planeWaveBases(dim, k, nplanewaves):
+    if dim==2:
         dirs = circleDirections(nplanewaves)
     else:
         dirs = cubeRotations(cubeDirections(nplanewaves))
-    pw = PlaneWaves(dirs,k)
-    return uniformBases(pw, mesh)
+    pw = [PlaneWaves(dirs,k)]
+    return UniformBases(pw)
 
 @ppd.distribute()
-class uniformBases(object):
-    def __init__(self, b, mesh):
+class UniformBases(object):
+    def __init__(self, b):
         self.b = b
 
     @ppd.parallelmethod()    
-    def populate(self, etob):    
-        for e in self.mesh.partition:
+    def populate(self, mesh, etob):    
+        for e in mesh.partition:
             etob[e] = self.b
 
 @ppd.distribute()
-class fourierBesselBases(object):
+class FourierBesselBases(object):
 
-    def __init__(self, mesh, k, orders):
-        if not mesh.dim==2: raise Exception("Bessel functions are only defined in 2D.")
-        self.mesh = mesh
+    def __init__(self, k, orders):
         self.orders = orders
         self.k = k
     
     @ppd.parallelmethod()
-    def populate(self, etob):
-        for e in self.mesh.partition:
-            origin=self.mesh.nodes[self.mesh.elements[e][0]]
-            etob[e] = FourierBessel(origin,self.orders,self.k)
+    def populate(self, mesh, etob):
+        if not mesh.dim==2: raise Exception("Bessel functions are only defined in 2D.")
+        for e in mesh.partition:
+            origin=mesh.nodes[mesh.elements[e][0]]
+            etob[e] = [FourierBessel(origin,self.orders,self.k)]
 
 def getSizes(etob, mesh):
     return numpy.array([sum([b.n for b in etob.get(e,[])]) for e in range(mesh.nelements)])    
@@ -74,7 +73,10 @@ def constructBasis(mesh, basisrule, returnmanager = False):
         manager = ppdd.ddictmanager(ppdd.elementddictinfo(mesh), localetob)
         remoteetob = manager.ddict()
     else:
-        remoteetob = {}        
+        remoteetob = localetob   
+    basisrule.populate(mesh, remoteetob)  
+    if mpiloaded:
+        manager.sync()   
     sizes = getSizes(localetob, mesh)
     bases =  ElementToBases(remoteetob, sizes)
     return (bases, manager) if returnmanager else bases
