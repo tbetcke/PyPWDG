@@ -103,7 +103,7 @@ class ddictmanager(object):
     def sync(self):
         """ Sync the managed ddict across all processes"""
         newdata = self.ddict.getChangedData()
-        if self.datacopy: self.datacopy.update(newdata)
+        if self.datacopy is not None: self.datacopy.update(newdata)
         unowneddata = [dict(zip(keys, [newdata[key] for key in keys])) for keys in self.unownedkeys]
         self.ddict.setUnownedData(unowneddata)
         

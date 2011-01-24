@@ -45,7 +45,7 @@ class UniformBases(object):
     def __init__(self, b):
         self.b = b
 
-    @ppd.parallelmethod()    
+    @ppd.parallelmethod(None, None)    
     def populate(self, mesh, etob):    
         for e in mesh.partition:
             etob[e] = self.b
@@ -57,7 +57,7 @@ class FourierBesselBases(object):
         self.orders = orders
         self.k = k
     
-    @ppd.parallelmethod()
+    @ppd.parallelmethod(None, None)
     def populate(self, mesh, etob):
         if not mesh.dim==2: raise Exception("Bessel functions are only defined in 2D.")
         for e in mesh.partition:
@@ -71,7 +71,7 @@ def constructBasis(mesh, basisrule, returnmanager = False):
     localetob = {}
     if mpiloaded:
         manager = ppdd.ddictmanager(ppdd.elementddictinfo(mesh), localetob)
-        remoteetob = manager.ddict()
+        remoteetob = manager.getDict()
     else:
         remoteetob = localetob   
     basisrule.populate(mesh, remoteetob)  
