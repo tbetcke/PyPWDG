@@ -56,9 +56,6 @@ class PWFBCreator(object):
         if npw > 0: nearby.append(PWFBCreator(k,origin,npw-1,nfb,params[np.abs(xpw) != np.min(np.abs(xpw))]))
         return nearby
     
-    def __str__(self):
-        return "PWFBCreator,n=%s,ps=%s"%(self.n, self.params)
-
 def origin(mesh, e):
     return np.average(mesh.nodes[mesh.elements[e]], axis = 0)
 
