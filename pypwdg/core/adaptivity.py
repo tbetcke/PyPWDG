@@ -63,22 +63,26 @@ def newAdaptiveBasis(mesh, k, npw, nfb, mqs):
     etopwfbc = dict([(e, PWFBCreator(k, origin(mesh, e), npw, nfb)) for e in range(mesh.nelements)])
     return AdaptiveBasis(mesh, mqs, etopwfbc)
 
-class AdaptiveBasis(object):
+class BasisController(object):
     
-    def __init__(self, mesh, mqs, etopwfbc):
-        self.etopwfbc = etopwfbc
+    def __init__(self, mesh, mqs, etob, initialbasiscreators):
+        self.etobc = etobc
         self.mqs = mqs
         self.mesh = mesh
+        self.etonbcs = {}
+        self.populate()
     
-    def getBases(self):
-        for bc in self.etopwfbc.values(): print bc.params.transpose()
-        return dict([(e, bc.getBasis()) for (e, bc) in self.etopwfbc.iteritems()])
+    def populate(self):
+        for (e, bc) in self.etobc.iteritems():
+            self.etob[e] = bc.getBasis()
     
-    def newBCs(self, etopwfbc):
-        return AdaptiveBasis(self.mesh, self.mqs, etopwfbc)
+    def selectNearbyBasis(self, etonbc):
+        for e in self.etobc.keys():
+            self.etobc[e] = self.etonbcs[e][etonbc[e]]
+        self.etonbcs = {}
+        self.populate()
     
-    def evaluateNearbyBases(self, indices, x):
-        etonbcs = {}
+    def getNearbyBases(self, indices, x):
         for e in self.mesh.partition:
             xe = x[indices[e]:indices[e+1]]
             bc = self.etopwfbc[e]
@@ -92,8 +96,8 @@ class AdaptiveBasis(object):
                 newnbc = puo.optimalbasis3(lsf.optimise, nbc.pwbasis, nbc.params, None, nbc.newparams) if nbc.npw > 0 else nbc
                 (_, l2err) = lsf.optimise(pcb.BasisCombine(newnbc.getBasis()))
                 optimisednbcs.append((newnbc, sum(l2err)))
-            etonbcs[e] = optimisednbcs
-        return etonbcs 
+            self.etonbcs[e] = optimisednbcs
+        return self.etonbcs 
             
     
 
