@@ -91,10 +91,11 @@ class ddictmanager(object):
         all the data.
     """  
     
-    def __init__(self, ddictinfo, localcopy = None):
+    def __init__(self, ddictinfo, localcopy = False):
         self.ddict = ddict(ddictinfo)
-        self.unownedkeys = self.ddict.getUnownedKeys()
-        self.datacopy = localcopy                    
+        if mpiloaded:
+            self.unownedkeys = self.ddict.getUnownedKeys()
+            if localcopy: self.ddict.subject = {}                    
 
     def getDict(self):
         """ Return the managed ddict"""
@@ -102,10 +103,11 @@ class ddictmanager(object):
         
     def sync(self):
         """ Sync the managed ddict across all processes"""
-        newdata = self.ddict.getChangedData()
-        if self.datacopy is not None: self.datacopy.update(newdata)
-        unowneddata = [dict(zip(keys, [newdata[key] for key in keys])) for keys in self.unownedkeys]
-        self.ddict.setUnownedData(unowneddata)
+        if mpiloaded:
+            newdata = self.ddict.getChangedData()
+            if self.ddict.subject is not None: self.ddict.subject.update(newdata)
+            unowneddata = [dict(zip(keys, [newdata[key] for key in keys])) for keys in self.unownedkeys]
+            self.ddict.setUnownedData(unowneddata)
         
         
         

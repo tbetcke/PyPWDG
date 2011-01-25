@@ -67,25 +67,18 @@ class FourierBesselBases(object):
 def getSizes(etob, mesh):
     return numpy.array([sum([b.n for b in etob.get(e,[])]) for e in range(mesh.nelements)])    
 
-def constructBasis(mesh, basisrule, returnmanager = False):
-    localetob = {}
-    if mpiloaded:
-        manager = ppdd.ddictmanager(ppdd.elementddictinfo(mesh), localetob)
-        remoteetob = manager.getDict()
-    else:
-        remoteetob = localetob   
-    basisrule.populate(mesh, remoteetob)  
-    if mpiloaded:
-        manager.sync()   
-    sizes = getSizes(localetob, mesh)
-    bases =  ElementToBases(remoteetob, sizes)
-    return (bases, manager) if returnmanager else bases
+def constructBasis(mesh, basisrule):
+    manager = ppdd.ddictmanager(ppdd.elementddictinfo(mesh), True)
+    etob = manager.getDict()
+    basisrule.populate(mesh, etob)  
+    manager.sync()   
+    return ElementToBases(etob, mesh)
 
 class ElementToBases(object):
-    def __init__(self, etob, sizes):
+    def __init__(self, etob, mesh):
         self.etob = etob
-        self.sizes = sizes     
-        self.indices = numpy.cumsum(numpy.concatenate(([0], sizes))) 
+        self.sizes = numpy.array([sum([b.n for b in etob.get(e,[])]) for e in range(mesh.nelements)])     
+        self.indices = numpy.cumsum(numpy.concatenate(([0], self.sizes))) 
         
     def getValues(self, eid, points, normal=None):
         """ Return the values of the basis for element eid at points"""

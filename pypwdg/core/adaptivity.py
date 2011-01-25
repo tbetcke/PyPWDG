@@ -3,13 +3,13 @@ Created on 1 Nov 2010
 
 @author: joel
 '''
-
+import pypwdg.parallel.decorate as ppd
+import pypwdg.parallel.distributeddict as ppdd
 import pypwdg.core.bases as pcb
 import pypwdg.setup as ps
 import pypwdg.utils.optimisation as puo
 import pypwdg.utils.optx as puoptx
 
-import math
 import numpy as np
 
 def augmentparams(params, npw, dim):
@@ -55,33 +55,43 @@ class PWFBCreator(object):
         xpw = x[:len(params)]
         if npw > 0: nearby.append(PWFBCreator(k,origin,npw-1,nfb,params[np.abs(xpw) != np.min(np.abs(xpw))]))
         return nearby
-    
+       
 def origin(mesh, e):
     return np.average(mesh.nodes[mesh.elements[e]], axis = 0)
 
-def newAdaptiveBasis(mesh, k, npw, nfb, mqs):
-    etopwfbc = dict([(e, PWFBCreator(k, origin(mesh, e), npw, nfb)) for e in range(mesh.nelements)])
-    return AdaptiveBasis(mesh, mqs, etopwfbc)
+class InitialPWFBCreator(object):
+    def __init__(self, mesh, k, npw, nfb):
+        self.mesh = mesh
+        self.k = k
+        self.npw = npw
+        self.nfb = nfb
+    
+    def __call__(self, e):
+        return PWFBCreator(self.k, origin(self.mesh, e), self.npw, self.nfb)
 
+@ppd.distribute()
 class BasisController(object):
     
-    def __init__(self, mesh, mqs, etob, initialbasiscreators):
-        self.etobc = etobc
+    def __init__(self, mesh, mqs, etob, ibc):
         self.mqs = mqs
         self.mesh = mesh
+        self.etobc = dict([(e, ibc(e)) for e in mesh.partition])
         self.etonbcs = {}
         self.populate()
     
+    @ppd.parallelmethod(None, None)
     def populate(self):
         for (e, bc) in self.etobc.iteritems():
             self.etob[e] = bc.getBasis()
     
+    @ppd.parallelmethod(None, None)
     def selectNearbyBasis(self, etonbc):
         for e in self.etobc.keys():
             self.etobc[e] = self.etonbcs[e][etonbc[e]]
         self.etonbcs = {}
         self.populate()
     
+    @ppd.parallelmethod(None, ppdd.combinedict)    
     def getNearbyBases(self, indices, x):
         for e in self.mesh.partition:
             xe = x[indices[e]:indices[e+1]]
@@ -105,20 +115,20 @@ class AdaptiveComputation(object):
     
     def __init__(self, problem, initialpw, initialfb, factor = 1):
         self.problem = problem
-        self.ab = newAdaptiveBasis(problem.mesh, problem.k, initialpw, initialfb, problem.mqs)
+        self.manager = ppdd.ddictmanager(ppdd.elementddictinfo(problem.mesh), True)
+        self.controller = BasisController(problem.mesh, problem.mqs, self.manager.getDict()  )
+        self.manager.sync()   
         self.factor = factor
         self.nelements = problem.mesh.nelements
     
-    
     def solve(self):
-        self.etob = pcb.ElementToBases(self.problem.mesh)
-        self.etob.setEtoB(self.ab.getBases()) # change this once etob is immutable
-        self.solution = ps.Computation(self.problem, self.etob, False).solve()
+        self.EtoB = pcb.ElementToBases(self.etob, self.problem.mesh)
+        self.solution = ps.Computation(self.problem, self.EtoB, False).solve()
         return self.solution
     
     def adapt(self):
-        etonbcs = self.ab.evaluateNearbyBases(self.etob.indices, self.solution.x)
-        oldn = self.etob.indices[-1]
+        etonbcs = self.ab.evaluateNearbyBases(self.EtoB.indices, self.solution.x)
+        oldn = self.EtoB.indices[-1]
         gain = np.ones((self.nelements, 3)) * -1
         gain[:,0] = 0
         bestbcs = np.empty((self.nelements, 3),dtype=object)
