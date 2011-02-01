@@ -102,10 +102,10 @@ class BasisController(object):
             lsf = puo.LeastSquaresFit(pcb.BasisReduce(pcb.BasisCombine(bc.getBasis()),xe).values, (qp,qw))            
             nbcs = bc.nearbybases(xe)
             optimisednbcs = []
-            for nbc in nbcs:
+            for i, nbc in enumerate(nbcs):
                 newnbc = puo.optimalbasis3(lsf.optimise, nbc.pwbasis, nbc.params, None, nbc.newparams) if nbc.npw > 0 else nbc
                 (_, l2err) = lsf.optimise(pcb.BasisCombine(newnbc.getBasis()))
-                optimisednbcs.append((newnbc, sum(l2err)))
+                optimisednbcs.append((i, newnbc.n, sum(l2err)))
             self.etonbcs[e] = optimisednbcs
         return self.etonbcs 
             
@@ -113,10 +113,10 @@ class BasisController(object):
 
 class AdaptiveComputation(object):
     
-    def __init__(self, problem, initialpw, initialfb, factor = 1):
+    def __init__(self, problem, ibc, factor = 1):
         self.problem = problem
         self.manager = ppdd.ddictmanager(ppdd.elementddictinfo(problem.mesh), True)
-        self.controller = BasisController(problem.mesh, problem.mqs, self.manager.getDict()  )
+        self.controller = BasisController(problem.mesh, problem.mqs, self.manager.getDict(), ibc)
         self.manager.sync()   
         self.factor = factor
         self.nelements = problem.mesh.nelements
@@ -131,21 +131,21 @@ class AdaptiveComputation(object):
         oldn = self.EtoB.indices[-1]
         gain = np.ones((self.nelements, 3)) * -1
         gain[:,0] = 0
-        bestbcs = np.empty((self.nelements, 3),dtype=object)
+        bestbcs = np.empty((self.nelements, 3),dtype=int)
         totaldof = 0
         for e in range(self.nelements):
-            nbcs = sorted(etonbcs[e], lambda (nbc1,err1), (nbc2, err2):int(np.sign(err2 - err1)) if nbc1.n==nbc2.n else nbc1.n - nbc2.n)
-            print [(nbc.n,err) for (nbc,err) in nbcs] 
-            (nbc0, err0) = nbcs[0]
+            nbcs = sorted(etonbcs[e], lambda (i1, nbc1,err1), (i2, nbc2, err2):int(np.sign(err2 - err1)) if nbc1.n==nbc2.n else nbc1.n - nbc2.n)
+            print [(i, nbc.n,err) for (i, nbc,err) in nbcs] 
+            (i0, nbc0, err0) = nbcs[0]
             
-            for (nbc, err) in nbcs[1:]:
+            for (i, nbc, err) in nbcs[1:]:
                 ddof = nbc.n - nbc0.n
-                if ddof==0: (nbc0, err0) = nbc, err
+                if ddof==0: (i0, nbc0, err0) = i, nbc, err
                 else:
-                    bestbcs[e, ddof] = nbc
+                    bestbcs[e, ddof] = i
                     gain[e,ddof] = err0 - err
             totaldof+=nbc0.n                           
-            bestbcs[e,0] = nbc0         
+            bestbcs[e,0] = i0         
         
         print gain.transpose()
         doftospend = int(oldn * self.factor) - totaldof
@@ -155,6 +155,6 @@ class AdaptiveComputation(object):
             print x
             newbcs = [ebcs[xi] for ebcs, xi in zip(bestbcs, x)]
         else: newbcs = bestbcs[:,0]
-        self.ab = self.ab.newBCs(dict(zip(np.arange(self.nelements), newbcs)))
+        self.ab.selectNearbyBasis(newbcs)
         
         
