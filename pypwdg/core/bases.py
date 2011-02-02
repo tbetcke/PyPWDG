@@ -40,6 +40,7 @@ def planeWaveBases(dim, k, nplanewaves):
     pw = [PlaneWaves(dirs,k)]
     return UniformBases(pw)
 
+
 @ppd.distribute()
 class UniformBases(object):
     def __init__(self, b):

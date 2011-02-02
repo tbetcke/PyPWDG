@@ -36,14 +36,15 @@ class elementddictinfo(object):
         neighbouring elements.
     """
     
-    def __init__(self, mesh):
+    def __init__(self, mesh, trackunowned = True):
         self.mesh = mesh        
+        self.trackunowned = trackunowned
         
     def getOwnedKeys(self):
         return self.mesh.partition
     
     def getUnownedKeys(self):
-        return self.mesh.neighbourelts
+        return self.mesh.neighbourelts if self.trackunowned else []
 
 def prescatteredargs(n):
     def nullscatterer(obj, data):

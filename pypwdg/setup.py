@@ -18,8 +18,6 @@ from pypwdg.output.vtk_output import VTKGrid
 
 import pypwdg.core.evaluation as pce
 
-import pypwdg.parallel.main
-
 problem = None
 computation = None
 usecache = True
@@ -47,8 +45,6 @@ class Problem(object):
        mesh        - A Mesh object
        k           - Wavenumber of the problem
        nquadpoints - Number of quadrature points
-       nplanewaves - Number of Plane Waves in each element
-                     In 3D the actual number of planewaves used is 6*nplanewaves^2
        bnddata     - Dictionary containing the boundary data
                      The dictionary takes the form bnddata[id]=bndobject,
                      where id is an identifier for the corresponding boundary and bndobject is an object defining

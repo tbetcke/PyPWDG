@@ -29,7 +29,7 @@ class PWFBCreator(object):
         self.npw = npw
         self.nfb = nfb
         self.n = npw + nfb        
-        if npw > 0: self.params = augmentparams(params, npw, len(origin))
+        self.params = augmentparams(params, npw, len(origin)) if npw > 0 else None 
     
     def pwbasis(self, params):
         return pcb.PlaneWaves(normalise(params, self.npw), self.k) if self.npw > 0 else None
@@ -51,9 +51,10 @@ class PWFBCreator(object):
         k,origin,npw,nfb, params = self.k,self.origin,self.npw,self.nfb, self.params
         nearby.append(PWFBCreator(k,origin,npw,nfb+1,params))
         if nfb > 3: nearby.append(PWFBCreator(k,origin,npw,nfb-1,params))
-        nearby.append(PWFBCreator(k,origin,npw+1,nfb,params))
-        xpw = x[:len(params)]
-        if npw > 0: nearby.append(PWFBCreator(k,origin,npw-1,nfb,params[np.abs(xpw) != np.min(np.abs(xpw))]))
+        nearby.append(PWFBCreator(k,origin,npw+1,nfb,params))        
+        if npw > 0:
+            xpw = x[:len(params)] 
+            nearby.append(PWFBCreator(k,origin,npw-1,nfb,params[np.abs(xpw) != np.min(np.abs(xpw))]))
         return nearby
        
 def origin(mesh, e):
@@ -77,6 +78,7 @@ class BasisController(object):
         self.mesh = mesh
         self.etobc = dict([(e, ibc(e)) for e in mesh.partition])
         self.etonbcs = {}
+        self.etob = etob
         self.populate()
     
     @ppd.parallelmethod(None, None)
@@ -88,26 +90,32 @@ class BasisController(object):
     def selectNearbyBasis(self, etonbc):
         for e in self.etobc.keys():
             self.etobc[e] = self.etonbcs[e][etonbc[e]]
+        print [(e, bc.npw, bc.nfb) for e,bc in self.etobc.iteritems()] 
         self.etonbcs = {}
         self.populate()
     
     @ppd.parallelmethod(None, ppdd.combinedict)    
     def getNearbyBases(self, indices, x):
+        etonbcdata = {}
+        self.etonbcs = {}
         for e in self.mesh.partition:
             xe = x[indices[e]:indices[e+1]]
-            bc = self.etopwfbc[e]
+            bc = self.etobc[e]
             fs = self.mesh.etof[e]
             qp = np.vstack([self.mqs.quadpoints(f) for f in fs])
             qw = np.concatenate([self.mqs.quadweights(f) for f in fs])
             lsf = puo.LeastSquaresFit(pcb.BasisReduce(pcb.BasisCombine(bc.getBasis()),xe).values, (qp,qw))            
             nbcs = bc.nearbybases(xe)
             optimisednbcs = []
+            nbcdata = []
             for i, nbc in enumerate(nbcs):
                 newnbc = puo.optimalbasis3(lsf.optimise, nbc.pwbasis, nbc.params, None, nbc.newparams) if nbc.npw > 0 else nbc
+                optimisednbcs.append(newnbc)
                 (_, l2err) = lsf.optimise(pcb.BasisCombine(newnbc.getBasis()))
-                optimisednbcs.append((i, newnbc.n, sum(l2err)))
+                nbcdata.append((i, newnbc.n, sum(l2err)))
+            etonbcdata[e] = nbcdata
             self.etonbcs[e] = optimisednbcs
-        return self.etonbcs 
+        return etonbcdata 
             
     
 
@@ -115,46 +123,47 @@ class AdaptiveComputation(object):
     
     def __init__(self, problem, ibc, factor = 1):
         self.problem = problem
-        self.manager = ppdd.ddictmanager(ppdd.elementddictinfo(problem.mesh), True)
-        self.controller = BasisController(problem.mesh, problem.mqs, self.manager.getDict(), ibc)
-        self.manager.sync()   
+        self.etobmanager = ppdd.ddictmanager(ppdd.elementddictinfo(problem.mesh, True), True)
+        self.etob = self.etobmanager.getDict()
+        self.controller = BasisController(problem.mesh, problem.mqs, self.etob, ibc)
         self.factor = factor
         self.nelements = problem.mesh.nelements
     
     def solve(self):
+        self.etobmanager.sync()   
         self.EtoB = pcb.ElementToBases(self.etob, self.problem.mesh)
         self.solution = ps.Computation(self.problem, self.EtoB, False).solve()
         return self.solution
     
     def adapt(self):
-        etonbcs = self.ab.evaluateNearbyBases(self.EtoB.indices, self.solution.x)
+        etonbcs = self.controller.getNearbyBases(self.EtoB.indices, self.solution.x)
         oldn = self.EtoB.indices[-1]
         gain = np.ones((self.nelements, 3)) * -1
         gain[:,0] = 0
         bestbcs = np.empty((self.nelements, 3),dtype=int)
         totaldof = 0
         for e in range(self.nelements):
-            nbcs = sorted(etonbcs[e], lambda (i1, nbc1,err1), (i2, nbc2, err2):int(np.sign(err2 - err1)) if nbc1.n==nbc2.n else nbc1.n - nbc2.n)
-            print [(i, nbc.n,err) for (i, nbc,err) in nbcs] 
-            (i0, nbc0, err0) = nbcs[0]
+            nbcs = sorted(etonbcs[e], lambda (i1, n1,err1), (i2, n2, err2):int(np.sign(err2 - err1)) if n1==n2 else n1 - n2)
+#            print [(i, n, err) for (i, n, err) in nbcs] 
+            (i0, n0, err0) = nbcs[0]
             
-            for (i, nbc, err) in nbcs[1:]:
-                ddof = nbc.n - nbc0.n
-                if ddof==0: (i0, nbc0, err0) = i, nbc, err
+            for (i, n, err) in nbcs[1:]:
+                ddof = n - n0
+                if ddof==0: (i0, n0, err0) = i, n, err
                 else:
                     bestbcs[e, ddof] = i
                     gain[e,ddof] = err0 - err
-            totaldof+=nbc0.n                           
+            totaldof+=n0                           
             bestbcs[e,0] = i0         
         
-        print gain.transpose()
+#        print gain.transpose()
         doftospend = int(oldn * self.factor) - totaldof
-        print doftospend
+#        print doftospend
         if doftospend:      
             x,errest = puoptx.optx(gain.transpose(), doftospend)
-            print x
+#            print x
             newbcs = [ebcs[xi] for ebcs, xi in zip(bestbcs, x)]
         else: newbcs = bestbcs[:,0]
-        self.ab.selectNearbyBasis(newbcs)
+        self.controller.selectNearbyBasis(newbcs)
         
         

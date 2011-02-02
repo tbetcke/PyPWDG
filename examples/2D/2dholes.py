@@ -2,6 +2,7 @@ import pypwdg.setup as ps
 import pypwdg.core.bases as pcb
 import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
+import pypwdg.parallel.main
 
 from numpy import array
 
