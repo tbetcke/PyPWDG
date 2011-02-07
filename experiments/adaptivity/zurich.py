@@ -80,6 +80,9 @@ def runadaptivebasis(k, u, Nb, origin, quadrule):
     return pcb.BasisReduce(bases[-1], coefflist[-1])
 
 def runpwbasis(k, u, Npw, quadrule):
+    bc = pcad.PWFBCreator(k, origin, npw, nfb, params = None)
+    newnbc = puo.optimalbasis3(lsf.optimise, nbc.pwbasis, nbc.params, None, nbc.newparams) if nbc.npw > 0 else nbc
+
     gen, ini = pcad.pwbasisgeneration(k, Npw)
     basis, (coeffs, err) = pcad.optimalbasis2(u, gen, ini, quadrule)
     l2err = math.sqrt(np.vdot(err,err))

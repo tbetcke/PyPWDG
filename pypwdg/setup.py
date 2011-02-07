@@ -143,6 +143,12 @@ class Solution(object):
         vtk_structure.create_vtk_structured_points(bounds,npoints)
         vtk_structure.write_to_file(fname)
    
+    def evaluate(self, structuredpoints):
+        spe = StructuredPointsEvaluator(self.problem.mesh, self.elttobasis, lambda x:x, self.x)
+        vals, count = spe.evaluate(structuredpoints)
+        count[count==0] = 1
+        return vals / count
+   
     def evalJumpErrors(self):
         print "Evaluate Jumps"
         (self.error_dirichlet2, self.error_neumann2, self.error_boundary2) = pce.EvalElementError3(self.problem.mesh, self.problem.mqs, self.lv, self.problem.bnddata, self.bndvs).evaluate(self.x)

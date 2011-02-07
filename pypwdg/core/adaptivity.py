@@ -47,7 +47,7 @@ class PWFBCreator(object):
 
     def nearbybases(self, x):
         nearby = [self]
-#        return nearby
+        return nearby
         k,origin,npw,nfb, params = self.k,self.origin,self.npw,self.nfb, self.params
         nearby.append(PWFBCreator(k,origin,npw,nfb+1,params))
         if nfb > 3: nearby.append(PWFBCreator(k,origin,npw,nfb-1,params))
@@ -90,7 +90,7 @@ class BasisController(object):
     def selectNearbyBasis(self, etonbc):
         for e in self.etobc.keys():
             self.etobc[e] = self.etonbcs[e][etonbc[e]]
-        print [(e, bc.npw, bc.nfb) for e,bc in self.etobc.iteritems()] 
+#        print [(e, bc.npw, bc.nfb) for e,bc in self.etobc.iteritems()] 
         self.etonbcs = {}
         self.populate()
     
@@ -115,9 +115,7 @@ class BasisController(object):
                 nbcdata.append((i, newnbc.n, sum(l2err)))
             etonbcdata[e] = nbcdata
             self.etonbcs[e] = optimisednbcs
-        return etonbcdata 
-            
-    
+        return etonbcdata      
 
 class AdaptiveComputation(object):
     
@@ -165,5 +163,5 @@ class AdaptiveComputation(object):
             newbcs = [ebcs[xi] for ebcs, xi in zip(bestbcs, x)]
         else: newbcs = bestbcs[:,0]
         self.controller.selectNearbyBasis(newbcs)
-        
+            
         
