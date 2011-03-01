@@ -119,6 +119,9 @@ class Computation(object):
         return Solution(self.problem, x, self.elttobasis, self.lv, self.bndvs)
                 
 
+def noop(x):
+    return x
+
 class Solution(object):
     """ The solution to a Problem """
     def __init__(self, problem, x, elttobasis, lvs, bndvs):  
@@ -144,7 +147,7 @@ class Solution(object):
         vtk_structure.write_to_file(fname)
    
     def evaluate(self, structuredpoints):
-        spe = StructuredPointsEvaluator(self.problem.mesh, self.elttobasis, lambda x:x, self.x)
+        spe = StructuredPointsEvaluator(self.problem.mesh, self.elttobasis, noop, self.x)
         vals, count = spe.evaluate(structuredpoints)
         count[count==0] = 1
         return vals / count
