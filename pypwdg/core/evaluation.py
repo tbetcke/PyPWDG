@@ -21,10 +21,23 @@ import pypwdg.core.vandermonde as pcv
 
 @distribute()
 class Evaluator(object):
+    """A class for evaluating a solution at a given set of points.
+    the evaluator holds the mesh, basis and points to be evaluated as
+    states.
+    """
     @print_timing
-    def __init__(self, mesh, elttobasis, points):
+    def __init__(self, mesh, elttobasis, points, direction=None): #rich: added direction
+        """
+        Constructor for Evaluator
+        
+        Params: mesh - a Mesh object
+                elttobasis - a Basis object
+                points - a N * dim array of points
+                directions - a N * dim array of directions
+        """ 
         self.mesh = mesh
         self.points = points
+        self.direction = direction #rich: added
         ptoe = pointsToElementBatch(points, mesh, 5000)
         # could use sparse matrix classes to speed this up, but it's a bit clearer like this
         # pointsToElement returns -1 for elements which have no point
@@ -37,12 +50,28 @@ class Evaluator(object):
     @parallelmethod()
     @print_timing
     def evaluate(self, x):
+        """
+        Evaluate the solution x at the points passed to the constructor
+        
+        Params: x - the data stored in a Solution object as x
+        
+        Returns: vals - an array with length = number of points
+                        the value of the solution at those points
+        """
         vals = numpy.zeros(len(self.points), dtype=numpy.complex128)
+        derivs = numpy.zeros(len(self.points), dtype=numpy.complex128)
         for e,p in enumerate(self.etop[1:]):
             v = self.elttobasis.getValues(e, self.points[p])            
             (vidx0,vidx1) = self.elttobasis.getIndices()[e:e+2]
             vals[p] += numpy.dot(v, x[vidx0: vidx1])
-        return vals
+        if self.direction != None: #rich: added all the if statement
+            for e, p in enumerate(self.etop[1:]):
+                v = self.elttobasis.getDerivs(e, self.points[p], self.direction)
+                (vidx0, vidx1) = self.elttobasis.getIndices()[e:e+2]
+                derivs[p] += numpy.dot(v, x[vidx0: vidx1])
+            return vals, derivs
+        else:
+            return vals
 
 
 @distribute()

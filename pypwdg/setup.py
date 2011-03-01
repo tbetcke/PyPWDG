@@ -137,7 +137,7 @@ class Solution(object):
         
               
     def writeSolution(self, bounds, npoints, realdata=True, fname='solution.vti'):
-        print "Evaluate Solution and Write to File"
+        print "Evaluate Solution and Write to File", fname
         
         bounds=numpy.array(bounds,dtype='d')
         filter=numpy.real if realdata else numpy.imag

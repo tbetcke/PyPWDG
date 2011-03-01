@@ -9,7 +9,18 @@ import scipy.sparse
 import numpy as np
 
 def pointsToElement(points, mesh):
-    """ detect which element each point is in """
+    """ 
+    detect which element each point is in 
+    
+    Params:
+        points - N * dim array of points
+        mesh - a mesh object
+        
+    Returns:
+        ptoe - <<guess>> a N array containing the element id of
+               an element that point n is in for n \in {1, 2, ... N},
+               or -1 if point is not in any element
+    """
     
     normals = np.array([mesh.normals[f] for f in mesh.fs])
     directions = np.array([mesh.directions[f] for f in mesh.fs])

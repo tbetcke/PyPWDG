@@ -34,7 +34,7 @@ def planeWaveBases(mesh, k, nplanewaves):
     else:
         dirs = cubeRotations(cubeDirections(nplanewaves))
     pw = PlaneWaves(dirs,k)
-    etob=ElementToBases(mesh)
+    etob = ElementToBases(mesh)
     for e in range(mesh.nelements):
         etob.addBasis(e,PlaneWaves(dirs,k))
     return etob
