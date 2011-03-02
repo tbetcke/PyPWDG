@@ -27,3 +27,7 @@ solution = ps.Computation(problem, bases).solve()
 points = vstack([linspace(0, 1, 1000), ones(1000)]).transpose()
 evalu = pce.Evaluator(mesh, solution.elttobasis, array(points), direction=(1, 0))
 vals, derivs = evalu.evaluate(solution.x)
+
+print vals
+print derivs
+
