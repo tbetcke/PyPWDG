@@ -14,7 +14,6 @@ import numpy
 
 import pypwdg.mesh.structure as pms
 import pypwdg.utils.sparse as pus
-import scipy.sparse as ss
 import numpy as np
 import pypwdg.core.vandermonde as pcv
 
@@ -57,6 +56,9 @@ class Evaluator(object):
         
         Returns: vals - an array with length = number of points
                         the value of the solution at those points
+                 derivs (optional) - an array length # of points
+                        the value of the derivative along direction
+                        at points
         """
         vals = numpy.zeros(len(self.points), dtype=numpy.complex128)
         derivs = numpy.zeros(len(self.points), dtype=numpy.complex128)
