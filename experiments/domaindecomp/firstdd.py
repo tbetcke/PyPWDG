@@ -4,6 +4,7 @@ import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
 import pypwdg.core.evaluation as pce
 from numpy import array,sqrt,vstack,ones,linspace
+import pylab as pl
 
 k = 60
 direction=array([[1.0,1.0]])/sqrt(2)
@@ -25,9 +26,10 @@ problem=ps.Problem(mesh,k,20, bnddata)
 solution = ps.Computation(problem, bases).solve()
 
 points = vstack([linspace(0, 1, 1000), ones(1000)]).transpose()
-evalu = pce.Evaluator(mesh, solution.elttobasis, array(points), direction=(1, 0))
+evalu = pce.Evaluator(mesh, solution.elttobasis, array(points), direction=(1, -1))
 vals, derivs = evalu.evaluate(solution.x)
 
-print vals
-print derivs
+pl.plot (vals)
+pl.plot (derivs)
+pl.show()
 
