@@ -282,3 +282,4 @@ class BasisCombine(object):
     def __str__(self):
         return "".join(map(str,self.bases))
 
+
