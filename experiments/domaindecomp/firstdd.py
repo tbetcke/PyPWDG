@@ -4,9 +4,9 @@ import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
 import pypwdg.core.evaluation as pce
 from numpy import array,sqrt,vstack,ones,linspace
-import pylab as pl
+#import pylab as pl
 from pypwdg.core.boundary_data import zero_impedance
-from Crypto.PublicKey.ElGamal import object
+#from Crypto.PublicKey.ElGamal import object
 
 class SchwarzInterface(object):
     """Pass in mesh object and solution object and
@@ -18,11 +18,11 @@ class SchwarzInterface(object):
     
     def values(self, points, n=None):
         evalu = pce.Evaluator(self.mesh, self.solution.elttobasis, points)
-        return evalu.evaluate(self.solution.x)        
+        return evalu.evaluate(self.solution.x).reshape(-1,1)
     
     def derivs(self, points, n):
         evalu = pce.Evaluator(self.mesh, self.solution.elttobasis, points, n)
-        return evalu.evaluate(self.solution.x)[1]
+        return evalu.evaluate(self.solution.x)[1].reshape(-1,1)
     
 
 k = 20
@@ -58,10 +58,10 @@ bnddata2={7:impbd,  #right
 problem2 = ps.Problem(mesh2, k, 20, bnddata2)
 solution2 = ps.Computation(problem2, bases2).solve()
 
-solution1.writeSolution(bounds1,npoints,fname='firstdd.vti')
-problem1.writeMesh(fname='firstdd.vtu',scalars=solution1.combinedError())
-solution2.writeSolution(bounds2, npoints, fname='firstdd.vti')
-problem1.writeMesh(fname='firstdd.vtu',scalars=solution2.combinedError())
+solution1.writeSolution(bounds1,npoints,fname='firstdd1.vti')
+problem1.writeMesh(fname='firstdd1.vtu',scalars=solution1.combinedError())
+solution2.writeSolution(bounds2, npoints, fname='firstdd2.vti')
+problem1.writeMesh(fname='firstdd2.vtu',scalars=solution2.combinedError())
 
 
 
