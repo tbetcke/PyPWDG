@@ -6,7 +6,6 @@ import pypwdg.core.evaluation as pce
 from numpy import array,sqrt,vstack,ones,linspace
 import pylab as pl
 from pypwdg.core.boundary_data import zero_impedance
-from Crypto.PublicKey.ElGamal import object
 
 class SchwarzInterface(object):
     """Pass in mesh object and solution object and
