@@ -3,7 +3,7 @@ Created on Sep 22, 2010
 
 @author: joel
 '''
-import pypwdg.core.adaptivity as pcad
+import pypwdg.adaptivity.adaptivity as paa
 
 import vtk
 import numpy as np
@@ -22,7 +22,7 @@ def vtkbasis(mesh, etob, fname, coeffs):
     
     nc = 0
     for e in range(mesh.nelements):
-        c = pcad.origin(mesh, e)
+        c = paa.origin(mesh, e)
         bs = etob[e]
         cc = np.zeros(3)
         cc[:len(c)] = c

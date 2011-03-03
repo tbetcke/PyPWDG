@@ -2,11 +2,13 @@ import pypwdg.setup as ps
 import pypwdg.core.bases as pcb
 import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
+import pypwdg.adaptivity.adaptivity as paa
+import pypwdg.adaptivity.scripts as pas
 import pypwdg.parallel.main
 
 from numpy import array,sqrt
 
-k = 15
+k = 30
 direction=array([[1.0,1.0]])/sqrt(2)
 g = pcb.PlaneWaves(direction, k)
 
@@ -17,10 +19,8 @@ bounds=array([[-2,2],[-2,2]],dtype='d')
 npoints=array([200,200])
 
 mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
-bases = pcb.constructBasis(mesh, pcb.planeWaveBases(2,k,15))
 
 problem=ps.Problem(mesh,k,20, bnddata)
-solution = ps.Computation(problem, bases).solve()
-solution.writeSolution(bounds,npoints,fname='soundsoft.vti')
-problem.writeMesh(fname='soundsoft.vtu',scalars=solution.combinedError())
+ibc = paa.InitialPWFBCreator(mesh,k,3,9)
+pas.runadaptive(problem, ibc, "squarescatt", 6, bounds, npoints)
 
