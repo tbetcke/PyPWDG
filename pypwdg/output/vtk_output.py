@@ -24,9 +24,6 @@ class VTKStructuredPoints(object):
         spacing = numpy.hstack((numpy.dot(boundsd, [-1.0,1.0]) / (npointsd-1), numpy.zeros(3-len(boundsd))))
                 
         data = vtk.vtkImageData()
-        print npoints
-        print spacing
-        print origin
         data.SetDimensions(npoints[0], npoints[1], npoints[2])
         data.SetSpacing(spacing[0], spacing[1], spacing[2])
         data.SetNumberOfScalarComponents(1)
