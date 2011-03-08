@@ -18,7 +18,7 @@ def gmshMesh(fname, dim):
         gmsh_elem_key=2 # Key for triangle element in Gmsh 
         gmsh_face_key=1 # Key for line element in Gmsh
     elif dim==3:
-        gmsh_elem_key=4 # Key for tetrahedal element in Gmsh
+        gmsh_elem_key=4 # Key for tetrahedral element in Gmsh
         gmsh_face_key=2 # Key for triangle element in Gmsh
     
     gmsh_dict=gmsh_reader(fname)
