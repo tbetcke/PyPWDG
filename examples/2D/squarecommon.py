@@ -18,8 +18,8 @@ bnddata={7:pcbd.dirichlet(g),
 bounds=array([[0,1],[0,1]],dtype='d')
 npoints=array([100,100])
 
-mesh = pmm.gmshMesh('examples/2D/square.msh',dim=2)
-bases = pcb.planeWaveBases(mesh,k,nplanewaves=15)
+mesh = pmm.gmshMesh('square.msh',dim=2)
+bases = pcb.planeWaveBases(mesh,k,nplanewaves=13)
 
 problem=ps.Problem(mesh,k,20, bnddata)
 solution = ps.Computation(problem, bases).solve()

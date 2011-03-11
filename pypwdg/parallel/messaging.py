@@ -11,10 +11,8 @@ import cStringIO
 import time
 
 import operator
-try:
+if mpiloaded:
     comm = mpi.COMM_WORLD
-except:
-    pass
 
 class ArrayHandler(object):
     """ An ArrayHandler is used in conjunction with the pickle persistency mechanism to collect numpy arrays so that they
