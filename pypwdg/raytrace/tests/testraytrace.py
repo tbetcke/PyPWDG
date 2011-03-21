@@ -6,6 +6,7 @@ Created on Mar 17, 2011
 import unittest
 import numpy as np
 import pypwdg.raytrace.homogeneous as prh
+import test.utils.mesh as tum
 
 class TestHomogeneous(unittest.TestCase):
 
@@ -33,6 +34,23 @@ class TestHomogeneous(unittest.TestCase):
                 self.assertAlmostEqual(0, np.linalg.det(np.vstack((planedirs, refdir + linedir))))
                 
         
+class TestRayTrace(unittest.TestCase):
+    
+    def test2D(self):
+        for n in range(1,10):
+            mesh = tum.regularsquaremesh(n, "BDY")
+            faces = mesh.entityfaces["BDY"]
+            tracer = prh.HomogenousTrace(mesh, ["BDY"])
+            
+            for f in faces:
+                if np.dot(mesh.normals[f], (-1,0)) > 0.5: # look for a face on the left side of the cube
+                    point = mesh.directions[f][0] + mesh.directions[f][0]/2 # pick a point in the middle
+                    etods = prh.trace(point, [1,0], f, tracer, 6, -1)
+                    self.assertEquals(len(etods), 2*n)
+                    break
+            
+    
+
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

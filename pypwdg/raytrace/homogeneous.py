@@ -12,10 +12,16 @@ def trace(point, direction, face, tracer, maxref=5, maxelts=-1):
     maxref: maximum number of reflections
     maxelts: maximum number of elements to trace
     '''
-    etod = {}
-    
-    
-
+    etods = {}
+    nrefs = maxref # number of remaining reflections allowed
+    nelts = maxelts # number of remaining elets allowed
+    laste = -1
+    while (nrefs !=0 and nrefs !=0):
+        e, face, point, direction = tracer.trace(face, point, direction)
+        if laste==e: nrefs-=1
+        eds = etods.setdefault(e, [])
+        eds.append(direction)
+        nelts-=1
 
 def intersect(linepoint, linedir, planepoint, planedirs):
     ''' Determine where the line given by linepoint + \mu * linedir intersects the plane given by 
