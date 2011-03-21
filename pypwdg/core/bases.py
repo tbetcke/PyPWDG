@@ -115,11 +115,6 @@ class Basis(object):
     def derivs(self,x,n):
         pass
 
-    def setRefractive(self,val):
-        self.refr=val
-
-    def getRefractive(self):
-        return self.refr
 
 class PlaneWaves(Basis):
     
@@ -127,7 +122,6 @@ class PlaneWaves(Basis):
         """ directions should be a n x dim array of directions.  k is the wave number """
         self.directions = directions.transpose()
         self.__k = k
-        self.refr=1
     
     def values(self,x,n=None):
         """ return the values of the plane-waves at points x 
@@ -136,7 +130,7 @@ class PlaneWaves(Basis):
         n is ignored
         The return value is a m x self.n array
         """
-        return numpy.exp(1j * self.__k * self.refr * numpy.dot(x, self.directions))
+        return numpy.exp(1j * self.__k * numpy.dot(x, self.directions))
     
     def derivs(self,x,n):
         """ return the directional derivatives of the plane-waves at points x and direction n 
@@ -145,7 +139,7 @@ class PlaneWaves(Basis):
         n should be a vector of length dim
         The return value is a m x self.n array
         """
-        return 1j*self.__k*self.refr*numpy.multiply(numpy.dot(n, self.directions), self.values(x,n))
+        return 1j*self.__k*numpy.multiply(numpy.dot(n, self.directions), self.values(x,n))
     
     def __str__(self):
         return "PW basis "+ str(self.directions)
@@ -160,7 +154,6 @@ class FourierHankelBessel(Basis):
         self.__origin = numpy.array(origin).reshape(1,2)
         self.__orders = numpy.array(orders).reshape(1,-1)
         self.__k = k
-        self.refr=1
 
     def rtheta(self, points):
         r = numpy.sqrt(numpy.sum(points**2, axis=1)).reshape(-1,1)
@@ -171,15 +164,14 @@ class FourierHankelBessel(Basis):
     def values(self, points, n=None):
         r,theta = self.rtheta(points-self.__origin)
 #        print numpy.hstack((points, points - self.__origin, theta, r, numpy.exp(1j * self.__orders * theta)))
-        return self.rfn(self.__orders,self.__k * self.refr* r) * numpy.exp(1j * self.__orders * theta)
+        return self.rfn(self.__orders,self.__k * r) * numpy.exp(1j * self.__orders * theta)
     
     def derivs(self, points, n):
         poffset = points-self.__origin
         r,theta = self.rtheta(poffset)
         ent = numpy.exp(1j * self.__orders * theta)
-        dr = (self.__k * self.refr* self.rfnd(self.__orders, self.__k *
-                self.refr* r, 1) * ent)
-        du = 1j * self.__orders * self.rfn(self.__orders, self.__k *self.refr * r) * ent
+        dr = (self.__k * self.rfnd(self.__orders, self.__k * r, 1) * ent)
+        du = 1j * self.__orders * self.rfn(self.__orders, self.__k *r) * ent
         x = poffset[:,0].reshape(-1,1)
         y = poffset[:,1].reshape(-1,1)
         r2 = r**2
@@ -238,8 +230,6 @@ class BasisReduce(Basis):
     def derivs(self, points, n):
         return numpy.dot(self.pw.derivs(points, n), self.x).reshape(-1,1)
 
-    def setRefractive(self,val):
-        self.pw.setRefractive(val)
 
 class BasisCombine(object):
     """ Combine several basis objects"""
@@ -253,8 +243,6 @@ class BasisCombine(object):
     def derivs(self, points, n):
         return numpy.hstack([b.derivs(points, n) for b in self.bases])
 
-    def setRefractive(self,val):
-        for b in self.bases: b.setrefractive(val)
     
     def __str__(self):
         return "".join(map(str,self.bases))
