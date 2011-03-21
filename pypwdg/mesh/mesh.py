@@ -146,6 +146,7 @@ class Mesh(object):
     normals = property(lambda self: self.meshpart.normals)
     dets = property(lambda self: self.meshpart.dets)
     partition = property(lambda self:self.meshpart.es)
+    facepartition = property(lambda self: self.meshpart.fp)
     neighbourelts = property(lambda self:self.meshpart.neighbourelts)
 
 @ppd.distribute(lambda n: lambda mesh: [((mesh, partition),{}) for partition in mesh.partitions(n)]) 

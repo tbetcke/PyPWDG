@@ -32,14 +32,16 @@ def circleDirections(n):
     theta = numpy.arange(n).reshape((-1,1)) * 2*math.pi / n
     return numpy.hstack((numpy.cos(theta), numpy.sin(theta)))
 
-def planeWaveBases(dim, k, nplanewaves):
+def uniformdirs(dim, npw):
     if dim==2:
-        dirs = circleDirections(nplanewaves)
+        return circleDirections(npw)
     else:
-        dirs = cubeRotations(cubeDirections(nplanewaves))
+        return cubeRotations(cubeDirections(npw))
+    
+def planeWaveBases(dim, k, nplanewaves):
+    dirs = uniformdirs(dim, nplanewaves)
     pw = [PlaneWaves(dirs,k)]
     return UniformBases(pw)
-
 
 @ppd.distribute()
 class UniformBases(object):
@@ -65,6 +67,20 @@ class FourierBesselBases(object):
             origin=mesh.nodes[mesh.elements[e][0]]
             etob[e] = [FourierBessel(origin,self.orders,self.k)]
 
+@ppd.distribute()
+class PlaneWaveVariableN(object):
+    def __init__(self, k, dirs, eton):
+        self.k = k
+        self.eton = eton
+        self.dirs = dirs
+        
+    @ppd.parallelmethod(None, None)
+    def populate(self, mesh, etob):
+        for e in mesh.partition:
+            etob[e] = [PlaneWaves(self.dirs, self.k * self.eton[mesh.elemIdentity[e]])]        
+            
+            
+
 def getSizes(etob, mesh):
     return numpy.array([sum([b.n for b in etob.get(e,[])]) for e in range(mesh.nelements)])    
 
@@ -81,19 +97,22 @@ class ElementToBases(object):
         self.sizes = numpy.array([sum([b.n for b in etob.get(e,[])]) for e in range(mesh.nelements)])     
         self.indices = numpy.cumsum(numpy.concatenate(([0], self.sizes))) 
         
-    def getValues(self, eid, points, normal=None):
+    def getValues(self, eid, points):
         """ Return the values of the basis for element eid at points"""
         bases = self.etob.get(eid)
         if bases==None:
             return numpy.zeros(len(points),0)
         else:
-            return numpy.hstack([b.values(points, normal) for b in bases])
+            return numpy.hstack([b.values(points) for b in bases])
     
-    def getDerivs(self, eid, points, normal):
-        """ Return the directional derivatives of the basis for element eid at points"""
+    def getDerivs(self, eid, points, normal = None):
+        """ Return the directional derivatives of the basis for element eid at points
+        
+           if normal == None, returns the gradient on the standard cartesian grid
+        """
         bases = self.etob.get(eid)
         if bases==None:
-            return numpy.zeros(len(points),0)
+            return numpy.zeros(len(points),0) if normal is not None else numpy.zeros(len(points), 0, points.shape[1])
         else:
             return numpy.hstack([b.derivs(points, normal) for b in bases])
     
@@ -108,11 +127,11 @@ class Basis(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def values(self,x,n=None):
+    def values(self,x):
         pass
 
     @abc.abstractmethod
-    def derivs(self,x,n):
+    def derivs(self,x,n = None):
         pass
 
 
@@ -123,7 +142,7 @@ class PlaneWaves(Basis):
         self.directions = directions.transpose()
         self.__k = k
     
-    def values(self,x,n=None):
+    def values(self,x):
         """ return the values of the plane-waves at points x 
         
         x should be a m x dim array of points.
@@ -132,14 +151,18 @@ class PlaneWaves(Basis):
         """
         return numpy.exp(1j * self.__k * numpy.dot(x, self.directions))
     
-    def derivs(self,x,n):
+    def derivs(self,x,n=None):
         """ return the directional derivatives of the plane-waves at points x and direction n 
         
         x should be a m x dim array.
         n should be a vector of length dim
         The return value is a m x self.n array
         """
-        return 1j*self.__k*numpy.multiply(numpy.dot(n, self.directions), self.values(x,n))
+        vals = self.values(x)
+        if n == None:
+            return 1j * self.__k * numpy.multiply(vals[..., numpy.newaxis], self.directions.transpose()[numpy.newaxis, ...])
+        else:
+            return 1j * self.__k*numpy.multiply(numpy.dot(n, self.directions), vals)
     
     def __str__(self):
         return "PW basis "+ str(self.directions)
@@ -147,6 +170,15 @@ class PlaneWaves(Basis):
     """ the number of functions """
     n=property(lambda self: self.directions.shape[1])
 
+class Polynomial(Basis):
+    def __init__(self, origin, degree):
+        self.origin = origin
+        self.degree = degree
+        self.n = (degree+1)*(degree+2)/2 if len(origin)==2 else -1 # todo: change this
+    
+    def values(self, x):
+        pass
+    
     
 class FourierHankelBessel(Basis):
     
@@ -161,7 +193,7 @@ class FourierHankelBessel(Basis):
 #        theta[numpy.isnan(theta)]=0
         return r, theta
     
-    def values(self, points, n=None):
+    def values(self, points):
         r,theta = self.rtheta(points-self.__origin)
 #        print numpy.hstack((points, points - self.__origin, theta, r, numpy.exp(1j * self.__orders * theta)))
         return self.rfn(self.__orders,self.__k * r) * numpy.exp(1j * self.__orders * theta)
@@ -224,8 +256,8 @@ class BasisReduce(Basis):
         assert len(x)==pw.n
         self.n = 1
         
-    def values(self, points, n=None):
-        return numpy.dot(self.pw.values(points, n), self.x).reshape(-1,1)
+    def values(self, points):
+        return numpy.dot(self.pw.values(points), self.x).reshape(-1,1)
 
     def derivs(self, points, n):
         return numpy.dot(self.pw.derivs(points, n), self.x).reshape(-1,1)
@@ -237,8 +269,8 @@ class BasisCombine(object):
         self.bases = bases
         self.n = sum([b.n for b in bases])
         
-    def values(self, points, n=None):
-        return numpy.hstack([b.values(points, n) for b in self.bases])
+    def values(self, points):
+        return numpy.hstack([b.values(points) for b in self.bases])
         
     def derivs(self, points, n):
         return numpy.hstack([b.derivs(points, n) for b in self.bases])

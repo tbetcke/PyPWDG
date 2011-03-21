@@ -4,10 +4,13 @@ Created on Aug 11, 2010
 @author: joel
 '''
 from pypwdg.mesh.meshutils import MeshQuadratures
-from pypwdg.core.vandermonde import LocalVandermondes
+from pypwdg.core.vandermonde import LocalVandermondes, LocalInnerProducts, ElementVandermondes
 from pypwdg.utils.timing import print_timing
 from pypwdg.core.assembly import Assembly
 import pypwdg.mesh.structure as pms
+import pypwdg.utils.sparse as pus
+import scipy.sparse as ss
+import numpy as np
 
 from pypwdg.parallel.decorate import parallel, tuplesum
 
@@ -15,12 +18,17 @@ import numpy
 
 @parallel(None, reduceop=tuplesum)
 @print_timing
-def assemble(mesh, k, lv, bndvs, mqs, elttobasis, bnddata, params):
+def assemble(mesh, k, lv, bndvs, mqs, elttobasis, bnddata, params, emqs, dovols):
         
-    stiffassembly,loadassemblies=init_assembly(mesh,lv, bndvs, mqs,elttobasis,bnddata)
+    stiffassembly,loadassemblies = init_assembly(mesh,lv, bndvs, mqs,elttobasis,bnddata)
+    
     
     S=assemble_int_faces(mesh, k, stiffassembly, params)
     f=0
+    
+    if dovols:
+        V = assemble_volume_terms(mesh, k, elttobasis, emqs, stiffassembly)
+        S+=V
     
     for (id, bdycondition), loadassembly in zip(bnddata.items(), loadassemblies):
         (Sb,fb)=assemble_bnd(mesh, k, id, bdycondition, stiffassembly, loadassembly, params)
@@ -84,47 +92,20 @@ def assemble_bnd(mesh, k, id, bnd_condition, stiffassembly, loadassembly, params
     G = pms.sumrhs(mesh,GB)
     return S,G    
 
-@parallel(None, reduceop=tuplesum)
-def impedanceSystem(mesh, k, g, localquads, elttobasis, usecache=True, alpha = 1.0/2, beta = 1.0/2, delta = 1.0/2):
-    """ Assemble the stiffness and load matrices for the PW DG method with UWVF parameters
+
+def assemble_volume_terms(mesh, k, elttobasis, emqs, stiffassembly):
+    ev = ElementVandermondes(mesh, elttobasis, emqs)
+    L2 = LocalInnerProducts(ev.getValues, ev.getValues, emqs.quadweights)
+    H1 = LocalInnerProducts(ev.getDerivs, ev.getDerivs, emqs.quadweights, ((0,2),(0,2)))
+    d = np.zeros(mesh.nelements)
+    d[mesh.partition] = 1
+    csrelts = ss.dia_matrix((d, [0]), shape = (mesh.nelements,)*2).tocsr()
+    L2P = pus.createvbsr(csrelts, L2.product, elttobasis.getSizes(), elttobasis.getSizes())
+    H1P = pus.createvbsr(csrelts, H1.product, elttobasis.getSizes(), elttobasis.getSizes())
     
-        k: wave number
-        g: boundary data (should have a values method and a derivs method - see .core.bases.PlaneWaves)
-        localquads: local quadrature rule for each face
-        elttobasis: list of bases for each element
-    """
-    print "Mesh has %s elements"%mesh.nelements
-    print "k = %s"%k
-    print "%s basis functions"%sum([b.n for bs in elttobasis for b in bs ])
-    print "%s quadrature points"%len(localquads[1])
+    Zero = ss.csr_matrix((mesh.nfaces, mesh.nfaces))
+    B = pms.sumfaces(mesh, stiffassembly.assemble([[Zero,Zero],[mesh.facepartition,Zero]]))
     
-    jk = 1j * k
-    jki = 1/jk
-    mqs = MeshQuadratures(mesh, localquads)
-    lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)
-    AJ = pms.AveragesAndJumps(mesh)
-    stiffassembly = Assembly(lv, lv, mqs.quadweights)        
-    SI = stiffassembly.assemble(numpy.array([[jk * alpha * AJ.JD,   -AJ.AN], 
-                                             [AJ.AD,                -beta*jki * AJ.JN]]))
-#    print "SI13,75 ",SI.tocsr()[13,75]
-    
-    # now for the boundary contribution
-    #impedance boundary conditions
-    B = mesh.boundary
-    SB = stiffassembly.assemble(numpy.array([[jk * (1-delta) * B, -delta * B],
-                                             [(1-delta) * B,      -delta * jki * B]]))
-        
-    print "Cached vandermondes %s"%lv.getCachesize()
-    
-    gelts = [[g]] * mesh.nelements
-    gv = LocalVandermondes(mesh, gelts, mqs.quadpoints)
-    
-    loadassembly = Assembly(lv, gv, mqs.quadweights)
-    # todo - check the cross terms.  Works okay with delta = 1/2.  
-    GB = loadassembly.assemble(numpy.array([[jk * (1-delta) * B,  (1-delta) * B], 
-                                            [-delta * B,          -delta * jki * B]]))
-        
-    S = pms.sumfaces(mesh,SI + SB)     
-    G = pms.sumrhs(mesh,GB)
-#    print "S 4,25",S.tocsr()[4,25]    
-    return S,G    
+    return H1P - k**2 * L2P - B
+      
+

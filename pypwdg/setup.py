@@ -8,8 +8,8 @@ __all__ = ["setup", "solve", "problem"]
 
 import numpy
 import pypwdg.core.bases as pcb
-from pypwdg.utils.quadrature import trianglequadrature, legendrequadrature
-from pypwdg.mesh.meshutils import MeshQuadratures
+from pypwdg.utils.quadrature import trianglequadrature, legendrequadrature, tetquadrature
+from pypwdg.mesh.meshutils import MeshQuadratures, MeshElementQuadratures
 from pypwdg.core.vandermonde import LocalVandermondes
 from pypwdg.core.physics import assemble
 from pypwdg.core.evaluation import StructuredPointsEvaluator
@@ -65,10 +65,13 @@ class Problem(object):
         
         # Set-up quadrature rules        
         if mesh.dim == 2:
-            quad = legendrequadrature(nquadpoints)
+            fquad = legendrequadrature(nquadpoints)
+            equad = trianglequadrature(nquadpoints)
         else:
-            quad = trianglequadrature(nquadpoints)
-        self.mqs = MeshQuadratures(self.mesh, quad)
+            fquad = trianglequadrature(nquadpoints)
+            equad = tetquadrature(nquadpoints)
+        self.mqs = MeshQuadratures(self.mesh, fquad)
+        self.emqs = MeshElementQuadratures(self.mesh, equad)
                     
     def setParams(self,alpha=0.5,beta=0.5,delta=0.5):
         self.params={'alpha':alpha,'beta':beta,'delta':delta}        
@@ -80,7 +83,7 @@ class Problem(object):
 
 class Computation(object):
     """ Contains everything needed to solve a Problem  """
-    def __init__(self, problem, elttobasis, usecache = True):
+    def __init__(self, problem, elttobasis, usecache = True, dovols = False):
         self.problem = problem  
         self.elttobasis = elttobasis
         # Setup local Vandermondes        
@@ -90,7 +93,7 @@ class Computation(object):
             bdyetob = pcb.constructBasis(problem.mesh, pcb.UniformBases([data]))
             bndv = LocalVandermondes(problem.mesh, bdyetob, problem.mqs)        
             self.bndvs.append(bndv)
-        stiffness, rhs = assemble(problem.mesh, problem.k, self.lv, self.bndvs, problem.mqs, self.elttobasis, problem.bnddata, problem.params)
+        stiffness, rhs = assemble(problem.mesh, problem.k, self.lv, self.bndvs, problem.mqs, self.elttobasis, problem.bnddata, problem.params, problem.emqs, dovols)
         self.stiffness = stiffness.tocsr()
         self.rhs = numpy.array(rhs.todense()).squeeze()
             

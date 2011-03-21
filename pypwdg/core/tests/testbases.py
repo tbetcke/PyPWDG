@@ -19,7 +19,7 @@ class TestBases(unittest.TestCase):
         # check that there's just one function
         self.assertEqual(pw.n, 1)
         # evaluate it at 0
-        fd0 = pw.values(numpy.zeros((1,2)), None)
+        fd0 = pw.values(numpy.zeros((1,2)))
         # answer should be 1
         self.assertAlmostEqual(fd0[0,0], 1.0)
         # now evaluate some directional derivatives

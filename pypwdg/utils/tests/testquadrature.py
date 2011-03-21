@@ -27,4 +27,12 @@ class testQuadrature(unittest.TestCase):
             for m in range(0,2*n):
                 # test integration of x^m
                 self.assertAlmostEqual(np.dot(x.transpose() ** m, w), 1.0/(m+1) )
+    
+    def testTetrahedron(self):
+        for n in range(1,8):
+            x, w = puq.tetquadrature(n)
+            self.assertAlmostEqual(sum(w), 1.0/6)
+            self.assertAlmostEqual(np.dot(x[:,0], w), 1.0/24)
+            self.assertAlmostEqual(np.dot(x[:,1], w), 1.0/24)
+            self.assertAlmostEqual(np.dot(x[:,2], w), 1.0/24)
                 
