@@ -5,6 +5,7 @@ Created on Mar 17, 2011
 '''
 import unittest
 import numpy as np
+import math
 import pypwdg.raytrace.homogeneous as prh
 import test.utils.mesh as tum
 
@@ -42,12 +43,17 @@ class TestRayTrace(unittest.TestCase):
             faces = mesh.entityfaces["BDY"]
             tracer = prh.HomogenousTrace(mesh, ["BDY"])
             
-            for f in faces:
+            for f in faces.tocsr().indices:
                 if np.dot(mesh.normals[f], (-1,0)) > 0.5: # look for a face on the left side of the cube
-                    point = mesh.directions[f][0] + mesh.directions[f][0]/2 # pick a point in the middle
+                    point = mesh.directions[f][0] + np.sum(mesh.directions[f][1:-1], axis=0)/2.0 # pick a point in the middle
                     etods = prh.trace(point, [1,0], f, tracer, 6, -1)
-                    self.assertEquals(len(etods), 2*n)
+                    self.assertEquals(len(etods), 2*n) # one strip contains 2n triangles
+                    self.assertEquals(sum([len(ds) for ds in etods.values()]), 2*n*6+1) # each triangle should be painted 6 times, +1 for final reflection
+                    
+                    etods = prh.trace(point, [math.sqrt(2),1], f, tracer, -1, 100)
+                    self.assertEquals(sum([len(ds) for ds in etods.values()]), 100) # we should manage to have painted 100 elements
                     break
+            
             
     
 

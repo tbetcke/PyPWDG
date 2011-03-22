@@ -115,7 +115,7 @@ class Mesh(object):
         ftov2=(ftov*ftov.transpose()).tocsr() # Multiply to get connectivity.
         ftof = ss.csr_matrix((ftov2.data / dim, ftov2.indices, ftov2.indptr))  # ftov2 contains integer data, so dividing by dim means we're left with matching faces
         
-        self._connectivity = ftof - ss.eye(self.nfaces, self.nfaces)
+        self._connectivity = ftof - ss.eye(self.nfaces, self.nfaces, dtype=int)
         self._connectivity.eliminate_zeros()
         self._internal = self._connectivity **2
         self._boundary = ss.eye(self.nfaces, self.nfaces) - self._internal
@@ -156,7 +156,7 @@ class MeshPart(object):
         self.mesh = mesh
         self.es = eltpartition
         self.fs = mesh.etof[eltpartition].ravel()
-        fpindex = np.zeros((mesh.nfaces,))
+        fpindex = np.zeros((mesh.nfaces,), dtype=int)
         fpindex[self.fs] = 1
         self.fp = ss.spdiags(fpindex, [0], mesh.nfaces, mesh.nfaces)
         

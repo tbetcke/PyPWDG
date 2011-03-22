@@ -5,6 +5,8 @@ Created on Mar 8, 2011
 '''
 import numpy as np
 
+
+
 def trace(point, direction, face, tracer, maxref=5, maxelts=-1):
     ''' Given a starting point on a face and direction, trace a ray through a mesh.  
     
@@ -16,12 +18,17 @@ def trace(point, direction, face, tracer, maxref=5, maxelts=-1):
     nrefs = maxref # number of remaining reflections allowed
     nelts = maxelts # number of remaining elets allowed
     laste = -1
-    while (nrefs !=0 and nrefs !=0):
-        e, face, point, direction = tracer.trace(face, point, direction)
+    while (nrefs !=0 and nelts !=0):
+        nextinfo = tracer.trace(face, point, np.array(direction))
+#        print nextinfo, nelts
+        if nextinfo is None: break
+        e, face, point, direction = nextinfo 
         if laste==e: nrefs-=1
         eds = etods.setdefault(e, [])
         eds.append(direction)
         nelts-=1
+        laste = e
+    return etods
 
 def intersect(linepoint, linedir, planepoint, planedirs):
     ''' Determine where the line given by linepoint + \mu * linedir intersects the plane given by 
@@ -30,6 +37,7 @@ def intersect(linepoint, linedir, planepoint, planedirs):
     Returns (\lambda, \mu) '''
     
     M = np.vstack((planedirs, -linedir))
+    if np.linalg.det(M) == 0: return (None, np.inf) 
     P = linepoint - planepoint
     x = np.linalg.solve(M.transpose(), P.transpose()).ravel()
     return (x[:-1], x[-1])
@@ -50,7 +58,7 @@ class HomogenousTrace(object):
         self.reflectingfaces =  np.zeros(mesh.nfaces,dtype=bool)
         for e in reflectingbdys:
             self.reflectingfaces[mesh.entityfaces[e].diagonal()!=0] = True        
-        self.neighbourface = mesh.connectivity * np.arange(1, mesh.nfaces+1) - 1
+        self.neighbourface = mesh.connectivity * np.arange(1, mesh.nfaces+1, dtype=int) - 1
                 
     def trace(self, face, point, direction):
         ''' Given an input face, a point on the face and a direction trace a path through the relevant element
@@ -65,10 +73,11 @@ class HomogenousTrace(object):
         fs = self.mesh.etof[e]
         
         for f in fs:
+            if f==face: continue
             dirs = self.mesh.directions[f]
             planedirs = dirs[1:self.mesh.dim]
             l, m = intersect(point, direction, dirs[0], planedirs)
-            if sum(l) <= 1: # assumes that the face is a simplex
+            if l is not None and (l > 0).all() and sum(l) <= 1 and m > 0: # assumes that the face is a simplex
                 p = point + m * direction
                 if self.reflectingfaces[f]:
                     direction = reflect(direction, planedirs)
@@ -76,7 +85,7 @@ class HomogenousTrace(object):
                     f = self.neighbourface[f]
                 return (e,f,p,direction)
         
-        print "Failed to find face to trace ",face,point,direction,e
+#        print "Failed to find face to trace ",face,point,direction,e
         return None
         
         
