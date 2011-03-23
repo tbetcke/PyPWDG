@@ -1,6 +1,8 @@
 '''
 Created on 23 Mar 2011
 
+Module of various preconditioners for problems
+
 @author: rdodd
 '''
 from scipy.sparse.linalg import LinearOperator, factorized

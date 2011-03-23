@@ -125,17 +125,28 @@ class Computation(object):
         
         if usegmres:
             print "Using gmres iterative solver with pre:", precond
+            residues = []
+            def callback(x):
+                residues.append(x)
+            
             from scipy.sparse.linalg.isolve import gmres
             from pypwdg.utils.preconditioning import block_diagonal, diagonal
+            import pylab as pl
             M = None
             if precond == 'diag':
                 M = diagonal(self.stiffness)
             if precond == 'block_diag':
-                partitions = self.problem.mesh.partitions(3)
+                partitions = [np.array([i]) for i in range(self.problem.mesh.nelements)]
+                print "# elms:", self.problem.mesh.nelements
+                print "# deg freedom", self.stiffness.shape
+                #partitions = self.problem.mesh.partitions(2)
                 idxs = [np.concatenate([np.arange(self.elttobasis.getIndices()[e], self.elttobasis.getIndices()[e] + self.elttobasis.getSizes()[e]) for e in partition]) for partition in partitions]
                 M = block_diagonal(self.stiffness, idxs)
-            x, error = gmres(self.stiffness, self.rhs, M=M)
+            x, error = gmres(self.stiffness, self.rhs, restart=2000, M=M, callback=callback)
             print "Gmres error code: ", error
+            pl.plot(residues)
+            pl.show()
+            print "Residue:", residues[-1]
 
         if usebicgstab:
             print "Using bicgstab iterative solver with pre:", precond
