@@ -106,8 +106,9 @@ class Computation(object):
         usepardiso = solver == "pardiso"
         useumfpack = solver == "umfpack"
         usebicgstab = solver == "bicgstab"
+        usegmres = solver == "gmres"
         
-        if not (usepardiso or useumfpack or usebicgstab): 
+        if not (usepardiso or useumfpack or usebicgstab or usegmres): 
             raise Exception("Solver not known")
         
         if usepardiso:
@@ -122,18 +123,17 @@ class Computation(object):
             from scipy.sparse.linalg.dsolve.linsolve import spsolve
             x = spsolve(self.stiffness, self.rhs)
         
-        if usebicgstab:
-            from scipy.sparse.linalg.isolve import bicgstab
+        if usegmres:
+            from scipy.sparse.linalg.isolve import gmres
             from pypwdg.utils.preconditioning import block_diagonal, diagonal
             M = None
             if precond == 'diag':
                 M = diagonal(self.stiffness)
             if precond == 'block_diag':
                 partitions = self.problem.mesh.partitions(3)
-                idxs = [np.concatenate([np.arange(self.elttobasis.getIndices(e), self.eltobasis.getIndices(e) + self.elttobasis.getSizes(e)) for e in partition]) for partition in partitions]
-                print idxs
-                #M = block_diagonal(self.stiffness)
-            x, error = bicgstab(self.stiffness, self.rhs, M=M)
+                idxs = [np.concatenate([np.arange(self.elttobasis.getIndices()[e], self.elttobasis.getIndices()[e] + self.elttobasis.getSizes()[e]) for e in partition]) for partition in partitions]
+                M = block_diagonal(self.stiffness, idxs)
+            x, error = gmres(self.stiffness, self.rhs, M=M)
             print "Bicgstab error code: ", error
             
         print "Relative residual: ", np.linalg.norm(self.stiffness * x - self.rhs) / np.linalg.norm(x)

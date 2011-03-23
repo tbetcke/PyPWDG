@@ -3,19 +3,22 @@ Created on 23 Mar 2011
 
 @author: rdodd
 '''
-from scipy.sparse.linalg import LinearOperator
+from scipy.sparse.linalg import LinearOperator, factorized
 from scipy.sparse import lil_matrix
 import numpy as np
 
-def diagonal(stiffness):
+def diagonal(matrix):
     """LinearOperator corresponding to diagonal preconditioner"""
-    Pm1 = 1. / stiffness.diagonal()
+    Pm1 = 1. / matrix.diagonal()
     def matvec(v):
         return Pm1 * v
-    return LinearOperator(stiffness.shape, matvec=matvec, rmatvec=matvec)
+    return LinearOperator(matrix.shape, matvec=matvec, rmatvec=matvec)
 
-def block_diagonal(stiffness):
+def block_diagonal(matrix, idxs):
     """LinearOperator corresponding to a block diagonal preconditioner"""
+    LU = [factorized(matrix[idx,:][:,idx].tocsc()) for idx in idxs]    
     def matvec(v):
-        pass
-    return LinearOperator(stiffness.shape, matvec)
+        for i in range(len(idxs)):
+            v[idxs[i]] = LU[i](v[idxs[i]])
+        return v
+    return LinearOperator(matrix.shape, matvec=matvec)
