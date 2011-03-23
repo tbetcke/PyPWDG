@@ -6,10 +6,9 @@ Created on 1 Nov 2010
 
 __all__ = ["setup", "solve", "problem"]
 
-import numpy
+import numpy as np
 import pypwdg.core.bases as pcb
 from pypwdg.utils.quadrature import trianglequadrature, legendrequadrature
-from pypwdg.utils.preconditioning import block_diagonal, diagonal
 from pypwdg.mesh.meshutils import MeshQuadratures
 from pypwdg.core.vandermonde import LocalVandermondes
 from pypwdg.core.physics import assemble
@@ -98,7 +97,7 @@ class Computation(object):
             self.bndvs.append(bndv)
         stiffness, rhs = assemble(problem.mesh, problem.k, self.lv, self.bndvs, problem.mqs, self.elttobasis, problem.bnddata, problem.params)
         self.stiffness = stiffness.tocsr()
-        self.rhs = numpy.array(rhs.todense()).squeeze()
+        self.rhs = np.array(rhs.todense()).squeeze()
     
     @print_timing        
     def solve(self, solver="pardiso", precond=None):
@@ -120,20 +119,25 @@ class Computation(object):
                 useumfpack = True
                 
         if useumfpack:
-            from scipy.sparse.linalg.dsolve.linsolve import spsolve as solve
-            x = solve(self.stiffness, self.rhs)
+            from scipy.sparse.linalg.dsolve.linsolve import spsolve
+            x = spsolve(self.stiffness, self.rhs)
         
         if usebicgstab:
             from scipy.sparse.linalg.isolve import bicgstab
+            from pypwdg.utils.preconditioning import block_diagonal, diagonal
             M = None
             if precond == 'diag':
                 M = diagonal(self.stiffness)
-            if precond == 'block_diag': 
-                M = block_diagonal(self.stiffness)
+            if precond == 'block_diag':
+                partition = self.problem.mesh.partitions(3)
+                print [e for e in partition]
+                idxs = np.concatenate([np.arange(self.elttobasis.getIndices(e), self.eltobasis.getIndices(e) + self.elttobasis.getSizes(e)) for e in partition])
+                print idxs
+                #M = block_diagonal(self.stiffness)
             x, error = bicgstab(self.stiffness, self.rhs, M=M)
             print "Bicgstab error code: ", error
             
-        print "Relative residual: ", numpy.linalg.norm(self.stiffness * x - self.rhs) / numpy.linalg.norm(x)
+        print "Relative residual: ", np.linalg.norm(self.stiffness * x - self.rhs) / np.linalg.norm(x)
         return Solution(self.problem, x, self.elttobasis, self.lv, self.bndvs)
                 
 
@@ -154,8 +158,8 @@ class Solution(object):
     def writeSolution(self, bounds, npoints, realdata=True, fname='solution.vti'):
         print "Evaluate Solution and Write to File", fname
         
-        bounds=numpy.array(bounds,dtype='d')
-        filter=numpy.real if realdata else numpy.imag
+        bounds=np.array(bounds,dtype='d')
+        filter=np.real if realdata else np.imag
 
         vtk_structure=VTKStructuredPoints(StructuredPointsEvaluator(self.problem.mesh, self.elttobasis, filter, self.x))
         vtk_structure.create_vtk_structured_points(bounds,npoints)
@@ -168,7 +172,7 @@ class Solution(object):
     def combinedError(self):        
         if self.error_dirichlet2 is None: self.evalJumpErrors()
         error_combined2 = self.problem.k ** 2 * self.error_dirichlet2 + self.error_neumann2 + self.error_boundary2
-        self.error_combined = numpy.sqrt(error_combined2)
+        self.error_combined = np.sqrt(error_combined2)
         return self.error_combined
             
         

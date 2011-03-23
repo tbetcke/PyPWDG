@@ -19,10 +19,10 @@ bounds=array([[0,1],[0,1]],dtype='d')
 npoints=array([100,100])
 
 mesh = pmm.gmshMesh('square.msh',dim=2)
-bases = pcb.planeWaveBases(mesh,k,nplanewaves=13)
+bases = pcb.planeWaveBases(mesh,k,nplanewaves=4)
 
 problem=ps.Problem(mesh,k,20, bnddata)
-solution = ps.Computation(problem, bases).solve(solver='bicgstab', precond='diag')
+solution = ps.Computation(problem, bases).solve(solver='bicgstab', precond='block_diag')
 solution.writeSolution(bounds,npoints,fname='square.vti')
 problem.writeMesh(fname='square.vtu',scalars=solution.combinedError())
 

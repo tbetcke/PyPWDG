@@ -9,14 +9,12 @@ import numpy as np
 
 def diagonal(stiffness):
     """LinearOperator corresponding to diagonal preconditioner"""
-    Pm1 = lil_matrix(stiffness.shape)
-    Pm1.setdiag(1. / stiffness.diagonal())
-    Pm1 = Pm1.tocsc()
+    Pm1 = 1. / stiffness.diagonal()
     def matvec(v):
-        return np.dot(Pm1, v)
+        return Pm1 * v
     return LinearOperator(stiffness.shape, matvec=matvec, rmatvec=matvec)
 
-def block_diagonal(stiffness, blocks=10):
+def block_diagonal(stiffness):
     """LinearOperator corresponding to a block diagonal preconditioner"""
     def matvec(v):
         pass
