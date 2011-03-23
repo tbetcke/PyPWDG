@@ -129,9 +129,8 @@ class Computation(object):
             if precond == 'diag':
                 M = diagonal(self.stiffness)
             if precond == 'block_diag':
-                partition = self.problem.mesh.partitions(3)
-                print [e for e in partition]
-                idxs = np.concatenate([np.arange(self.elttobasis.getIndices(e), self.eltobasis.getIndices(e) + self.elttobasis.getSizes(e)) for e in partition])
+                partitions = self.problem.mesh.partitions(3)
+                idxs = [np.concatenate([np.arange(self.elttobasis.getIndices(e), self.eltobasis.getIndices(e) + self.elttobasis.getSizes(e)) for e in partition]) for partition in partitions]
                 print idxs
                 #M = block_diagonal(self.stiffness)
             x, error = bicgstab(self.stiffness, self.rhs, M=M)
