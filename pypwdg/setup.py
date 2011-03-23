@@ -9,12 +9,15 @@ __all__ = ["setup", "solve", "problem"]
 import numpy
 import pypwdg.core.bases as pcb
 from pypwdg.utils.quadrature import trianglequadrature, legendrequadrature
+from pypwdg.utils.preconditioning import block_diagonal, diagonal
 from pypwdg.mesh.meshutils import MeshQuadratures
 from pypwdg.core.vandermonde import LocalVandermondes
 from pypwdg.core.physics import assemble
 from pypwdg.core.evaluation import StructuredPointsEvaluator
 from pypwdg.output.vtk_output import VTKStructuredPoints
 from pypwdg.output.vtk_output import VTKGrid
+
+from pypwdg.utils.timing import print_timing
 
 import pypwdg.core.evaluation as pce
 
@@ -96,14 +99,17 @@ class Computation(object):
         stiffness, rhs = assemble(problem.mesh, problem.k, self.lv, self.bndvs, problem.mqs, self.elttobasis, problem.bnddata, problem.params)
         self.stiffness = stiffness.tocsr()
         self.rhs = numpy.array(rhs.todense()).squeeze()
-            
-    def solve(self, solver="pardiso"):
+    
+    @print_timing        
+    def solve(self, solver="pardiso", precond=None):
         print "Solve linear system of equations"
         
         usepardiso = solver == "pardiso"
         useumfpack = solver == "umfpack"
+        usebicgstab = solver == "bicgstab"
         
-        if not (usepardiso or useumfpack): raise Exception("Solver not known")
+        if not (usepardiso or useumfpack or usebicgstab): 
+            raise Exception("Solver not known")
         
         if usepardiso:
             try:            
@@ -117,7 +123,16 @@ class Computation(object):
             from scipy.sparse.linalg.dsolve.linsolve import spsolve as solve
             x = solve(self.stiffness, self.rhs)
         
-        
+        if usebicgstab:
+            from scipy.sparse.linalg.isolve import bicgstab
+            M = None
+            if precond == 'diag':
+                M = diagonal(self.stiffness)
+            if precond == 'block_diag': 
+                M = block_diagonal(self.stiffness)
+            x, error = bicgstab(self.stiffness, self.rhs, M=M)
+            print "Bicgstab error code: ", error
+            
         print "Relative residual: ", numpy.linalg.norm(self.stiffness * x - self.rhs) / numpy.linalg.norm(x)
         return Solution(self.problem, x, self.elttobasis, self.lv, self.bndvs)
                 

@@ -22,7 +22,7 @@ mesh = pmm.gmshMesh('square.msh',dim=2)
 bases = pcb.planeWaveBases(mesh,k,nplanewaves=13)
 
 problem=ps.Problem(mesh,k,20, bnddata)
-solution = ps.Computation(problem, bases).solve()
+solution = ps.Computation(problem, bases).solve(solver='bicgstab', precond='diag')
 solution.writeSolution(bounds,npoints,fname='square.vti')
 problem.writeMesh(fname='square.vtu',scalars=solution.combinedError())
 
