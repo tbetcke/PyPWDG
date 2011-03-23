@@ -124,6 +124,7 @@ class Computation(object):
             x = spsolve(self.stiffness, self.rhs)
         
         if usegmres:
+            print "Using gmres iterative solver with pre:", precond
             from scipy.sparse.linalg.isolve import gmres
             from pypwdg.utils.preconditioning import block_diagonal, diagonal
             M = None
@@ -134,7 +135,22 @@ class Computation(object):
                 idxs = [np.concatenate([np.arange(self.elttobasis.getIndices()[e], self.elttobasis.getIndices()[e] + self.elttobasis.getSizes()[e]) for e in partition]) for partition in partitions]
                 M = block_diagonal(self.stiffness, idxs)
             x, error = gmres(self.stiffness, self.rhs, M=M)
+            print "Gmres error code: ", error
+
+        if usebicgstab:
+            print "Using bicgstab iterative solver with pre:", precond
+            from scipy.sparse.linalg.isolve import bicgstab
+            from pypwdg.utils.preconditioning import block_diagonal, diagonal
+            M = None
+            if precond == 'diag':
+                M = diagonal(self.stiffness)
+            if precond == 'block_diag':
+                partitions = self.problem.mesh.partitions(3)
+                idxs = [np.concatenate([np.arange(self.elttobasis.getIndices()[e], self.elttobasis.getIndices()[e] + self.elttobasis.getSizes()[e]) for e in partition]) for partition in partitions]
+                M = block_diagonal(self.stiffness, idxs)
+            x, error = bicgstab(self.stiffness, self.rhs, M=M)
             print "Bicgstab error code: ", error
+
             
         print "Relative residual: ", np.linalg.norm(self.stiffness * x - self.rhs) / np.linalg.norm(x)
         return Solution(self.problem, x, self.elttobasis, self.lv, self.bndvs)
