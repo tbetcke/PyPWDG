@@ -6,8 +6,6 @@ Module of various preconditioners for problems
 @author: rdodd
 '''
 from scipy.sparse.linalg import LinearOperator, factorized
-from scipy.sparse import lil_matrix
-import numpy as np
 
 def diagonal(matrix):
     """LinearOperator corresponding to diagonal preconditioner"""

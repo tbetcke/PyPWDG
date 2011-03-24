@@ -100,7 +100,7 @@ class Computation(object):
         self.rhs = np.array(rhs.todense()).squeeze()
     
     @print_timing        
-    def solve(self, solver="pardiso", precond=None):
+    def solve(self, solver="pardiso", precond=None, part=None):
         print "Solve linear system of equations"
         
         usepardiso = solver == "pardiso"
@@ -136,15 +136,23 @@ class Computation(object):
             if precond == 'diag':
                 M = diagonal(self.stiffness)
             if precond == 'block_diag':
-                partitions = [np.array([i]) for i in range(self.problem.mesh.nelements)]
+                if part == 'elms':
+                    partitions = [np.array([i]) for i in range(self.problem.mesh.nelements)]
+                elif type(part) == type(1):
+                    partitions = self.problem.mesh.partitions(part)
+                else:
+                    print "Partition number not understood - defaulting to 2"
+                    partitions = self.problem.mesh.partitions(2)
                 print "# elms:", self.problem.mesh.nelements
                 print "# deg freedom", self.stiffness.shape
-                #partitions = self.problem.mesh.partitions(2)
                 idxs = [np.concatenate([np.arange(self.elttobasis.getIndices()[e], self.elttobasis.getIndices()[e] + self.elttobasis.getSizes()[e]) for e in partition]) for partition in partitions]
                 M = block_diagonal(self.stiffness, idxs)
-            x, error = gmres(self.stiffness, self.rhs, restart=2000, M=M, callback=callback)
+            x, error = gmres(self.stiffness, self.rhs, tol=1e-10, restart=2000, M=M, callback=callback)
             print "Gmres error code: ", error
-            pl.plot(residues)
+            pl.semilogy(residues)
+            pl.title("SquareCommon: k="+str(self.problem.k)+", pw=16, diag precond"+", elms="+str(self.problem.mesh.nelements)+", degfree="+str(self.stiffness.shape)+".")
+            pl.xlabel("Iterations")
+            pl.ylabel("residual")
             pl.show()
             print "Residue:", residues[-1]
 
