@@ -7,6 +7,12 @@ import unittest
 import numpy as np
 import math
 import pypwdg.raytrace.homogeneous as prh
+import pypwdg.raytrace.boundary as prb
+import pypwdg.core.bases as pcb
+import pypwdg.core.boundary_data as pcbd
+import pypwdg.utils.quadrature as puq
+import pypwdg.mesh.meshutils as pmmu
+
 import test.utils.mesh as tum
 
 class TestHomogeneous(unittest.TestCase):
@@ -54,6 +60,19 @@ class TestRayTrace(unittest.TestCase):
                     self.assertEquals(sum([len(ds) for ds in etods.values()]), 100) # we should manage to have painted 100 elements
                     break
             
+            
+class TestBoundary(unittest.TestCase):
+    
+    def testImpedance(self):
+        mesh = tum.regularsquaremesh(5, "BDY")
+        mqs = pmmu.MeshQuadratures(mesh, puq.legendrequadrature(10))
+        for k in [1,10,100]:
+            direction = np.array([1,1])/math.sqrt(2.0)
+            g = pcb.PlaneWaves(direction, k)
+            impbd = pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g)
+            
+            bnddata={"BDY":impbd}
+            ftodirs = prb.initialrt(mesh, bnddata, k, mqs, 5)
             
     
 
