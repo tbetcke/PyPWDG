@@ -54,7 +54,8 @@ def optimalbasis3(linearopt, basisgenerator, iniparams, penalty = None, finalobj
         err = linearopt(basis)[1]
         return err if penalty is None else np.concatenate((err, penalty(params)))
     
-    optparams = so.leastsq(nonlinearfn, iniparams.flatten())[0]     
+    optparams, a, b, msg,ier  = so.leastsq(nonlinearfn, iniparams.flatten(), full_output = True)     
+    print msg, ier
     return finalobject(optparams)
     
 @put.print_timing    

@@ -65,8 +65,8 @@ class TestBoundary(unittest.TestCase):
     
     def testImpedance(self):
         mesh = tum.regularsquaremesh(1, "BDY")
-        mqs = pmmu.MeshQuadratures(mesh, puq.legendrequadrature(20))
-        for k in [1,10,100]:
+        mqs = pmmu.MeshQuadratures(mesh, puq.legendrequadrature(200))
+        for k in [1]:
             direction = np.array([1,1])/math.sqrt(2.0)
             g = pcb.PlaneWaves(direction, k)
             impbd = pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g)
