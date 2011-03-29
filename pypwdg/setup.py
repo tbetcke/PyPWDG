@@ -143,8 +143,6 @@ class Computation(object):
                 else:
                     print "Partition number not understood - defaulting to 2"
                     partitions = self.problem.mesh.partitions(2)
-                print "# elms:", self.problem.mesh.nelements
-                print "# deg freedom", self.stiffness.shape
                 idxs = [np.concatenate([np.arange(self.elttobasis.getIndices()[e], self.elttobasis.getIndices()[e] + self.elttobasis.getSizes()[e]) for e in partition]) for partition in partitions]
                 M = block_diagonal(self.stiffness, idxs)
             x, error = gmres(self.stiffness, self.rhs, tol=1e-10, restart=2000, M=M, callback=callback)
