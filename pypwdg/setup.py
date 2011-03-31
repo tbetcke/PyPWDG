@@ -15,6 +15,7 @@ from pypwdg.core.physics import assemble
 from pypwdg.core.evaluation import StructuredPointsEvaluator
 from pypwdg.output.vtk_output import VTKStructuredPoints
 from pypwdg.output.vtk_output import VTKGrid
+from pypwdg.utils.rich import write_out
 
 from pypwdg.utils.timing import print_timing
 
@@ -131,7 +132,6 @@ class Computation(object):
             
             from scipy.sparse.linalg.isolve import gmres
             from pypwdg.utils.preconditioning import block_diagonal, diagonal
-            import pylab as pl
             M = None
             if precond == 'diag':
                 M = diagonal(self.stiffness)
@@ -143,16 +143,14 @@ class Computation(object):
                 else:
                     print "Partition number not understood - defaulting to 2"
                     partitions = self.problem.mesh.partitions(2)
-                idxs = [np.concatenate([np.arange(self.elttobasis.getIndices()[e], self.elttobasis.getIndices()[e] + self.elttobasis.getSizes()[e]) for e in partition]) for partition in partitions]
+                idxs = [np.concatenate([np.arange(self.elttobasis.getIndices()[e], \
+                            self.elttobasis.getIndices()[e] + self.elttobasis.getSizes()[e]) \
+                            for e in partition]) for partition in partitions]
                 M = block_diagonal(self.stiffness, idxs)
-            x, error = gmres(self.stiffness, self.rhs, tol=1e-10, restart=2000, M=M, callback=callback)
+            (x, error) = gmres(self.stiffness, self.rhs, tol=1e-10, restart=2000, M=M, callback=callback)
             print "Gmres error code: ", error
-            pl.semilogy(residues)
-            pl.title("SquareCommon: k="+str(self.problem.k)+", pw=16, diag precond"+", elms="+str(self.problem.mesh.nelements)+", degfree="+str(self.stiffness.shape)+".")
-            pl.xlabel("Iterations")
-            pl.ylabel("residual")
-            pl.show()
             print "Residue:", residues[-1]
+            write_out(residues, "./residues.dat")
 
         if usebicgstab:
             print "Using bicgstab iterative solver with pre:", precond
