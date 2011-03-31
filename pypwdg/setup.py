@@ -15,6 +15,7 @@ from pypwdg.core.physics import assemble
 from pypwdg.core.evaluation import StructuredPointsEvaluator
 from pypwdg.output.vtk_output import VTKStructuredPoints
 from pypwdg.output.vtk_output import VTKGrid
+from pypwdg.utils.timing import print_timing
 
 import pypwdg.core.evaluation as pce
 
@@ -96,14 +97,18 @@ class Computation(object):
         stiffness, rhs = assemble(problem.mesh, problem.k, self.lv, self.bndvs, problem.mqs, self.elttobasis, problem.bnddata, problem.params)
         self.stiffness = stiffness.tocsr()
         self.rhs = numpy.array(rhs.todense()).squeeze()
-            
+    
+    @print_timing
     def solve(self, solver="pardiso"):
         print "Solve linear system of equations"
         
         usepardiso = solver == "pardiso"
         useumfpack = solver == "umfpack"
+        usecg      = solver == "cg"
+        usegmres   = solver == "gmres"
+        usebicgstab = solver == "bicgstab"
         
-        if not (usepardiso or useumfpack): raise Exception("Solver not known")
+        if not (usepardiso or useumfpack or usecg or usegmres or usebicgstab): raise Exception("Solver not known")
         
         if usepardiso:
             try:            
@@ -112,10 +117,24 @@ class Computation(object):
                 if not error == 0: raise Exception("Pardiso Error")
             except ImportError:
                 useumfpack = True
-                
+        
+        if usecg:
+            from scipy.sparse.linalg import cg
+            (x, error) = cg(self.stiffness, self.rhs)
+            print x   
+            
+        if usebicgstab:
+            from scipy.sparse.linalg import bicgstab
+            (x, error) = bicgstab(self.stiffness, self.rhs)
+            
+        if usegmres:
+            from scipy.sparse.linalg import gmres
+            (x, error) = gmres(self.stiffness, self.rhs)
+            if not error == 0: raise Exception("Gmres error code: "+str(error))
+            
         if useumfpack:
-            from scipy.sparse.linalg.dsolve.linsolve import spsolve as solve
-            x = solve(self.stiffness, self.rhs)
+            from scipy.sparse.linalg.dsolve.linsolve import spsolve
+            x = spsolve(self.stiffness, self.rhs)
         
         
         print "Relative residual: ", numpy.linalg.norm(self.stiffness * x - self.rhs) / numpy.linalg.norm(x)
