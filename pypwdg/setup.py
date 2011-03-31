@@ -103,11 +103,11 @@ class Computation(object):
         
         usepardiso = solver == "pardiso"
         useumfpack = solver == "umfpack"
+        usecg      = solver == "cg"
+        usegmres   = solver == "gmres"
         usebicgstab = solver == "bicgstab"
-        usegmres = solver == "gmres"
         
-        if not (usepardiso or useumfpack or usebicgstab or usegmres): 
-            raise Exception("Solver not known")
+        if not (usepardiso or useumfpack or usecg or usegmres or usebicgstab): raise Exception("Solver not known")
         
         if usepardiso:
             try:            
@@ -116,7 +116,16 @@ class Computation(object):
                 if not error == 0: raise Exception("Pardiso Error")
             except ImportError:
                 useumfpack = True
-                
+        
+        if usecg:
+            from scipy.sparse.linalg import cg
+            (x, error) = cg(self.stiffness, self.rhs)
+            print x   
+            
+        if usebicgstab:
+            from scipy.sparse.linalg import bicgstab
+            (x, error) = bicgstab(self.stiffness, self.rhs)
+            
         if useumfpack:
             from scipy.sparse.linalg.dsolve.linsolve import spsolve
             x = spsolve(self.stiffness, self.rhs)

@@ -4,7 +4,9 @@ import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
 import pypwdg.core.evaluation as pce
 from numpy import array,sqrt
-from pypwdg.core.boundary_data import zero_impedance
+from pypwdg.core.boundary_data import zero_impedance, zero_dirichlet,\
+    zero_neumann
+    
 
 class SchwarzInterface(object):
     """Pass in mesh object and solution object and
@@ -27,16 +29,18 @@ class SchwarzInterface(object):
         return evalu.evaluate(self.solution.x)[1].reshape(-1,1)
     
 #Wavenumber
-k = 20
+k = 50
+
 # #schwarz iterations
-iterations = 1
+iterations = 2
 
 #Problem is solve for incident wave coming in at direction wavenumber k
-direction=array([[-1.0,1.0]])/sqrt(2)
-g = pcb.PlaneWaves(direction, k)
+
+direction=array([[-1.0,3.0]])/sqrt(10)
+g = pcb.FourierHankel(array((3., 2.)), [0], k)
 impbd = pcbd.generic_boundary_data([-1j*k, 1], [-1j*k, 1], g)
 
-bnddata={7:zero_impedance(k),  #right
+bnddata={7:zero_neumann(),  #right
          8:impbd,
          9:impbd, #left
          10:impbd}
@@ -52,6 +56,7 @@ bases2 = pcb.planeWaveBases(mesh2,k,nplanewaves=15)
 
 problem1 = ps.Problem(mesh1, k, 20, bnddata)
 solution1 = ps.Computation(problem1, bases1).solve()
+
 
 solution1.writeSolution(bounds1,npoints,fname='firstdd.vti')
 #problem1.writeMesh(fname='firstdd.vtu',scalars=solution1.combinedError())
@@ -80,6 +85,9 @@ solution1.writeSolution(bounds1,npoints,fname='firstddl.vti')
 #problem1.writeMesh(fname='firstddl.vtu',scalars=solution1.combinedError())
 solution2.writeSolution(bounds2, npoints, fname='firstddr.vti')
 #problem1.writeMesh(fname='firstddr.vtu',scalars=solution2.combinedError())
+
+
+
 
 
 

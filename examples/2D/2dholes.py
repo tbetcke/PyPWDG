@@ -23,6 +23,6 @@ bases = pcb.planeWaveBases(mesh,k,nplanewaves=15)
 
 
 problem=ps.Problem(mesh,k,20, bnddata)
-solution = ps.Computation(problem, bases).solve()
+solution = ps.Computation(problem, bases).soclve()
 solution.writeSolution(bounds,npoints,fname='2dhole.vti')
 problem.writeMesh(fname='2dhole.vtu',scalars=solution.combinedError())
