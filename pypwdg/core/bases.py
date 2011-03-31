@@ -78,8 +78,24 @@ class PlaneWaveVariableN(object):
     def populate(self, mesh, etob):
         for e in mesh.partition:
             etob[e] = [PlaneWaves(self.dirs, self.k * self.eton[mesh.elemIdentity[e]])]        
-            
-            
+
+class ReferencePolynomial(object):
+    """ A reference polynomial basis on a simplex"""
+    def __init__(self, order):
+        self.order = order
+        
+    def values(self, points):
+        pass
+    
+    def derivs(self, points, n = None):
+        pass
+                
+    
+@ppd.distribute()
+class Affine(object):
+    """ A basis that uses an affine transformation to a reference element (old skool)"""
+    def __init__(self, reference):
+                    
 
 def getSizes(etob, mesh):
     return numpy.array([sum([b.n for b in etob.get(e,[])]) for e in range(mesh.nelements)])    
