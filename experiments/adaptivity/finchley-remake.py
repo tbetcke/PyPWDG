@@ -11,6 +11,7 @@ import pypwdg.mesh.meshutils as pmmu
 import math
 import matplotlib.pyplot as mp
 import pypwdg.utils.timing as put
+import scipy.linalg as sl
 
 def project(g, qxw, k, theta):
     dir = np.array([[math.cos(theta), math.sin(theta)]])
@@ -77,6 +78,12 @@ def findpw(g, qxw, k, diameter, threshold = 0.2, maxtheta = 0):
         return theta
         
 
+def qrp(qxw, dirs, k):
+    qx,qw = qxw
+    P = np.sqrt(qw.reshape(-1,1)) * pcb.PlaneWaves(dirs, k).values(qx)
+    Q,R = sl.qr(P)
+    print R
+
 if __name__ == '__main__':
     N = 20
     k = 20    
@@ -91,10 +98,12 @@ if __name__ == '__main__':
 #    qw = np.concatenate([mqs.quadweights(f) for f in mesh.etof[e]])
 #    qxw = (qx,qw)
     
+    qrp(qxw, pcb.circleDirections(4), k)
+    
     g = pcb.PlaneWaves(pcb.circleDirections(40)[15], k)
 #    g = pcb.FourierHankel([-1,-0.5], [10], k)
     g = pcb.BasisReduce(pcb.PlaneWaves(pcb.circleDirections(20)[[5,8]], k), [3,1])
-    g = pcb.BasisReduce(pcb.BasisCombine([pcb.FourierHankel([-1,-0.5], [0], k), pcb.FourierHankel([-0.2,0.5], [0], k)]), [1,1])
+#    g = pcb.BasisReduce(pcb.BasisCombine([pcb.FourierHankel([-1,-0.5], [0], k), pcb.FourierHankel([-0.2,0.5], [0], k)]), [1,1])
 #    g = pcb.FourierBessel([0.25,0.25],[20], k)
 
     t1 = findpw(g, qxw, k, D, maxtheta = 1)
