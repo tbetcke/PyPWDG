@@ -18,14 +18,13 @@ def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
     
     The (i,j)th block of the vbsr is mat[i,j] * blocks(i,j)
     """
-    import numpy
     csr = mat.tocsr()
     csr.sum_duplicates()
     csr.eliminate_zeros()
     csr.sort_indices()
     zipip = zip(csr.indptr[:-1], csr.indptr[1:])
     coords = [(i,j) for i,p in enumerate(zipip) for j in csr.indices[p[0]:p[1]] ]
-    data = numpy.array([csr.data[n] * blocks(i,j) for n, (i,j) in enumerate(coords)])
+    data = [csr.data[n] * blocks(i,j) for n, (i,j) in enumerate(coords)]
     s = csr.get_shape()
     if bsizerows is None: bsizerows = [None]*s[0]
     if bsizecols is None: bsizecols = [None]*s[1]

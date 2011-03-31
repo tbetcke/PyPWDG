@@ -12,6 +12,10 @@ import numpy
 import math
 import scipy.special as ss
 
+import pypwdg.parallel.decorate as ppd
+import pypwdg.parallel.distributeddict as ppdd
+from pypwdg.parallel.mpiload import mpiloaded
+
 def cubeDirections(n):
     """ Return n^2 directions roughly parallel to (1,0,0)"""
     
@@ -28,33 +32,54 @@ def circleDirections(n):
     theta = numpy.arange(n).reshape((-1,1)) * 2*math.pi / n
     return numpy.hstack((numpy.cos(theta), numpy.sin(theta)))
 
-def planeWaveBases(mesh, k, nplanewaves):        
-    if mesh.dim==2:
+def planeWaveBases(dim, k, nplanewaves):
+    if dim==2:
         dirs = circleDirections(nplanewaves)
     else:
         dirs = cubeRotations(cubeDirections(nplanewaves))
-    pw = PlaneWaves(dirs,k)
-    etob = ElementToBases(mesh)
-    for e in range(mesh.nelements):
-        etob.addBasis(e,PlaneWaves(dirs,k))
-    return etob
+    pw = [PlaneWaves(dirs,k)]
+    return UniformBases(pw)
 
 
-def fourierBesselBases(mesh, k, orders):
-    if not mesh.dim==2: raise Exception("Bessel functions are only defined in 2D.")
-    etob = ElementToBases(mesh)
-    for e in range(mesh.nelements):
-        origin=mesh.nodes[mesh.elements[e][0]]
-        etob.addBasis(e, FourierBessel(origin,orders,k))
-    return etob
+@ppd.distribute()
+class UniformBases(object):
+    def __init__(self, b):
+        self.b = b
+
+    @ppd.parallelmethod(None, None)    
+    def populate(self, mesh, etob):    
+        for e in mesh.partition:
+            etob[e] = self.b
+
+@ppd.distribute()
+class FourierBesselBases(object):
+
+    def __init__(self, k, orders):
+        self.orders = orders
+        self.k = k
+    
+    @ppd.parallelmethod(None, None)
+    def populate(self, mesh, etob):
+        if not mesh.dim==2: raise Exception("Bessel functions are only defined in 2D.")
+        for e in mesh.partition:
+            origin=mesh.nodes[mesh.elements[e][0]]
+            etob[e] = [FourierBessel(origin,self.orders,self.k)]
+
+def getSizes(etob, mesh):
+    return numpy.array([sum([b.n for b in etob.get(e,[])]) for e in range(mesh.nelements)])    
+
+def constructBasis(mesh, basisrule):
+    manager = ppdd.ddictmanager(ppdd.elementddictinfo(mesh), True)
+    etob = manager.getDict()
+    basisrule.populate(mesh, etob)  
+    manager.sync()   
+    return ElementToBases(etob, mesh)
 
 class ElementToBases(object):
-    def __init__(self, mesh):
-        self.mesh = mesh
-        self.etob = {}
-        self.sizes = None     
-        self.indices = None 
-        self.version = 0  
+    def __init__(self, etob, mesh):
+        self.etob = etob
+        self.sizes = numpy.array([sum([b.n for b in etob.get(e,[])]) for e in range(mesh.nelements)])     
+        self.indices = numpy.cumsum(numpy.concatenate(([0], self.sizes))) 
         
     def getValues(self, eid, points, normal=None):
         """ Return the values of the basis for element eid at points"""
@@ -72,59 +97,11 @@ class ElementToBases(object):
         else:
             return numpy.hstack([b.derivs(points, normal) for b in bases])
     
-    def _reset(self):
-        self.sizes = None     
-        self.indices = None 
-        self.version +=1
-    
-    def addBasis(self, eid, b):
-        """ Add a basis object to element eid"""
-        bases = self.etob.setdefault(eid, [])
-        bases.append(b)
-        self._reset()
-        return self
-    
-    def addUniformBasis(self, b):
-        for e in range(self.mesh.nelements):
-            self.addBasis(e, b)   
-        self._reset()
-        return self
-    
-    def setEtoB(self, etob = {}):
-        self.etob = etob
-        self._reset()
-    
     def getSizes(self):
-        if self.sizes is None:
-            self.sizes = numpy.array([sum([b.n for b in self.etob.get(e,[])]) for e in range(self.mesh.nelements)])
         return self.sizes
         
     def getIndices(self):
-        """ Return the global index for element eid"""
-        if self.indices is None:
-            sizes = self.getSizes()
-            self.indices = numpy.cumsum(numpy.concatenate(([0], sizes)))
         return self.indices 
-
-    def setRefractiveElement(self,eid,refr):
-        """Set refractive index of all basis objects on element eid"""
-        bases=self.etob.setdefault(eid,[])
-        for b in bases: b.setRefractive(refr)
-
-
-    def setRefractive(self,geomDict):
-        """Set refractive indices of the elements
-
-           geomDict is a dictionary that maps geometric entities
-           to the corresponding refractive indices.
-        """
-        for eid in range(self.mesh.nelements):
-            self.setRefractiveElement(eid,geomDict[self.mesh.elemIdentity[eid]])
-       
-    def getRefractive(self):
-        for eid in range(self.mesh.nelements):
-            for b in self.etob[eid]:
-                print b.getRefractive()
 
 
 class Basis(object):

@@ -45,9 +45,9 @@ class LeastSquaresFit(object):
         err = np.abs(np.dot(basisvals, coeffs).ravel() - self.urp)/self.l2urp
         return coeffs, err
 
-@put.print_timing    
-def optimalbasis3(linearopt, basisgenerator, iniparams, penalty = None, finalbasis = None):
-    if finalbasis is None: finalbasis = basisgenerator
+#@put.print_timing    
+def optimalbasis3(linearopt, basisgenerator, iniparams, penalty = None, finalobject = None):
+    if finalobject is None: finalobject = basisgenerator
     def nonlinearfn(params):
 #        print params
         basis = basisgenerator(params)
@@ -55,8 +55,7 @@ def optimalbasis3(linearopt, basisgenerator, iniparams, penalty = None, finalbas
         return err if penalty is None else np.concatenate((err, penalty(params)))
     
     optparams = so.leastsq(nonlinearfn, iniparams.flatten())[0]     
-    basis = finalbasis(optparams)
-    return basis, linearopt(basis)
+    return finalobject(optparams)
     
 @put.print_timing    
 def optimalbasis2(u, basisgenerator, initialparams, quadrule, extrabasis = None):

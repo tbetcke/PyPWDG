@@ -146,6 +146,7 @@ class Mesh(object):
     normals = property(lambda self: self.meshpart.normals)
     dets = property(lambda self: self.meshpart.dets)
     partition = property(lambda self:self.meshpart.es)
+    neighbourelts = property(lambda self:self.meshpart.neighbourelts)
 
 @ppd.distribute(lambda n: lambda mesh: [((mesh, partition),{}) for partition in mesh.partitions(n)]) 
 class MeshPart(object):
@@ -179,7 +180,10 @@ class MeshPart(object):
 #        self.normals = ma.masked_all((mesh.nfaces, mesh.dim))
 #        self.dets = ma.masked_all((mesh.nfaces))
         
-        relevantfaces = ((mesh._connectivity + ss.eye(mesh.nfaces, mesh.nfaces)) * fpindex).nonzero()[0]      
+        relevantfaces = ((mesh._connectivity + ss.eye(mesh.nfaces, mesh.nfaces)) * fpindex).nonzero()[0]   
+        ne = (mesh.elttofaces * (mesh._connectivity + ss.eye(mesh.nfaces, mesh.nfaces)) * fpindex)
+        ne[eltpartition] = 0
+        self.neighbourelts = ne.nonzero()[0]
         self.__compute_facedata(relevantfaces)
 #        print "connectivity, ", self.connectivity
         

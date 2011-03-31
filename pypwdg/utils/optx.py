@@ -1,4 +1,8 @@
 import numpy as np
+''' Notes:
+    It appears that G[2,:] is not the incremental gain.  It's the full gain.  So G[2,i] < G[1,i] => x <> 212
+'''
+
 
 def optx(G,m):
     '''
@@ -28,12 +32,13 @@ def optx(G,m):
         V[1] = gain[i]
     return T[m,:],V[m]
 
-if __name__ == "main":
+if __name__ == "__main__":
     G = np.zeros((3,5));
     G[1,:] = np.random.rand(5);
     G[2,:] = np.random.rand(5);
     x,v = optx(G,6);
     
+    print G
     print('x = ', x)
     print('v = ', v)
 

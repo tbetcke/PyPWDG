@@ -3,7 +3,7 @@ Created on Dec 19, 2010
 
 @author: joel
 '''
-import pypwdg.utils.optimisation as pca
+import pypwdg.utils.optimisation as puo
 import pypwdg.core.bases as pcb
 import pypwdg.utils.quadrature as puq
 
@@ -19,9 +19,9 @@ class TestOptimisation(unittest.TestCase):
 #        g = pcb.FourierBessel(numpy.array([-2,-1]), numpy.array([5]),k)
         npw = 3
         nq = 8
-        gen, ini = pca.pwbasisgeneration(k, npw)
+        gen, ini = puo.pwbasisgeneration(k, npw)
         triquad = puq.trianglequadrature(nq)
-        basis, coeffs, l2err = pca.optimalbasis(g, gen, ini, triquad, True)
+        basis, coeffs, l2err = puo.optimalbasis(g, gen, ini, triquad, True)
         self.assertAlmostEqual(l2err,0)
         
     def testOptimalBasis2(self):
@@ -31,9 +31,9 @@ class TestOptimisation(unittest.TestCase):
 #        g = pcb.FourierBessel(numpy.array([-2,-1]), numpy.array([5]),k)
         npw = 3
         nq = 8
-        gen, ini = pca.pwbasisgeneration(k, npw)
+        gen, ini = puo.pwbasisgeneration(k, npw)
         triquad = puq.trianglequadrature(nq)
-        basis, (coeffs, l2err) = pca.optimalbasis2(g, gen, ini, triquad)
+        basis, (coeffs, l2err) = puo.optimalbasis2(g, gen, ini, triquad)
         self.assertAlmostEqual(sum(l2err),0)
         
     def testOptimalBasis3(self):
@@ -43,10 +43,11 @@ class TestOptimisation(unittest.TestCase):
 #        g = pcb.FourierBessel(numpy.array([-2,-1]), numpy.array([5]),k)
         npw = 3
         nq = 8
-        gen, ini = pca.pwbasisgeneration(k, npw)
+        gen, ini = puo.pwbasisgeneration(k, npw)
         triquad = puq.trianglequadrature(nq)
-        linearopt = pca.LeastSquaresFit(g, triquad)
-        basis, (coeffs, l2err) = pca.optimalbasis3(linearopt.optimise, gen, ini)
+        linearopt = puo.LeastSquaresFit(g, triquad)
+        basis = puo.optimalbasis3(linearopt.optimise, gen, ini)
+        (coeffs, l2err) = linearopt.optimise(basis)
         self.assertAlmostEqual(sum(l2err),0)
     
     def testPenalisedOptimisation(self):
@@ -58,9 +59,10 @@ class TestOptimisation(unittest.TestCase):
         alpha = 100
         ini = pcb.circleDirections(npw)
         triquad = puq.trianglequadrature(nq)
-        linearopt = pca.LeastSquaresFit(g, triquad)
-        pwpg = pca.PWPenaltyBasisGenerator(k, alpha, 2)
-        basis, (coeffs, l2err) = pca.optimalbasis3(linearopt.optimise, pwpg.genbasis, ini, pwpg.penalty, pwpg.finalbasis)
+        linearopt = puo.LeastSquaresFit(g, triquad)
+        pwpg = puo.PWPenaltyBasisGenerator(k, alpha, 2)
+        basis = puo.optimalbasis3(linearopt.optimise, pwpg.genbasis, ini, pwpg.penalty, pwpg.finalbasis)
+        (coeffs, l2err) = linearopt.optimise(basis)
         self.assertAlmostEqual(sum(l2err),0)        
         
     def testConstrainedOptimisation(self):
@@ -71,9 +73,10 @@ class TestOptimisation(unittest.TestCase):
         nq = 8
         ini = pcb.circleDirections(npw)
         triquad = puq.trianglequadrature(nq)
-        linearopt = pca.LeastSquaresFit(g, triquad)
-        pwpg = pca.PWPenaltyBasisGenerator(k, 1, 2)
-        basis, (coeffs, l2err) = pca.optimalbasis3(linearopt.optimise, pwpg.finalbasis, ini)
+        linearopt = puo.LeastSquaresFit(g, triquad)
+        pwpg = puo.PWPenaltyBasisGenerator(k, 1, 2)
+        basis = puo.optimalbasis3(linearopt.optimise, pwpg.finalbasis, ini)
+        (coeffs, l2err) = linearopt.optimise(basis)        
         self.assertAlmostEqual(sum(l2err),0)        
         
         

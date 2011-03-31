@@ -21,8 +21,6 @@ from pypwdg.utils.timing import print_timing
 
 import pypwdg.core.evaluation as pce
 
-import pypwdg.parallel.main
-
 problem = None
 computation = None
 usecache = True
@@ -50,8 +48,6 @@ class Problem(object):
        mesh        - A Mesh object
        k           - Wavenumber of the problem
        nquadpoints - Number of quadrature points
-       nplanewaves - Number of Plane Waves in each element
-                     In 3D the actual number of planewaves used is 6*nplanewaves^2
        bnddata     - Dictionary containing the boundary data
                      The dictionary takes the form bnddata[id]=bndobject,
                      where id is an identifier for the corresponding boundary and bndobject is an object defining
@@ -94,7 +90,8 @@ class Computation(object):
         self.lv = LocalVandermondes(problem.mesh, elttobasis, problem.mqs, usecache=usecache)
         self.bndvs = []
         for data in problem.bnddata.values():
-            bndv = LocalVandermondes(problem.mesh, pcb.ElementToBases(problem.mesh).addUniformBasis(data), problem.mqs)        
+            bdyetob = pcb.constructBasis(problem.mesh, pcb.UniformBases([data]))
+            bndv = LocalVandermondes(problem.mesh, bdyetob, problem.mqs)        
             self.bndvs.append(bndv)
         stiffness, rhs = assemble(problem.mesh, problem.k, self.lv, self.bndvs, problem.mqs, self.elttobasis, problem.bnddata, problem.params)
         self.stiffness = stiffness.tocsr()
@@ -171,6 +168,9 @@ class Computation(object):
         return Solution(self.problem, x, self.elttobasis, self.lv, self.bndvs)
                 
 
+def noop(x):
+    return x
+
 class Solution(object):
     """ The solution to a Problem """
     def __init__(self, problem, x, elttobasis, lvs, bndvs):  
@@ -194,6 +194,12 @@ class Solution(object):
         vtk_structure=VTKStructuredPoints(StructuredPointsEvaluator(self.problem.mesh, self.elttobasis, filter, self.x))
         vtk_structure.create_vtk_structured_points(bounds,npoints)
         vtk_structure.write_to_file(fname)
+   
+    def evaluate(self, structuredpoints):
+        spe = StructuredPointsEvaluator(self.problem.mesh, self.elttobasis, noop, self.x)
+        vals, count = spe.evaluate(structuredpoints)
+        count[count==0] = 1
+        return vals / count
    
     def evalJumpErrors(self):
         print "Evaluate Jumps"

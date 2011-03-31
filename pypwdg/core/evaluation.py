@@ -78,7 +78,7 @@ class Evaluator(object):
 
 @distribute()
 class StructuredPointsEvaluator(object):
-    @print_timing
+#    @print_timing
     def __init__(self, mesh, elttobasis, filter, x):
         self.mesh = mesh
         self.elttobasis = elttobasis
@@ -86,7 +86,7 @@ class StructuredPointsEvaluator(object):
         self.x = x
     
     @parallelmethod(reduceop = tuplesum)
-    @print_timing
+#    @print_timing
     def evaluate(self, structuredpoints):
         vals = numpy.zeros(structuredpoints.length, dtype=numpy.complex128)
         pointcount = numpy.zeros(structuredpoints.length, dtype=int)

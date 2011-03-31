@@ -3,6 +3,8 @@ Created on Nov 13, 2010
 
 @author: joel
 '''
+import pypwdg.parallel.decorate
+
 from pypwdg.parallel.mpiload import *
 
 import numpy as np
@@ -93,7 +95,7 @@ class ArrayHandler(object):
         """ Send the array data to dest.  Also tells nexthandler to send"""
         if len(self.sids):
             a = np.concatenate(map(np.ravel,[self.sidtoobj[sid] for sid in self.sids]))
-            print "sending %s array of length %s"%(self.dtype, len(a))
+#            print "sending %s array of length %s"%(self.dtype, len(a))
             comm.Send(a,dest)
         if self.nexthandler is not None: self.nexthandler.send(dest)
     
@@ -102,7 +104,7 @@ class ArrayHandler(object):
         if len(self.sids):
             sizes = [reduce(operator.mul, shape) for shape in self.shapes]
             totallen = sum(sizes)
-            print "receiving %s array of length %s"%(self.dtype, totallen)
+#            print "receiving %s array of length %s"%(self.dtype, totallen)
             a = np.empty(totallen, dtype = self.dtype)
             comm.Recv(a, self.source)
             ixs = np.cumsum([0]+sizes)     
@@ -171,6 +173,7 @@ def scatterfncall(fn, args, reduceop=None):
     mastersend(tasks)
     values = masterrecv()
     return values if reduceop is None else reduce(reduceop, values)
+
 
 def workerloop():
         # For some unclear reason, the developers of openmpi think that it's acceptable for a thread to use 100% CPU

@@ -1,23 +1,32 @@
-from pypwdg import PlaneWaves
-from pypwdg import setup,runParallel,gmshMesh
-from pypwdg import dirichlet
-from numpy import array,sqrt
+import pypwdg.setup as ps
+import pypwdg.core.bases as pcb
+import pypwdg.mesh.mesh as pmm
+import pypwdg.core.boundary_data as pcbd
+import pypwdg.adaptivity.adaptivity as paa
+import pypwdg.output.basis as pob
+import pypwdg.utils.geometry as pug
+import pypwdg.adaptivity.scripts as pas
 
-k = 15
-direction=array([[1.0,1.0]])/sqrt(2)
-def g(x):
-    return PlaneWaves(direction, k).values(x)
+import pypwdg.parallel.main
+      
+import numpy as np      
+        
+k = 60
+direction=np.array([[1.0,1.0]])/np.sqrt(2)
+#g = pcb.PlaneWaves(direction, k)
+g = pcb.FourierHankel([-1,-1], [0], k)
 
-bnddata={7:dirichlet(g), 
-         8:dirichlet(g)}
+impbd = pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g)
 
-runParallel()
+bnddata={7:impbd, 
+         8:impbd}
+#bnddata={7:pcbd.dirichlet(g), 
+#         8:pcbd.dirichlet(g)}
 
-bounds=array([[0,1],[0,1],[0,0]],dtype='d')
-npoints=array([100,100,1])
+bounds=np.array([[0,1],[0,1]],dtype='d')
+npoints=np.array([250,250])
 
-comp=setup(gmshMesh('square.msh',dim=2),k=k,nquadpoints=20,nplanewaves=15,bnddata=bnddata)
-
-
-comp.writeSolution(bounds,npoints,fname='square.vti')
-comp.writeMesh(fname='square.vtu',scalars=comp.combinedError())
+mesh = pmm.gmshMesh('square.msh',dim=2)
+problem=ps.Problem(mesh,k,16, bnddata)
+ibc = paa.InitialPWFBCreator(mesh,k,3,9)
+pas.runadaptive(problem, ibc, "square", 20, bounds, npoints, g)
