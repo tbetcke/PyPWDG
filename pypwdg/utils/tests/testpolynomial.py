@@ -56,7 +56,7 @@ class TestDubiner(unittest.TestCase):
     def testDerivs(self):
         N = 5
         h = 1E-6
-        for k in range(N):
+        for k in range(2,N):
             x,w = puq.trianglequadrature(k+1)
             dt = pup.DubinerTriangle(k,x)
             dtV = dt.values()
@@ -67,12 +67,13 @@ class TestDubiner(unittest.TestCase):
             dtD = dt.derivs()
             dtxhD = (dtxhV - dtV)/h
             dtyhD = (dtyhV - dtV)/h
-            print dtD
-            print dtxhD
+            print dtD[1]
+#            print dtxhD
             print dtyhD
 
-            P1wD1 = (dtyx.P1w - dt.P1w) / h
-            np.testing.assert_almost_equal(wD, dt.wD)
+#            P1wD1 = (dtyx.P1w - dt.P1w) / h
+#            np.testing.assert_almost_equal(wD, dt.wD)
             
+            np.testing.assert_almost_equal(dtD[0],dtxhD)
             np.testing.assert_almost_equal(dtD[1],dtyhD)
                         
