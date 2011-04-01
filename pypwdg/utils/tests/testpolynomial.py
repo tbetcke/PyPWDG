@@ -60,15 +60,19 @@ class TestDubiner(unittest.TestCase):
             x,w = puq.trianglequadrature(k+1)
             dt = pup.DubinerTriangle(k,x)
             dtV = dt.values()
-            dtxhV = pup.DubinerTriangle(k, x+[h,0]).values()
-            dtyhV = pup.DubinerTriangle(k, x+[0,h]).values()
+            dtxh = pup.DubinerTriangle(k, x+[h,0])
+            dtxhV = dtxh.values()
+            dtyh = pup.DubinerTriangle(k, x+[0,h])
+            dtyhV = dtyh.values()
             dtD = dt.derivs()
             dtxhD = (dtxhV - dtV)/h
             dtyhD = (dtyhV - dtV)/h
             print dtD
             print dtxhD
             print dtyhD
+
+            P1wD1 = (dtyx.P1w - dt.P1w) / h
+            np.testing.assert_almost_equal(wD, dt.wD)
             
-            np.testing.assert_almost_equal(dtD[0],dtxhD)
             np.testing.assert_almost_equal(dtD[1],dtyhD)
                         

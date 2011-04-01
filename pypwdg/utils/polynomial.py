@@ -60,7 +60,7 @@ class Jacobi(object):
 class DubinerTriangle(object):
     """ Represents the evaluation of a Dubiner basis of order k on a triangle at a set of points, p
         The reference triangle has vertices at (0,0), (0,1) and (1,0).
-        As things stand, things will probably fail at (0,1).    
+        As things stand, evaluation will probably fail at (0,1).    
     """
     def __init__(self,k, p):
         x = p[:,0]
@@ -73,17 +73,18 @@ class DubinerTriangle(object):
         n = np.arange(k+1)[np.newaxis,:]
         w = (1-self.eta2[:,np.newaxis])**n
         self.P1w = self.P1 * w 
-        wD = np.hstack((np.zeros((len(p),1)), w[:,[-1]] * n[:,1:])) 
-        self.P1wD = jacobidnorm(self.k,0,0,1,self.eta1) * w + self.P1w *wD 
-        self.P2D = [jacobidnorm(self.k - i, 2*i +1, 0, 1, self.eta2) for i in range(self.k+1)]
+        wD = np.hstack((np.zeros((len(p),1)), (-1)**n[:,1:] * w[:,:-1] * n[:,1:])) 
+        self.P1wD1 = jacobidnorm(self.k,0,0,1,self.eta1) * w
+        self.P1wD2 = self.P1w *wD 
+        self.P2D2 = [jacobidnorm(self.k - i, 2*i +1, 0, 1, self.eta2) for i in range(self.k+1)]
         self.J = np.array([[1/(1-y), np.zeros(len(p))],[x/(1-y)**2, np.ones(len(p))]])
         
     def values(self):
         return np.hstack([self.P1w[:,[i]]  * self.P2[i] for i in range(self.k+1)])
     
     def derivs(self):
-        Deta1 = np.hstack([self.P1wD[:,[i]]  * self.P2[i] for i in range(self.k+1)])
-        Deta2 = np.hstack([self.P1w[:,[i]]  * self.P2D[i] for i in range(self.k+1)])
+        Deta1 = np.hstack([self.P1wD1[:,[i]]  * self.P2[i] for i in range(self.k+1)])
+        Deta2 = np.hstack([self.P1w[:,[i]]  * self.P2D2[i] + self.P1wD2[:,[i]] * self.P2[i] for i in range(self.k+1)])
         etagrad = np.array([Deta1, Deta2])
         return np.sum(self.J[...,np.newaxis] * etagrad[np.newaxis,...], axis=1)
         
