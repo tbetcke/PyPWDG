@@ -75,7 +75,7 @@ class DubinerTriangle(object):
         self.P1w = self.P1 * w 
         wD = np.hstack((np.zeros((len(p),1)), - w[:,:-1] * n[:,1:])) 
         self.P1wD1 = jacobidnorm(self.k,0,0,1,self.eta1) * w
-        self.P1wD2 = self.P1w *wD 
+        self.P1wD2 = self.P1 *wD 
         self.P2D2 = [jacobidnorm(self.k - i, 2*i +1, 0, 1, self.eta2) for i in range(self.k+1)]
         self.J = np.array([[1/(1-y), np.zeros(len(p))],[x/(1-y)**2, np.ones(len(p))]])
         
