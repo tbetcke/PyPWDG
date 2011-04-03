@@ -6,6 +6,8 @@ Created on Dec 19, 2010
 import unittest
 
 import pypwdg.core.bases as pcb
+import test.utils.mesh as tum
+import pypwdg.utils.polynomial as pup
 import numpy
 
 
@@ -49,4 +51,7 @@ class TestBases(unittest.TestCase):
                 d = fb.derivs(points, n)
                 numpy.testing.assert_array_almost_equal(d, (vh - v0)/h, decimal=4)
         
-        
+class TestReference(unittest.TestCase):
+    def testPolynomial(self):
+        mesh = tum.regularsquaremesh()
+        polynomial = pup.DubinerTriangle()
