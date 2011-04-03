@@ -8,6 +8,7 @@ import numpy as np
 import numpy.linalg as nl
 import math
 from pypwdg.parallel.decorate import distribute, immutable
+import pypwdg.utils.mappings as pum
         
 @immutable
 class MeshQuadratures(object):
@@ -26,6 +27,18 @@ class MeshQuadratures(object):
     def quadweights(self, faceid):
         """ return the quadrature weights on face faceid"""
         return self.__qw * self.__mesh.dets[faceid]
+
+class MeshElementMaps(object):
+    """ For any mesh element, return the affine map that maps to it from the reference simplex"""
+    def __init__(self, mesh):
+        self.mesh = mesh
+    
+    def getMap(self, e):
+        # happily, mesh.directions contains the origin and offsets to all the vertices on the *element* 
+        # for each face.  So just pick the first face associated with this element
+        dirs = self.__mesh.directions[self.__mesh.etof[e][0]]
+        return pum.Affine(dirs[0], dirs[1:])
+    
 
 class MeshElementQuadratures(object):
     def __init__(self, mesh, quadrule):
