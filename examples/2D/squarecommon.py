@@ -34,8 +34,12 @@ problem=ps.Problem(mesh,k,5, bnddata)
 print mesh.nelements
 
 npw = 8
+# Original basis:
 #bases = pcb.constructBasis(mesh, pcb.planeWaveBases(2,k,npw))
-bases = pcb.constructBasis(mesh, pcb.ProductBases(pcb.planeWaveBases(2,k,npw), pcr.ReferenceBases(pcr.Dubiner(1), mesh)))
+# Polynomials only:
+bases = pcb.constructBasis(mesh,  pcr.ReferenceBases(pcr.Dubiner(2), mesh))
+# Product basis:
+#bases = pcb.constructBasis(mesh, pcb.ProductBases(pcb.planeWaveBases(2,k,npw), pcr.ReferenceBases(pcr.Dubiner(1), mesh)))
 
 solution = ps.Computation(problem, bases, True, True).solve()
 solution.writeSolution(bounds,npoints,fname='square.vti')
