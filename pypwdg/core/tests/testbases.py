@@ -50,8 +50,3 @@ class TestBases(unittest.TestCase):
                 vh = fb.values(points + n * h)
                 d = fb.derivs(points, n)
                 numpy.testing.assert_array_almost_equal(d, (vh - v0)/h, decimal=4)
-        
-class TestReference(unittest.TestCase):
-    def testPolynomial(self):
-        mesh = tum.regularsquaremesh()
-        polynomial = pup.DubinerTriangle()

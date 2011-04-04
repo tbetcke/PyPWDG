@@ -15,6 +15,7 @@ class AveragesAndJumps(object):
         self.AN = self.jump / 2
         self.JD = self.jump
         self.JN = self.average * 2
+        self.Z = ss.csr_matrix(self.average.shape)
         
 def sumfaces(mesh,S):
     """Sum all the faces that contribute to each element

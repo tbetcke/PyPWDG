@@ -36,7 +36,7 @@ class MeshElementMaps(object):
     def getMap(self, e):
         # happily, mesh.directions contains the origin and offsets to all the vertices on the *element* 
         # for each face.  So just pick the first face associated with this element
-        dirs = self.__mesh.directions[self.__mesh.etof[e][0]]
+        dirs = self.mesh.directions[self.mesh.etof[e][0]]
         return pum.Affine(dirs[0], dirs[1:])
     
 

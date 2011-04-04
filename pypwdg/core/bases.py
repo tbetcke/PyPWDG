@@ -8,7 +8,6 @@ All basis classes should have values and derivs methods and a property n giving 
 '''
 
 import abc
-import numpy
 import math
 import scipy.special as ss
 import numpy as np
@@ -16,7 +15,6 @@ import numpy as np
 import pypwdg.parallel.decorate as ppd
 import pypwdg.parallel.distributeddict as ppdd
 from pypwdg.parallel.mpiload import mpiloaded
-import pypwdg.mesh.meshutils as pmmu
 
 def cubeDirections(n):
     """ Return n^2 directions roughly parallel to (1,0,0)"""
@@ -45,61 +43,55 @@ def planeWaveBases(dim, k, nplanewaves):
     pw = [PlaneWaves(dirs,k)]
     return UniformBases(pw)
 
-@ppd.distribute()
 class UniformBases(object):
     def __init__(self, b):
         self.b = b
 
-    @ppd.parallelmethod(None, None)    
-    def populate(self, mesh, etob):    
-        for e in mesh.partition:
-            etob[e] = self.b
+    def populate(self, e):    
+        return self.b
 
-@ppd.distribute()
 class FourierBesselBases(object):
 
-    def __init__(self, k, orders):
+    def __init__(self, k, orders, mesh):
         self.orders = orders
         self.k = k
-    
-    @ppd.parallelmethod(None, None)
-    def populate(self, mesh, etob):
+        self.mesh = mesh
         if not mesh.dim==2: raise Exception("Bessel functions are only defined in 2D.")
-        for e in mesh.partition:
-            origin=mesh.nodes[mesh.elements[e][0]]
-            etob[e] = [FourierBessel(origin,self.orders,self.k)]
+    
+    def populate(self, e):
+        origin=self.mesh.nodes[self.mesh.elements[e][0]]
+        return [FourierBessel(origin,self.orders,self.k)]
 
-@ppd.distribute()
 class PlaneWaveVariableN(object):
-    def __init__(self, k, dirs, eton):
+    def __init__(self, k, dirs, eton, mesh):
         self.k = k
         self.eton = eton
         self.dirs = dirs
+        self.mesh = mesh
         
-    @ppd.parallelmethod(None, None)
-    def populate(self, mesh, etob):
-        for e in mesh.partition:
-            etob[e] = [PlaneWaves(self.dirs, self.k * self.eton[mesh.elemIdentity[e]])]        
-    
-@ppd.distribute()
-class ReferenceBases(object):
-    """ A basis that uses a (affine) transformation to a reference element (old skool)"""
-    def __init__(self, reference):
-        self.reference = reference
-        
-    @ppd.parallelmethod(None, None)
-    def populate(self, mesh, etob):
-        mems = pmmu.MeshElementMaps(mesh)
-        for e in mesh.partition:
-            etob[e] = [Reference(mems.getMap(e), self.reference)]
+    def populate(self, mesh, e):
+        return [PlaneWaves(self.dirs, self.k * self.eton[self.mesh.elemIdentity[e]])]        
 
+class ProductBases(object):
+    def __init__(self, bases1, bases2):
+        self.bases1 = bases1
+        self.bases2 = bases2
+        
+    def populate(self, e):        
+        return [Product(BasisCombine(self.bases1.populate(e)), BasisCombine(self.bases2.populate(e)))]
+   
 def getSizes(etob, mesh):
     return np.array([sum([b.n for b in etob.get(e,[])]) for e in range(mesh.nelements)])    
+
+@ppd.parallel(None, None)
+def localConstructBasis(mesh, etob, basisrule):
+    for e in mesh.partition:
+        etob[e] = basisrule.populate(e)
 
 def constructBasis(mesh, basisrule):
     manager = ppdd.ddictmanager(ppdd.elementddictinfo(mesh), True)
     etob = manager.getDict()
-    basisrule.populate(mesh, etob)  
+    localConstructBasis(mesh, etob, basisrule)
     manager.sync()   
     return ElementToBases(etob, mesh)
 
@@ -145,21 +137,8 @@ class Basis(object):
     @abc.abstractmethod
     def derivs(self,x,n = None):
         pass
-
-class Reference(Basis):
     
-    def __init__(self, map, reference):
-        self.mapi = map.inverse
-        self.n = reference.size
     
-    def values(self, x):
-        return self.reference.values(self.mapi.apply(x))
-    
-    def derivs(self, x, n = None):        
-        derivs = np.dot(self.reference.derivs(self.map.inverse.apply(x)),self.mapi.linear.transpose())
-        return derivs if n is None else np.dot(derivs, n)  
-        
-
 class PlaneWaves(Basis):
     
     def __init__(self, directions, k):
@@ -294,3 +273,27 @@ class BasisCombine(object):
     def __str__(self):
         return "".join(map(str,self.bases))
 
+
+class Product(Basis):
+    def __init__(self, basis1, basis2):
+        self.basis1 = basis1
+        self.basis2 = basis2
+        self.n = basis1.n * basis2.n
+    
+    def prod(self,v1,v2):
+        v = v1[:,np.newaxis,...]*v2[:,:,np.newaxis,...]
+        s = v.shape
+        return v.reshape((s[0], s[1]+s[2])+s[3:])
+        
+    def values(self, x):
+        v1 = self.basis1.values(x)
+        v2 = self.basis2.values(x)
+        return self.prod(v1,v2)
+    
+    def derivs(self, x, n = None):
+        v1 = self.basis1.values(x)
+        d1 = self.basis1.derivs(x, n)
+        v2 = self.basis2.values(x)
+        d2 = self.basis2.derivs(x, n)
+        return self.prod(v1, d2) + self.prod(d1, v2)
+        

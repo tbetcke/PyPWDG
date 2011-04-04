@@ -78,7 +78,6 @@ class DubinerTriangle(object):
         self.P1wD2 = self.P1 *wD 
         self.P2D2 = [jacobidnorm(self.k - i, 2*i +1, 0, 1, self.eta2) for i in range(self.k+1)]
         self.J = np.array([[1/(1-y), np.zeros(len(p))],[x/(1-y)**2, np.ones(len(p))]])
-        self.size = ((k+1) * (k+2)) / 2
         
     def values(self):
         return np.hstack([self.P1w[:,[i]]  * self.P2[i] for i in range(self.k+1)])
@@ -89,4 +88,5 @@ class DubinerTriangle(object):
         etagrad = np.array([Deta1, Deta2])
         return np.sum(self.J[...,np.newaxis] * etagrad[np.newaxis,...], axis=1)
         
-        
+
+          
