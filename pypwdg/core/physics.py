@@ -28,7 +28,7 @@ def assemble(mesh, k, lv, bndvs, mqs, elttobasis, bnddata, params, emqs, dovols)
     
     if dovols:
         V = assemble_volume_terms(mesh, k, elttobasis, emqs, stiffassembly)
-        S-=V
+        S+=V
     
     for (id, bdycondition), loadassembly in zip(bnddata.items(), loadassemblies):
         (Sb,fb)=assemble_bnd(mesh, k, id, bdycondition, stiffassembly, loadassembly, params)

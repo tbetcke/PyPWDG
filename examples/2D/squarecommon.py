@@ -37,7 +37,7 @@ npw = 8
 # Original basis:
 #bases = pcb.constructBasis(mesh, pcb.planeWaveBases(2,k,npw))
 # Polynomials only:
-bases = pcb.constructBasis(mesh,  pcr.ReferenceBases(pcr.Dubiner(2), mesh))
+bases = pcb.constructBasis(mesh,  pcr.ReferenceBases(pcr.Dubiner(3), mesh))
 # Product basis:
 #bases = pcb.constructBasis(mesh, pcb.ProductBases(pcb.planeWaveBases(2,k,npw), pcr.ReferenceBases(pcr.Dubiner(1), mesh)))
 
