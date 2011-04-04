@@ -2,6 +2,7 @@ import pypwdg.setup as ps
 import pypwdg.core.bases as pcb
 import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
+import pypwdg.core.reference as pcr
 import pypwdg.parallel.main
 import pypwdg.utils.geometry as pug
 
@@ -33,7 +34,8 @@ problem=ps.Problem(mesh,k,5, bnddata)
 print mesh.nelements
 
 npw = 8
-bases = pcb.constructBasis(mesh, pcb.planeWaveBases(2,k,npw))
+#bases = pcb.constructBasis(mesh, pcb.planeWaveBases(2,k,npw))
+bases = pcb.constructBasis(mesh, pcb.ProductBases(pcb.planeWaveBases(2,k,npw), pcr.ReferenceBases(pcr.Dubiner(1), mesh)))
 
 solution = ps.Computation(problem, bases, True, True).solve()
 solution.writeSolution(bounds,npoints,fname='square.vti')

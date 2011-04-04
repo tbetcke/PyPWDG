@@ -281,9 +281,13 @@ class Product(Basis):
         self.n = basis1.n * basis2.n
     
     def prod(self,v1,v2):
-        v = v1[:,np.newaxis,...]*v2[:,:,np.newaxis,...]
+        s1 = v1.shape
+        s2 = v2.shape
+        ss1 = s1[0:2] + (1,) + s1[2:] + (1,)*(len(s2) - 2)
+        ss2 = (s2[0],) + (1,) + (s2[1],) + (1,)*(len(s1) - 2) + s2[2:]
+        v = v1.reshape(ss1) * v2.reshape(ss2)
         s = v.shape
-        return v.reshape((s[0], s[1]+s[2])+s[3:])
+        return v.reshape((s[0], s[1]*s[2])+s[3:])
         
     def values(self, x):
         v1 = self.basis1.values(x)
