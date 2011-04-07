@@ -1,4 +1,6 @@
 '''
+Generation of polynomials.  Stolen from pypyramid.
+
 Created on Mar 31, 2011
 
 @author: joel

@@ -8,7 +8,7 @@ import pypwdg.utils.geometry as pug
 
 import numpy as np
 
-k = 10
+k = 30
 direction=np.array([[1.0,1.0]])/np.sqrt(2)
 #g = pcb.PlaneWaves(direction, k)
 g = pcb.FourierHankel([-2,-2], [0], k)
@@ -29,15 +29,16 @@ gvals[idx] = g.values(points)
 l2g = np.sqrt(np.vdot(gvals, gvals) / sp.length)
 
 mesh = pmm.gmshMesh('square.msh',dim=2)
-problem=ps.Problem(mesh,k,5, bnddata)
+problem=ps.Problem(mesh,k,9, bnddata)
+#problem.setParams(alpha=1.0/100, beta = 10)
 
 print mesh.nelements
 
-npw = 8
+npw = 12
 # Original basis:
 #bases = pcb.constructBasis(mesh, pcb.planeWaveBases(2,k,npw))
 # Polynomials only:
-bases = pcb.constructBasis(mesh,  pcr.ReferenceBases(pcr.Dubiner(3), mesh))
+bases = pcb.constructBasis(mesh,  pcr.ReferenceBases(pcr.Dubiner(4), mesh))
 # Product basis:
 #bases = pcb.constructBasis(mesh, pcb.ProductBases(pcb.planeWaveBases(2,k,npw), pcr.ReferenceBases(pcr.Dubiner(1), mesh)))
 

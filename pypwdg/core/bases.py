@@ -275,12 +275,21 @@ class BasisCombine(object):
 
 
 class Product(Basis):
+    """ A basis which is a product of one basis against another """
+    
     def __init__(self, basis1, basis2):
         self.basis1 = basis1
         self.basis2 = basis2
         self.n = basis1.n * basis2.n
     
     def prod(self,v1,v2):
+        """ Takes a product of values v1 and v2.  It is assumed that each array is >= 2 dimensional.
+        The first dimension corresponds to points; the second to functions and subsequent dimensions 
+        to vectors.  The product structure is across dimension 1 from each array, which is then flattened
+        Higher dimensions are left intact.  For example the product of an N x M1 array with a N x M2 x 3
+        array would be an N x (M1.M2) x 3 array.  The product of an N x M1 x 2 array with a N x M2 x 3
+        array would be an N x (M1.M2) x 2 x 3 array""" 
+        
         s1 = v1.shape
         s2 = v2.shape
         ss1 = s1[0:2] + (1,) + s1[2:] + (1,)*(len(s2) - 2)
