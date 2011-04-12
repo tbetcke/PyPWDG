@@ -43,6 +43,13 @@ def planeWaveBases(dim, k, nplanewaves):
     pw = [PlaneWaves(dirs,k)]
     return UniformBases(pw)
 
+class ElementInfo(object):
+    ''' Provides information about elements used by basis objects'''
+    def __init__(self, mesh, k):
+        self.k = k
+        self.mesh = mesh
+        
+
 class UniformBases(object):
     def __init__(self, b):
         self.b = b

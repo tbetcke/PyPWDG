@@ -74,7 +74,10 @@ class Problem(object):
         self.emqs = MeshElementQuadratures(self.mesh, equad)
                     
     def setParams(self,alpha=0.5,beta=0.5,delta=0.5):
-        self.params={'alpha':alpha,'beta':beta,'delta':delta}        
+        self.params={'alpha':alpha,'beta':beta,'delta':delta}
+    
+    def getBasis(self, basisrule):
+                
         
     def writeMesh(self, fname='mesh.vtu', scalars=None):
         vtkgrid = VTKGrid(self.mesh, scalars)
