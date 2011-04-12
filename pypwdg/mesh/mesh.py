@@ -91,7 +91,7 @@ class Mesh(object):
         """ Initialize Mesh """
     
         self.elements = elements
-        self.nodes = nodes
+        self.nodes = np.array(nodes)
         self.boundaries = boundaries
         self.dim = dim
         self.elemIdentity=elemIdentity

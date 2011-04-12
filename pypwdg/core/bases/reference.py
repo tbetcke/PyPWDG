@@ -4,23 +4,20 @@ Classes used to implement finite elements based on a reference element
 @author: joel
 '''
 
-import pypwdg.core.bases as pcb
-import pypwdg.mesh.meshutils as pmmu
+import pypwdg.core.bases.definitions as pcbd
 import pypwdg.utils.polynomial as pup
-import pypwdg.parallel.decorate as ppd
 
 import numpy as np
  
-class ReferenceBases(object):
+class ReferenceBasisRule(object):
     """ A basis that uses a (affine) transformation to a reference element (old skool)"""
-    def __init__(self, reference, mesh):
+    def __init__(self, reference):
         self.reference = reference
-        self.mems = pmmu.MeshElementMaps(mesh)
         
     def populate(self, e):
-        return [Reference(self.mems.getMap(e), self.reference)]
+        return [Reference(e.refmap, self.reference)]
 
-class Reference(pcb.Basis):
+class Reference(pcbd.Basis):
     
     def __init__(self, map, reference):
         self.mapi = map.inverse

@@ -6,7 +6,7 @@ Created on Apr 4, 2011
 import unittest
 
 import pypwdg.utils.mappings as pum
-import pypwdg.core.reference as pcr
+import pypwdg.core.bases.reference as pcbr
 
 import numpy.random as nr
 import numpy as np        
@@ -18,13 +18,13 @@ class TestReference(unittest.TestCase):
         N = 5
         h = 1E-6
         for k in range(6):  # we'll go up to order 6
-            ref = pcr.Dubiner(k) # and use Dubiner bases (because all we have right now)
+            ref = pcbr.Dubiner(k) # and use Dubiner bases (because all we have right now)
             for _ in range(10):  # 10 random elements              
                 offset = nr.random(2)
                 linear = nr.random((2,2))
 #                if nl.cond(linear) < 200:
                 map = pum.Affine(offset, linear)
-                b = pcr.Reference(map, ref)
+                b = pcbr.Reference(map, ref)
                 # generate some random points and normals inside the element
                 p = map.apply(nr.random((N, 2))/2)
                 nn = nr.random((N,2))

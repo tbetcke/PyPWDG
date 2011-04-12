@@ -1,138 +1,17 @@
 '''
+Implementations of Basis objects
+
+All Basis objects should have values and derivs methods and a property n giving the number of functions
+
 Created on Aug 5, 2010
 
 @author: joel
 
-All basis classes should have values and derivs methods and a property n giving the number of functions
-
 '''
 
 import abc
-import math
 import scipy.special as ss
 import numpy as np
-
-import pypwdg.parallel.decorate as ppd
-import pypwdg.parallel.distributeddict as ppdd
-from pypwdg.parallel.mpiload import mpiloaded
-
-def cubeDirections(n):
-    """ Return n^2 directions roughly parallel to (1,0,0)"""
-    
-    r = [2.0*t/(n+1)-1 for t in range(1,n+1)]
-    return [v / math.sqrt(np.dot(v,v)) for v in [np.array([1,y,z]) for y in r for z in r]]
-
-def cubeRotations(directions):
-    """ Rotate each direction through the faces of the cube"""
-    M = np.array(directions)
-    return np.vstack([np.vstack([M,-M])[:,i] for i in [(0,1,2),(1,2,0),(2,0,1)] ])
-
-def circleDirections(n):
-    """ return n equi-spaced directions on a circle """
-    theta = np.arange(n).reshape((-1,1)) * 2*math.pi / n
-    return np.hstack((np.cos(theta), np.sin(theta)))
-
-def uniformdirs(dim, npw):
-    if dim==2:
-        return circleDirections(npw)
-    else:
-        return cubeRotations(cubeDirections(npw))
-    
-def planeWaveBases(dim, k, nplanewaves):
-    dirs = uniformdirs(dim, nplanewaves)
-    pw = [PlaneWaves(dirs,k)]
-    return UniformBases(pw)
-
-class ElementInfo(object):
-    ''' Provides information about elements used by basis objects'''
-    def __init__(self, mesh, k):
-        self.k = k
-        self.mesh = mesh
-        
-
-class UniformBases(object):
-    def __init__(self, b):
-        self.b = b
-
-    def populate(self, e):    
-        return self.b
-
-class FourierBesselBases(object):
-
-    def __init__(self, k, orders, mesh):
-        self.orders = orders
-        self.k = k
-        self.mesh = mesh
-        if not mesh.dim==2: raise Exception("Bessel functions are only defined in 2D.")
-    
-    def populate(self, e):
-        origin=self.mesh.nodes[self.mesh.elements[e][0]]
-        return [FourierBessel(origin,self.orders,self.k)]
-
-class PlaneWaveVariableN(object):
-    def __init__(self, k, dirs, eton, mesh):
-        self.k = k
-        self.eton = eton
-        self.dirs = dirs
-        self.mesh = mesh
-        
-    def populate(self, mesh, e):
-        return [PlaneWaves(self.dirs, self.k * self.eton[self.mesh.elemIdentity[e]])]        
-
-class ProductBases(object):
-    def __init__(self, bases1, bases2):
-        self.bases1 = bases1
-        self.bases2 = bases2
-        
-    def populate(self, e):        
-        return [Product(BasisCombine(self.bases1.populate(e)), BasisCombine(self.bases2.populate(e)))]
-   
-def getSizes(etob, mesh):
-    return np.array([sum([b.n for b in etob.get(e,[])]) for e in range(mesh.nelements)])    
-
-@ppd.parallel(None, None)
-def localConstructBasis(mesh, etob, basisrule):
-    for e in mesh.partition:
-        etob[e] = basisrule.populate(e)
-
-def constructBasis(mesh, basisrule):
-    manager = ppdd.ddictmanager(ppdd.elementddictinfo(mesh), True)
-    etob = manager.getDict()
-    localConstructBasis(mesh, etob, basisrule)
-    manager.sync()   
-    return ElementToBases(etob, mesh)
-
-class ElementToBases(object):
-    def __init__(self, etob, mesh):
-        self.etob = etob
-        self.sizes = np.array([sum([b.n for b in etob.get(e,[])]) for e in range(mesh.nelements)])     
-        self.indices = np.cumsum(np.concatenate(([0], self.sizes))) 
-        
-    def getValues(self, eid, points):
-        """ Return the values of the basis for element eid at points"""
-        bases = self.etob.get(eid)
-        if bases==None:
-            return np.zeros(len(points),0)
-        else:
-            return np.hstack([b.values(points) for b in bases])
-    
-    def getDerivs(self, eid, points, normal = None):
-        """ Return the directional derivatives of the basis for element eid at points
-        
-           if normal == None, returns the gradient on the standard cartesian grid
-        """
-        bases = self.etob.get(eid)
-        if bases==None:
-            return np.zeros(len(points),0) if normal is not None else np.zeros(len(points), 0, points.shape[1])
-        else:
-            return np.hstack([b.derivs(points, normal) for b in bases])
-    
-    def getSizes(self):
-        return self.sizes
-        
-    def getIndices(self):
-        return self.indices 
-
 
 class Basis(object):
     __metaclass__ = abc.ABCMeta

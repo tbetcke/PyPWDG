@@ -3,10 +3,6 @@ Created on 3 Mar 2011
 
 @author: jphillips
 '''
-import pypwdg.setup as ps
-import pypwdg.core.bases as pcb
-import pypwdg.mesh.mesh as pmm
-import pypwdg.core.boundary_data as pcbd
 import pypwdg.adaptivity.adaptivity as paa
 import pypwdg.output.basis as pob
 import pypwdg.utils.geometry as pug

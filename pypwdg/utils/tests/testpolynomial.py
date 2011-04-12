@@ -70,4 +70,14 @@ class TestDubiner(unittest.TestCase):
             
             np.testing.assert_almost_equal(dtD[0],dtxhD, decimal=4)
             np.testing.assert_almost_equal(dtD[1],dtyhD, decimal=4)
-                        
+
+    def testOrthonormal(self):
+        ''' Test that the Dubiner polynomials are L^2-orthonormal over the reference triangle'''
+        N = 8
+        for k in range(0, N):
+            x,w = puq.trianglequadrature(k+1)
+            dt = pup.DubinerTriangle(k,x)
+            dtV = dt.values()
+            l2 = np.dot(dtV.T, w * dtV)
+            np.testing.assert_almost_equal(l2, np.eye(dtV.shape[1],dtV.shape[1]))
+        

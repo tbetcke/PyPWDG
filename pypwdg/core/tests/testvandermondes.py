@@ -25,7 +25,7 @@ class TestVandermondes(unittest.TestCase):
         meshes = tum.examplemeshes2d()
         for mesh in meshes:
             mq = pmm.MeshQuadratures(mesh, puq.legendrequadrature(numquads))
-            e2b = pcb.constructBasis(mesh, pcb.UniformBases([pw]))
+            e2b = pcb.constructBasis(mesh, pcb.UniformBasisRule([pw]))
             LV = pcv.LocalVandermondes(mesh, e2b, mq)
             for faceid in range(mesh.nfaces):
                 v = LV.getValues(faceid)

@@ -21,6 +21,6 @@ npoints=array([200,200])
 mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 
 problem=ps.Problem(mesh,k,20, bnddata)
-ibc = paa.InitialPWFBCreator(mesh,k,3,9)
+ibc = paa.InitialPWFBCreator(mesh,k,3,7)
 pas.runadaptive(problem, ibc, "squarescatt", 6, bounds, npoints)
 
