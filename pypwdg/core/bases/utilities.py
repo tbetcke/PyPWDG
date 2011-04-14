@@ -96,6 +96,9 @@ class ElementInfo(object):
     def k(self, e):
         return self.k
     
+    def kp(self, e):
+        return lambda p: self.k
+        
     def origin(self, e):
         return np.sum(self.mesh.nodes[self.mesh.elements[e]], axis=0) / len(self.mesh.elements[e])
     

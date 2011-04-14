@@ -39,3 +39,13 @@ def squarequadrature(n):
     w = w00[g[0]] * w00[g[1]]
     x = numpy.hstack((x00[g[0]], x00[g[1]]))
     return x, w
+
+def quadrules(dim, nquadpoints):
+    if dim == 2:
+        fquad = legendrequadrature(nquadpoints)
+        equad = trianglequadrature(nquadpoints)
+    else:
+        fquad = trianglequadrature(nquadpoints)
+        equad = tetquadrature(nquadpoints)
+    
+    return (fquad, equad)
