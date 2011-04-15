@@ -2,7 +2,6 @@ import pypwdg.core.bases as pcb
 import pypwdg.core.bases.reference as pcbr
 import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
-import pypwdg.utils.geometry as pug
 import pypwdg.setup.problem as psp
 import pypwdg.setup.computation as psc
 import pypwdg.core.physics as pcp
@@ -28,12 +27,6 @@ bnddata={7:pcbd.dirichlet(g),
 bounds=np.array([[0,1],[0,1]],dtype='d')
 npoints=np.array([500,500])
 
-sp = pug.StructuredPoints(bounds.transpose(), npoints)
-idx, points = sp.getPoints(bounds.transpose())
-gvals = np.zeros(sp.length, dtype=complex)
-gvals[idx] = g.values(points)
-l2g = np.sqrt(np.vdot(gvals, gvals) / sp.length)
-
 mesh = pmm.gmshMesh('square.msh',dim=2)
 print mesh.nelements
 
@@ -52,7 +45,5 @@ problem = psp.Problem(mesh, k, bnddata)
 computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, quadpoints)
 solution = computation.solution(psc.DirectSolver().solve)
 
-perr = solution.evaluate(sp) - gvals
-print npw, np.sqrt(np.vdot(perr,perr) / sp.length) / l2g
-
+pos.comparetrue(bounds, npoints, g, solution)
 pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'square')
