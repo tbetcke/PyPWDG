@@ -3,7 +3,7 @@ Created on Aug 6, 2010
 
 @author: joel
 '''
-import numpy
+import numpy as np
 import scipy.sparse as ss
 
 class AveragesAndJumps(object):
@@ -16,6 +16,10 @@ class AveragesAndJumps(object):
         self.JD = self.jump
         self.JN = self.average * 2
         self.Z = ss.csr_matrix(self.average.shape)
+        d = np.zeros(mesh.nelements)
+        d[mesh.partition] = 1
+        self.I = ss.dia_matrix((d, [0]), shape = (mesh.nelements,)*2).tocsr()
+
         
 def sumfaces(mesh,S):
     """Sum all the faces that contribute to each element
@@ -29,7 +33,7 @@ def sumrhs(mesh,G):
     
     This reduces a faces x faces structure to an elts x 1 structure
     """
-    return G.__rmul__(mesh.elttofaces) * ss.csr_matrix(numpy.ones((G.shape[1],1)))
+    return G.__rmul__(mesh.elttofaces) * ss.csr_matrix(np.ones((G.shape[1],1)))
 
 
             

@@ -61,3 +61,5 @@ class Assembly(object):
         """
         structures = numpy.array(structures)
         return sum([createvbsr(structures[i,j],self.ips[i,j].product, self.numleft, self.numright) for i in [0,1] for j in [0,1]])
+        
+    
