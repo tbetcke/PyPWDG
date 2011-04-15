@@ -154,3 +154,22 @@ class ElementToBases(object):
         
     def getIndices(self):
         return self.indices 
+    
+class UniformElementToBases(object):
+    def __init__(self, b, mesh):
+        self.b = b
+        self.sizes = np.ones(mesh.nelements, dtype=int) * b.n
+        self.indices = np.arange(mesh.nelements) * b.n
+    
+    def getValues(self, eid, points):
+        return self.b.values(points)
+    
+    def getDerivs(self, eid, points, normal = None):
+        return self.b.derivs(points, normal)
+    
+    def getSizes(self):
+        return self.sizes
+        
+    def getIndices(self):
+        return self.indices 
+     

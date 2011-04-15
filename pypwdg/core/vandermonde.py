@@ -94,7 +94,8 @@ class LocalInnerProducts(object):
             vl = self.__vleft(i).conj()
             vr = self.__vright(j)
             w = self.__weights(i).reshape((-1,) + (1,)*(len(vl.shape)-1))
-            p = numpy.tensordot(vl * w, vr, self.axes)    
+            axes = (0,)+tuple(range(2,min(len(vl.shape), len(vr.shape)))) # sum over the points and then as much as possible
+            p = numpy.tensordot(vl * w, vr, (axes,axes))    
             
             if len(p.shape)==0: p = p.reshape(1,1)
             self.__cache[(i,j)] = p

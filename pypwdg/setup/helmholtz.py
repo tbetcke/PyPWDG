@@ -11,6 +11,7 @@ import pypwdg.mesh.meshutils as pmmu
 import pypwdg.core.vandermonde as pcv
 import pypwdg.core.assembly as pca
 import pypwdg.mesh.structure as pms
+import pypwdg.core.evaluation as pce
 
 import numpy as np
 
@@ -28,23 +29,31 @@ class Problem(object):
     
 
 @ppd.parallel(None, None)
-def localConstructBasis(etob, basisrule, problem):
-    problem.populate(etob, basisrule)
-    
+def localPopulateBasis(etob, basisrule, problem):
+    problem.populateBasis(etob, basisrule)
+
 def constructBasis(problem, basisrule):
     ''' Build an element to basis (distributed) map based on a basisrule'''
     manager = ppdd.ddictmanager(ppdd.elementddictinfo(problem.mesh), True)
     etob = manager.getDict()
-    localConstructBasis(etob, basisrule, problem)
+    localPopulateBasis(etob, basisrule, problem)
     manager.sync()   
-    return pcbu.ElementToBases(etob, problem.mesh)    
+    return pcbu.ElementToBases(etob, problem.mesh)
 
-def computation(klazz, problem, basisrule, *args, **kwargs):
-    basis = constructBasis(problem, basisrule)
-    return klazz(problem, basis, *args, **kwargs)
+class Computation(object):
+    def __init__(self, problem, basisrule, systemklass, *args, **kwargs):
+        self.problem = problem
+        self.basis = constructBasis(problem, basisrule)        
+        self.system = systemklass(problem, self.basis, *args, **kwargs)
+                
+    def solution(self, solver, *args, **kwargs):
+        S,G = self.system.getSystem(*args, **kwargs)                
+        x = solver(S.tocsr(), G.todense().squeeze())
+        return Solution(self.problem, self.basis, x)        
+
     
 @ppd.distribute()    
-class Computation(object):
+class HelmholtzSystem(object):
     def __init__(self, problem, basis, nquadpoints, alpha=0.5,beta=0.5,delta=0.5, usecache=True):
         self.alpha = alpha
         self.beta = beta
@@ -61,15 +70,23 @@ class Computation(object):
         self.bdyvandermondes = []
         self.loadassemblies = []
         for data in problem.bnddata.values():
-            bdyetob = constructBasis(problem.mesh, pcbu.UniformBasisRule([data]))
+            bdyetob = pcbu.UniformElementToBases(data, problem.mesh)
             bdyvandermondes = pcv.LocalVandermondes(problem.mesh, bdyetob, facequads)        
             self.bdyvandermondes.append(bdyvandermondes)
             self.loadassemblies.append(pca.Assembly(self.facevandermondes, bdyvandermondes, facequads.quadweights))
         
         ev = pcv.ElementVandermondes(problem.mesh, self.basis, elementquads)
-        l2weights = lambda e: elementquads.quadweights(e) * problem.elementinfo.kp(e)(elementquads.quadpoints(e))
-        self.L2 = pcv.LocalInnerProducts(ev.getValues, ev.getValues, l2weights)
-        self.H1 = pcv.LocalInnerProducts(ev.getDerivs, ev.getDerivs, elementquads.quadweights, ((0,2),(0,2)))
+        self.volumeassembly = pca.Assembly(ev, ev, elementquads.quadweights)
+        kweights = lambda e: elementquads.quadweights(e) * (problem.elementinfo.kp(e)(elementquads.quadpoints(e))**2)
+        self.weightedassembly = pca.Assembly(ev, ev, kweights)
+
+    @ppd.parallelmethod(None, ppd.tuplesum)        
+    def getSystem(self, dovolumes = False):
+        S = self.internalStiffness() + sum(self.boundaryStiffnesses())
+        G = sum(self.boundaryLoads())
+        if dovolumes: 
+            S+=self.volumeStiffness()
+        return S,G
 
     @ppd.parallelmethod()        
     def internalStiffness(self):
@@ -89,13 +106,13 @@ class Computation(object):
             lv, ld = bdycondition.l_coeffs
             delta = self.delta
             
-            SB = self.stiffassembly.assemble([[lv*(1-delta) * B, (-1+(1-delta)*ld)*B],
+            SB = self.internalassembly.assemble([[lv*(1-delta) * B, (-1+(1-delta)*ld)*B],
                                               [(1-delta*lv) * B, -delta * ld*B]])
             SBs.append(pms.sumfaces(self.problem.mesh,SB))     
         return SBs
     
     @ppd.parallelmethod(None, ppd.tuplesum)
-    def boundaryLoad(self): 
+    def boundaryLoads(self): 
         GBs = []
         for (id, bdycondition), loadassembly in zip(self.problem.bnddata.items(), self.loadassemblies):
             B = self.problem.mesh.entityfaces[id]
@@ -111,12 +128,56 @@ class Computation(object):
     
     @ppd.parallelmethod()
     def volumeStiffness(self):
-        AJ = pms.AveragesAndJumps(self.problem.mesh)    
-        L2P = pus.createvbsr(csrelts, L2.product, elttobasis.getSizes(), elttobasis.getSizes())
-        H1P = pus.createvbsr(csrelts, H1.product, elttobasis.getSizes(), elttobasis.getSizes())
+        E = pms.ElementMatrices(self.problem.mesh)
+        L2K = self.weightedassembly.assemble([[E.I, E.Z],[E.Z, E.Z]])
+        H1 = self.volumeassembly.assemble([[E.Z,E.Z],[E.Z, E.I]])
         
-        Zero = ss.csr_matrix((mesh.nfaces, mesh.nfaces))
-        B = pms.sumfaces(mesh, stiffassembly.assemble([[Zero,Zero],[mesh.facepartition,Zero]]))
+        AJ = pms.AveragesAndJumps(self.problem.mesh)
+        B = pms.sumfaces(self.problem.mesh, self.internalassembly.assemble([[AJ.Z,AJ.Z],[AJ.I,AJ.Z]]))
         
-        return H1P - k**2 * L2P - B
+        return H1 - L2K - B   
+
+def noop(x): return x
+
+class Solution(object):
+    """ The solution to a Problem """
+    def __init__(self, problem, basis, x):  
+        self.mesh = problem.mesh
+        self.elttobasis = basis
+        self.x = x
+#        self.lv = lvs
+#        self.bndvs = bndvs
+#        self.error_dirichlet2=None
+#        self.error_neumann2=None
+#        self.error_boundary2=None
+#        self.error_combined=None
         
+              
+    def writeSolution(self, bounds, npoints, realdata=True, fname='solution.vti'):
+        from pypwdg.output.vtk_output import VTKStructuredPoints
+
+        print "Evaluate Solution and Write to File"
+        
+        bounds=np.array(bounds,dtype='d')
+        filter=np.real if realdata else np.imag
+
+        vtk_structure=VTKStructuredPoints(pce.StructuredPointsEvaluator(self.mesh, self.elttobasis, filter, self.x))
+        vtk_structure.create_vtk_structured_points(bounds,npoints)
+        vtk_structure.write_to_file(fname)
+   
+    def evaluate(self, structuredpoints):
+        spe = pce.StructuredPointsEvaluator(self.problem.mesh, self.elttobasis, noop, self.x)
+        vals, count = spe.evaluate(structuredpoints)
+        count[count==0] = 1
+        return vals / count
+   
+    def evalJumpErrors(self):
+        print "Evaluate Jumps"
+        (self.error_dirichlet2, self.error_neumann2, self.error_boundary2) = pce.EvalElementError3(self.problem.mesh, self.problem.mqs, self.lv, self.problem.bnddata, self.bndvs).evaluate(self.x)
+
+    def combinedError(self):        
+        if self.error_dirichlet2 is None: self.evalJumpErrors()
+        error_combined2 = self.problem.k ** 2 * self.error_dirichlet2 + self.error_neumann2 + self.error_boundary2
+        self.error_combined = np.sqrt(error_combined2)
+        return self.error_combined    
+          

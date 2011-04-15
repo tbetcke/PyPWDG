@@ -8,6 +8,9 @@ import numpy
 from pypwdg.core.vandermonde import LocalVandermondes
 from pypwdg.core.physics import assemble
 import pypwdg.core.bases as pcb
+from pypwdg.output.vtk_output import VTKStructuredPoints
+from pypwdg.core.evaluation import StructuredPointsEvaluator
+import pypwdg.core.evaluation as pce
 
 class Computation(object):
     """ Contains everything needed to solve a Problem  """
@@ -26,7 +29,6 @@ class Computation(object):
         self.rhs = numpy.array(rhs.todense()).squeeze()
             
     def solve(self, solver="pardiso"):
-        from pypwdg.setup.solution import Solution
         print "Solve linear system of equations"
         
         usepardiso = solver == "pardiso"
@@ -50,6 +52,9 @@ class Computation(object):
         print "Relative residual: ", numpy.linalg.norm(self.stiffness * x - self.rhs) / numpy.linalg.norm(x)
         return Solution(self.problem, x, self.elttobasis, self.lv, self.bndvs)
                 
+
+def noop(x):
+    return x
 
 class Solution(object):
     """ The solution to a Problem """
