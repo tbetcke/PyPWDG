@@ -1,10 +1,16 @@
-import pypwdg.setup as ps
 import pypwdg.core.bases as pcb
+import pypwdg.core.bases.reference as pcbr
 import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
-import pypwdg.core.bases.reference as pcbr
-import pypwdg.parallel.main
 import pypwdg.utils.geometry as pug
+import pypwdg.setup.problem as psp
+import pypwdg.setup.computation as psc
+import pypwdg.core.physics as pcp
+import pypwdg.output.solution as pos
+
+import pypwdg.parallel.main
+
+
 
 import numpy as np
 
@@ -29,35 +35,24 @@ gvals[idx] = g.values(points)
 l2g = np.sqrt(np.vdot(gvals, gvals) / sp.length)
 
 mesh = pmm.gmshMesh('square.msh',dim=2)
-
-def newstuff():
-    import pypwdg.setup.helmholtz as psh
-    import pypwdg.utils.solvers as pus
-    problem = psh.Problem(mesh, k, bnddata)
-    npw = 12
-    computation = psh.Computation(problem, pcb.planeWaveBases(2,k,npw), psh.HelmholtzSystem, 30)
-    solution = computation.solution(pus.DirectSolver().solve, dovolumes = True)
-    solution.writeSolution(bounds,npoints,fname='squarenew.vti')
-    
-
-problem=ps.Problem(mesh,k,30, bnddata)
-h = 0.1
-#problem.setParams(alpha = 1.0/(k * h), beta = k * h)
-
 print mesh.nelements
 
 npw = 12
-# Original basis:
-bases = problem.constructBasis(pcb.planeWaveBases(2,k,npw))
-# Polynomials only:
-#bases = problem.constructBasis(pcbr.ReferenceBasisRule(pcbr.Dubiner(5)))
-# Product basis:
-#bases = problem.constructBasis(pcb.ProductBasisRule(pcb.planeWaveBases(2,k,npw), pcbr.ReferenceBasisRule(pcbr.Dubiner(1))))
+quadpoints = 20
 
-solution = ps.Computation(problem, bases, True, True).solve()
-solution.writeSolution(bounds,npoints,fname='square.vti')
-problem.writeMesh(fname='square.vtu',scalars=solution.combinedError())
-err = solution.combinedError()
+# Original basis:
+basisrule = pcb.planeWaveBases(2,k,npw)
+# Polynomials only:
+#basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(3))
+# Product basis:
+#basisrule = pcb.ProductBasisRule(pcb.planeWaveBases(2,k,npw), pcbr.ReferenceBasisRule(pcbr.Dubiner(1)))
+
+
+problem = psp.Problem(mesh, k, bnddata)
+computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, quadpoints)
+solution = computation.solution(psc.DirectSolver().solve)
+
 perr = solution.evaluate(sp) - gvals
 print npw, np.sqrt(np.vdot(perr,perr) / sp.length) / l2g
-newstuff()
+
+pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'square')

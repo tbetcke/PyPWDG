@@ -3,109 +3,103 @@ Created on Aug 11, 2010
 
 @author: joel
 '''
-from pypwdg.mesh.meshutils import MeshQuadratures
-from pypwdg.core.vandermonde import LocalVandermondes, LocalInnerProducts, ElementVandermondes
-from pypwdg.utils.timing import print_timing
-from pypwdg.core.assembly import Assembly
+import pypwdg.utils.quadrature as puq
+import pypwdg.mesh.meshutils as pmmu
+import pypwdg.core.vandermonde as pcv
+import pypwdg.core.assembly as pca
 import pypwdg.mesh.structure as pms
-import pypwdg.utils.sparse as pus
-import scipy.sparse as ss
-import numpy as np
+import pypwdg.parallel.decorate as ppd
+import pypwdg.core.bases.utilities as pcbu
+    
+@ppd.distribute()    
+class HelmholtzSystem(object):
+    ''' Assemble a system to solve a Helmholtz problem using the DG formulation of Gittelson et al.
+        It's parallelised so will only assemble the relevant bits of the system for the partition managed by
+        this process.
+    '''
+    def __init__(self, problem, basis, nquadpoints, alpha=0.5,beta=0.5,delta=0.5, usecache=True):
+        self.alpha = alpha
+        self.beta = beta
+        self.delta = delta
+        self.problem = problem
+        fquad, equad = puq.quadrules(problem.mesh.dim, nquadpoints)
+        facequads = pmmu.MeshQuadratures(problem.mesh, fquad)
+        elementquads = pmmu.MeshElementQuadratures(problem.mesh, equad)
 
-from pypwdg.parallel.decorate import parallel, tuplesum
-
-import numpy
-
-@parallel(None, reduceop=tuplesum)
-@print_timing
-def assemble(mesh, k, lv, bndvs, mqs, elttobasis, bnddata, params, emqs, dovols):
+        self.basis = basis
+        self.facevandermondes = pcv.LocalVandermondes(problem.mesh, basis, facequads, usecache=usecache)
+        self.internalassembly = pca.Assembly(self.facevandermondes, self.facevandermondes, facequads.quadweights)
+         
+        self.bdyvandermondes = []
+        self.loadassemblies = []
+        for data in problem.bnddata.values():
+            bdyetob = pcbu.UniformElementToBases(data, problem.mesh)
+            bdyvandermondes = pcv.LocalVandermondes(problem.mesh, bdyetob, facequads)        
+            self.bdyvandermondes.append(bdyvandermondes)
+            self.loadassemblies.append(pca.Assembly(self.facevandermondes, bdyvandermondes, facequads.quadweights))
         
-    stiffassembly,loadassemblies = init_assembly(mesh,lv, bndvs, mqs,elttobasis,bnddata)
-    
-    
-    S=assemble_int_faces(mesh, k, stiffassembly, params)
-    f=0
-    
-    if dovols:
-        V = assemble_volume_terms(mesh, k, elttobasis, emqs, stiffassembly)
-        S+=V
-    
-    for (id, bdycondition), loadassembly in zip(bnddata.items(), loadassemblies):
-        (Sb,fb)=assemble_bnd(mesh, k, id, bdycondition, stiffassembly, loadassembly, params)
-        S=S+Sb
-        f=f+fb
-    return S, f
+        ev = pcv.ElementVandermondes(problem.mesh, self.basis, elementquads)
+        self.volumeassembly = pca.Assembly(ev, ev, elementquads.quadweights)
+        kweights = lambda e: elementquads.quadweights(e) * (problem.elementinfo.kp(e)(elementquads.quadpoints(e))**2)
+        self.weightedassembly = pca.Assembly(ev, ev, kweights)
 
-def init_assembly(mesh,lv,bndvs, mqs,elttobasis,bnddata):
+    @ppd.parallelmethod(None, ppd.tuplesum)        
+    def getSystem(self, dovolumes = False):
+        ''' Returns the stiffness matrix and load vector'''
+        S = self.internalStiffness() + sum(self.boundaryStiffnesses())
+        G = sum(self.boundaryLoads())
+        if dovolumes: 
+            S+=self.volumeStiffness()
+        return S,G
 
-    stiffassembly = Assembly(lv, lv, mqs.quadweights) 
+    @ppd.parallelmethod()        
+    def internalStiffness(self):
+        ''' The contribution of the internal faces to the stiffness matrix'''
+        jk = 1j * self.problem.k
+        AJ = pms.AveragesAndJumps(self.problem.mesh)    
+        SI = self.internalassembly.assemble([[jk * self.alpha * AJ.JD,   -AJ.AN], 
+                                            [AJ.AD,                -(self.beta / jk) * AJ.JN]])        
+        return pms.sumfaces(self.problem.mesh,SI)
     
-    loadassemblies = []
-    for bndv in bndvs:
-        loadassemblies.append(Assembly(lv, bndv, mqs.quadweights))
-
-    return (stiffassembly,loadassemblies)
-
-def assemble_int_faces(mesh, k, stiffassembly, params):
-    "Assemble the stiffness matrix for the interior faces"
-
-    #print "%s basis functions"%sum([b.n for bs in elttobasis for b in bs ])
-    #print "%s quadrature points"%len(localquads[1])
+    @ppd.parallelmethod(None, ppd.tuplesum)
+    def boundaryStiffnesses(self):
+        ''' The contribution of the boundary faces to the stiffness matrix'''
+        SBs = []
+        for (id, bdycondition) in self.problem.bnddata.items():
+            B = self.problem.mesh.entityfaces[id]
+            
+            lv, ld = bdycondition.l_coeffs
+            delta = self.delta
+            
+            SB = self.internalassembly.assemble([[lv*(1-delta) * B, (-1+(1-delta)*ld)*B],
+                                              [(1-delta*lv) * B, -delta * ld*B]])
+            SBs.append(pms.sumfaces(self.problem.mesh,SB))     
+        return SBs
     
-    alpha=params['alpha']
-    beta=params['beta']
+    @ppd.parallelmethod(None, ppd.tuplesum)
+    def boundaryLoads(self): 
+        ''' The load vector (due to the boundary conditions)'''
+        GBs = []
+        for (id, bdycondition), loadassembly in zip(self.problem.bnddata.items(), self.loadassemblies):
+            B = self.problem.mesh.entityfaces[id]
+            
+            rv, rd = bdycondition.r_coeffs
+            delta = self.delta
+            # todo - check the cross terms.  Works okay with delta = 1/2.  
+            GB = loadassembly.assemble([[(1-delta) *rv* B, (1-delta) * rd*B], 
+                                        [-delta*rv* B,     -delta * rd*B]])
+                
+            GBs.append(pms.sumrhs(self.problem.mesh,GB))
+        return GBs
     
-    jk = 1j * k
-    jki = 1/jk
-    #mqs = MeshQuadratures(mesh, localquads)
-    #lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)  
-    AJ = pms.AveragesAndJumps(mesh)    
-    SI = stiffassembly.assemble(numpy.array([[jk * alpha * AJ.JD,   -AJ.AN], 
-                                             [AJ.AD,                -beta*jki * AJ.JN]]))
-    
-    
-    return pms.sumfaces(mesh,SI)
-
-def assemble_bnd(mesh, k, id, bnd_condition, stiffassembly, loadassembly, params):
-    
-    #mqs = MeshQuadratures(mesh, localquads)
-    #lv = LocalVandermondes(mesh, elttobasis, mqs.quadpoints, usecache)
-           
-
-    
-    delta=params['delta']
-
-    l_coeffs=bnd_condition.l_coeffs
-    r_coeffs=bnd_condition.r_coeffs
-    
-    B = mesh.entityfaces[id]
+    @ppd.parallelmethod()
+    def volumeStiffness(self):
+        ''' The contribution of the volume terms to the stiffness matrix (should be zero if using Trefftz basis functions)'''
+        E = pms.ElementMatrices(self.problem.mesh)
+        L2K = self.weightedassembly.assemble([[E.I, E.Z],[E.Z, E.Z]])
+        H1 = self.volumeassembly.assemble([[E.Z,E.Z],[E.Z, E.I]])
         
-    SB = stiffassembly.assemble(numpy.array([[l_coeffs[0]*(1-delta) * B, (-1+(1-delta)*l_coeffs[1])*B],
-                                             [(1-delta*l_coeffs[0]) * B,      -delta * l_coeffs[1]*B]]))
+        AJ = pms.AveragesAndJumps(self.problem.mesh)
+        B = pms.sumfaces(self.problem.mesh, self.internalassembly.assemble([[AJ.Z,AJ.Z],[AJ.I,AJ.Z]]))
         
-
-    # todo - check the cross terms.  Works okay with delta = 1/2.  
-    GB = loadassembly.assemble(numpy.array([[(1-delta) *r_coeffs[0]* B,  (1-delta) * r_coeffs[1]*B], 
-                                            [-delta*r_coeffs[0]* B,          -delta * r_coeffs[1]*B]]))
-        
-    S = pms.sumfaces(mesh,SB)     
-    G = pms.sumrhs(mesh,GB)
-    return S,G    
-
-
-def assemble_volume_terms(mesh, k, elttobasis, emqs, stiffassembly):
-    ev = ElementVandermondes(mesh, elttobasis, emqs)
-    L2 = LocalInnerProducts(ev.getValues, ev.getValues, emqs.quadweights)
-    H1 = LocalInnerProducts(ev.getDerivs, ev.getDerivs, emqs.quadweights, ((0,2),(0,2)))
-    d = np.zeros(mesh.nelements)
-    d[mesh.partition] = 1
-    csrelts = ss.dia_matrix((d, [0]), shape = (mesh.nelements,)*2).tocsr()
-    L2P = pus.createvbsr(csrelts, L2.product, elttobasis.getSizes(), elttobasis.getSizes())
-    H1P = pus.createvbsr(csrelts, H1.product, elttobasis.getSizes(), elttobasis.getSizes())
-    
-    Zero = ss.csr_matrix((mesh.nfaces, mesh.nfaces))
-    B = pms.sumfaces(mesh, stiffassembly.assemble([[Zero,Zero],[mesh.facepartition,Zero]]))
-    
-    return H1P - k**2 * L2P - B
-      
-
+        return H1 - L2K - B   

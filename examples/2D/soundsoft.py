@@ -1,7 +1,10 @@
-import pypwdg.setup as ps
 import pypwdg.core.bases as pcb
 import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
+import pypwdg.setup.problem as psp
+import pypwdg.setup.computation as psc
+import pypwdg.core.physics as pcp
+import pypwdg.output.solution as pos
 import pypwdg.parallel.main
 
 from numpy import array,sqrt
@@ -17,10 +20,8 @@ bounds=array([[-2,2],[-2,2]],dtype='d')
 npoints=array([200,200])
 
 mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
-bases = pcb.constructBasis(mesh, pcb.planeWaveBases(2,k,15))
 
-problem=ps.Problem(mesh,k,20, bnddata)
-solution = ps.Computation(problem, bases).solve()
-solution.writeSolution(bounds,npoints,fname='soundsoft.vti')
-problem.writeMesh(fname='soundsoft.vtu',scalars=solution.combinedError())
-
+problem = psp.Problem(mesh, k, bnddata)
+computation = psc.Computation(problem, pcb.planeWaveBases(2,k,15), pcp.HelmholtzSystem, 20)
+solution = computation.solution(psc.DirectSolver().solve)
+pos.standardoutput(computation, solution, 20, bounds, npoints, 'soundsoft')
