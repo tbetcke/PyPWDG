@@ -53,7 +53,7 @@ def elementwiseconstant():
     
 def fullyvariable():
     npw = 12
-    basisrule = pcb.ProductBasisRule(pcb.planeWaveBases(2,k,npw), pcbr.ReferenceBasisRule(pcbr.Dubiner(1)))
+    basisrule = pcb.ProductBasisRule(pcbv.PlaneWaveVariableN(pcb.circleDirections(npw)), pcbr.ReferenceBasisRule(pcbr.Dubiner(1)))
 #    basisrule = pcbv.PlaneWaveVariableN(pcb.circleDirections(npw))  
     
     entityton = {11:1.0, 12:QuadBubble(1.0, 2.0)}
