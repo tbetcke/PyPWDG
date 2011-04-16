@@ -40,7 +40,7 @@ class HelmholtzSystem(object):
         
         ev = pcv.ElementVandermondes(problem.mesh, self.basis, elementquads)
         self.volumeassembly = pca.Assembly(ev, ev, elementquads.quadweights)
-        kweights = lambda e: elementquads.quadweights(e) * (problem.elementinfo.kp(e)(elementquads.quadpoints(e))**2).reshape(-1,1)
+        kweights = lambda e: elementquads.quadweights(e).squeeze() * (problem.elementinfo.kp(e)(elementquads.quadpoints(e))**2)
         self.weightedassembly = pca.Assembly(ev, ev, kweights)
 
     @ppd.parallelmethod(None, ppd.tuplesum)        
