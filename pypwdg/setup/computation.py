@@ -26,7 +26,8 @@ class DirectSolver(object):
     
     def pardisoSolve(self, M, b):
         from pymklpardiso.linsolve import solve
-        (x, error) = solve(M,b)
+	print type(b), b.shape, b.squeeze().shape
+        (x, error) = solve(M,b.squeeze())
         if not error == 0: raise Exception("Pardiso Error")
         return x
     
@@ -37,7 +38,7 @@ class DirectSolver(object):
     def solve(self, S, G):
         print "Solve linear system of equations"
         M = S.tocsr()
-        b = G.todense().squeeze()
+        b = np.array(G.todense()).squeeze()
         x = self.solvemethod(M,b).squeeze()
         print "Relative residual: ", np.linalg.norm(M * x -b) / np.linalg.norm(x)
         return x        

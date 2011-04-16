@@ -21,7 +21,7 @@ class QuadBubble(object):
     
     def __call__(self, p):
         r2 = np.sum(p**2, axis=1)
-        return self.a - r2 * (self.a-1.0) / self.R
+        return self.a - r2 * (self.a-1.0) / self.R**2
     
 import pypwdg.parallel.main
 
@@ -52,7 +52,7 @@ def elementwiseconstant():
     pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'twocirclesEWC')
     
 def fullyvariable():
-    npw = 8
+    npw = 12
     basisrule = pcb.ProductBasisRule(pcb.planeWaveBases(2,k,npw), pcbr.ReferenceBasisRule(pcbr.Dubiner(1)))
     
     entityton = {11:1.0, 12:QuadBubble(1.0, 2.0)}
@@ -61,6 +61,7 @@ def fullyvariable():
     solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
     
     pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'twocirclesFV')
-    
+
+#elementwiseconstant()    
 fullyvariable()
     
