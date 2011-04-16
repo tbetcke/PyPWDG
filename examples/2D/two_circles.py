@@ -8,6 +8,7 @@ import pypwdg.core.bases.variable as pcbv
 import pypwdg.core.physics as pcp
 import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
+import numpy as np
 
 class QuadBubble(object):
     ''' An example of variable N.  Quadratic in r, equal to 1 on R and a at 0.     
@@ -19,7 +20,7 @@ class QuadBubble(object):
         self.a = a
     
     def __call__(self, p):
-        r2 = sum(p**2, axis=1)
+        r2 = np.sum(p**2, axis=1)
         return self.a - r2 * (self.a-1.0) / self.R
     
 import pypwdg.parallel.main
