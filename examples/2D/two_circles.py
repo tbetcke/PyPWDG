@@ -56,7 +56,7 @@ def fullyvariable():
     
     entityton = {11:1.0, 12:QuadBubble(1.0, 2.0)}
     problem = psp.VariableNProblem(entityton, mesh, k, bnddata)
-    computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, quadpoints, usecache = False)
+    computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, quadpoints)
     solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
     
     pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'twocirclesFV')
