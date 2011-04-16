@@ -27,7 +27,7 @@ import pypwdg.parallel.main
 
 from numpy import array
 
-k = 8
+k = 30
 direction=array([[1.0,0]])
 g = pcb.PlaneWaves(direction, k)
 
