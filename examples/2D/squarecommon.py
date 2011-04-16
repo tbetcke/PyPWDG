@@ -15,8 +15,8 @@ import numpy as np
 
 k = 20
 direction=np.array([[1.0,1.0]])/np.sqrt(2)
-g = pcb.PlaneWaves(direction, k)
-#g = pcb.FourierHankel([-2,-2], [0], k)
+#g = pcb.PlaneWaves(direction, k)
+g = pcb.FourierHankel([-2,-2], [0], k)
 impbd = pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g)
 
 #bnddata={7:impbd, 
@@ -34,7 +34,7 @@ npw = 12
 quadpoints = 20
 
 # Original basis:
-basisrule = pcb.planeWaveBases(2,k,npw)
+basisrule = pcbr.PlaneWaveVariableN(pcbu.)
 # Polynomials only:
 #basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(3))
 # Product basis:

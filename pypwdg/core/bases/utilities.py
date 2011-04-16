@@ -92,9 +92,6 @@ class ElementInfo(object):
         self.mesh = mesh
         self.k = k
         self.mems = pmmu.MeshElementMaps(mesh)
-
-    def k(self, e):
-        return self.k
     
     def kp(self, e):
         return lambda p: self.k

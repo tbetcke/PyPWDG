@@ -13,27 +13,21 @@ class PlaneWaveVariableN(object):
     def __init__(self, dirs):
         self.dirs = dirs
         
-    def populate(self, mesh, einfo):
-        return [pcbb.PlaneWaves(self.dirs, einfo.k * einfo.n)]        
+    def populate(self, einfo):
+        return [pcbb.PlaneWaves(self.dirs, einfo.kp(einfo.origin))]        
 
 
 class EntityNElementInfo(pcbu.ElementInfo):
-    ''' Element info for variable n based on an entity-to-n map'''
-    
+    ''' Element info for variable n based on an entity-to-n map
+        entityton should be a dictionary of entities to either a scalar, or 
+        a callable that returns a 1-D array given a set of points    
+    '''    
     def __init__(self, mesh, k, entityton):
         pcbu.ElementInfo.__init__(self, mesh, k)
         self.entityton = entityton
-    
-    def n(self, e):
+                    
+    def kp(self, e):
         entity = self.mesh.elemIdentity[e]
-        return self.entityton[entity]
-
-class FunctionNElementInfo(pcbu.ElementInfo):
-    ''' Element info for variable n based on a function returning n given a point'''
-    
-    def __init__(self, mesh, k, fn):
-        pcbu.ElementInfo.__init__(self, mesh, k)
-        self.fn = fn
-    
-    def n(self, e):
-        return self.fn(self.origin(e))
+        n = self.entityton[entity]
+        if callable(n): return lambda p: n(p) * self.k
+        else: return lambda p: n * self.k

@@ -5,6 +5,7 @@ Created on Apr 15, 2011
 '''
 
 import numpy as np
+import math
 import pypwdg.utils.geometry as pug
 
 def writeSolutionVTK(solution, bounds, npoints, realdata=True, fname='solution.vti'):
@@ -45,4 +46,4 @@ def comparetrue(bounds, npoints, g, solution):
     gvals[idx] = g.values(points)
     l2g = np.sqrt(np.vdot(gvals, gvals) / sp.length)
     perr = solution.evaluate(sp) - gvals
-    print np.sqrt(np.vdot(perr,perr) / sp.length) / l2g
+    print "L2 error in solution: ",np.abs(np.sqrt(np.vdot(perr,perr) / sp.length) / l2g)
