@@ -25,7 +25,6 @@ class HelmholtzSystem(object):
         fquad, equad = puq.quadrules(problem.mesh.dim, nquadpoints)
         facequads = pmmu.MeshQuadratures(problem.mesh, fquad)
         elementquads = pmmu.MeshElementQuadratures(problem.mesh, equad)
-        print elementquads.quadweights(0).shape
 
         self.basis = basis
         self.facevandermondes = pcv.LocalVandermondes(problem.mesh, basis, facequads, usecache=usecache)
