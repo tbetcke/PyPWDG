@@ -19,6 +19,15 @@ def trianglequadrature(n):
     y = numpy.outer(1-x01s, x00s).reshape(-1,1)
     return numpy.hstack((x, y)), w
 
+def tetquadrature(n):
+    txy, tw = trianglequadrature(n)
+    x02,w02 = scipy.special.orthogonal.j_roots(n,2,0)
+    x02s = (x02+1)/2
+    xy = ((1-x02s).reshape(-1,1,1) * txy.reshape(1,2,-1)).reshape(-1,2) 
+    z =  numpy.repeat(x02s,len(txy)).reshape(-1,1)
+    w = (tw.reshape(1,-1) * w02.reshape(-1,1)).reshape(-1,1)/8
+    return numpy.hstack((xy, z)), w
+    
 def legendrequadrature(n):
     """ Legendre quadrature points on [0,1] """
     x00,w00 = scipy.special.orthogonal.p_roots(n)
@@ -30,3 +39,13 @@ def squarequadrature(n):
     w = w00[g[0]] * w00[g[1]]
     x = numpy.hstack((x00[g[0]], x00[g[1]]))
     return x, w
+
+def quadrules(dim, nquadpoints):
+    if dim == 2:
+        fquad = legendrequadrature(nquadpoints)
+        equad = trianglequadrature(nquadpoints)
+    else:
+        fquad = trianglequadrature(nquadpoints)
+        equad = tetquadrature(nquadpoints)
+    
+    return (fquad, equad)

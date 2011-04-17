@@ -59,6 +59,7 @@ class Assembly(object):
             A structure matrix SM.JD, for example, corresponds to the product u * [[v]].  
             SM.JD^T * SM.JD, would correspond to [[u]] * [[v]] 
         """
+        structures = numpy.array(structures)
         return sum([createvbsr(structures[i,j],self.ips[i,j].product, self.numleft, self.numright) for i in [0,1] for j in [0,1]])
-            
-
+        
+    

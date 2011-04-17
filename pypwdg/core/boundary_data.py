@@ -37,8 +37,8 @@ class generic_boundary_data(object):
         self.g = g
         self.n = 1
         
-    def values(self,x,n=None):
-        return numpy.zeros((x.shape[0],1)) if self.g is None else self.g.values(x,n)
+    def values(self,x):
+        return numpy.zeros((x.shape[0],1)) if self.g is None else self.g.values(x)
     
     def derivs(self,x,n):
         return numpy.zeros((x.shape[0],1)) if self.g is None else self.g.derivs(x,n)

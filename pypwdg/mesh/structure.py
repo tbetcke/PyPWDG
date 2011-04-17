@@ -3,18 +3,21 @@ Created on Aug 6, 2010
 
 @author: joel
 '''
-import numpy
+import numpy as np
 import scipy.sparse as ss
 
 class AveragesAndJumps(object):
     def __init__(self, mesh):
+        # Face matrices:
         self.average = (mesh.connectivity + mesh.internal)/2
         self.jump = mesh.internal - mesh.connectivity
-
         self.AD = self.average
         self.AN = self.jump / 2
         self.JD = self.jump
         self.JN = self.average * 2
+        self.Z = ss.csr_matrix(self.average.shape)
+        self.I = mesh.facepartition
+        
         
 def sumfaces(mesh,S):
     """Sum all the faces that contribute to each element
@@ -28,7 +31,12 @@ def sumrhs(mesh,G):
     
     This reduces a faces x faces structure to an elts x 1 structure
     """
-    return G.__rmul__(mesh.elttofaces) * ss.csr_matrix(numpy.ones((G.shape[1],1)))
+    return G.__rmul__(mesh.elttofaces) * ss.csr_matrix(np.ones((G.shape[1],1)))
 
-
-            
+class ElementMatrices(object):
+    def __init__(self, mesh):
+        # Element matrices:
+        d = np.zeros(mesh.nelements)
+        d[mesh.partition] = 1            
+        self.I = ss.dia_matrix((d, [0]), shape = (mesh.nelements,)*2).tocsr()
+        self.Z = ss.csr_matrix(self.I.shape)

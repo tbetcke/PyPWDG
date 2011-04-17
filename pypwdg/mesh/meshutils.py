@@ -8,6 +8,7 @@ import numpy as np
 import numpy.linalg as nl
 import math
 from pypwdg.parallel.decorate import distribute, immutable
+import pypwdg.utils.mappings as pum
         
 @immutable
 class MeshQuadratures(object):
@@ -27,6 +28,18 @@ class MeshQuadratures(object):
         """ return the quadrature weights on face faceid"""
         return self.__qw * self.__mesh.dets[faceid]
 
+class MeshElementMaps(object):
+    """ For any mesh element, return the affine map that maps to it from the reference simplex"""
+    def __init__(self, mesh):
+        self.mesh = mesh
+    
+    def getMap(self, e):
+        # happily, mesh.directions contains the origin and offsets to all the vertices on the *element* 
+        # for each face.  So just pick the first face associated with this element
+        dirs = self.mesh.directions[self.mesh.etof[e][0]]
+        return pum.Affine(dirs[0], dirs[1:])
+    
+
 class MeshElementQuadratures(object):
     def __init__(self, mesh, quadrule):
         self.__mesh = mesh
@@ -43,7 +56,7 @@ class MeshElementQuadratures(object):
     def quadweights(self, eltid):
         """ return the quadrature weights on face faceid"""
         # The area of a simplex is 1/n! times the area of a parallepiped;
-        area = abs(nl.det(self.__mesh.directions[self.__mesh.etof[eltid][0]][1:]) / math.factorial(self.__mesh.dim))
+        area = abs(nl.det(self.__mesh.directions[self.__mesh.etof[eltid][0]][1:]))# / math.factorial(self.__mesh.dim))
         return self.__qw * area
 
 def elementcentres(mesh):

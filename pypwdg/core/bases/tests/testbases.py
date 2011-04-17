@@ -6,6 +6,8 @@ Created on Dec 19, 2010
 import unittest
 
 import pypwdg.core.bases as pcb
+import test.utils.mesh as tum
+import pypwdg.utils.polynomial as pup
 import numpy
 
 
@@ -19,7 +21,7 @@ class TestBases(unittest.TestCase):
         # check that there's just one function
         self.assertEqual(pw.n, 1)
         # evaluate it at 0
-        fd0 = pw.values(numpy.zeros((1,2)), None)
+        fd0 = pw.values(numpy.zeros((1,2)))
         # answer should be 1
         self.assertAlmostEqual(fd0[0,0], 1.0)
         # now evaluate some directional derivatives
@@ -48,5 +50,3 @@ class TestBases(unittest.TestCase):
                 vh = fb.values(points + n * h)
                 d = fb.derivs(points, n)
                 numpy.testing.assert_array_almost_equal(d, (vh - v0)/h, decimal=4)
-        
-        
