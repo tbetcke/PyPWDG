@@ -34,7 +34,7 @@ npw = 12
 quadpoints = 20
 
 # Original basis:
-basisrule = pcbr.PlaneWaveVariableN(pcbu.)
+basisrule = pcb.planeWaveBases(2,k,npw)
 # Polynomials only:
 #basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(3))
 # Product basis:
