@@ -35,7 +35,8 @@ class DirectSolver(object):
         from scipy.sparse.linalg.dsolve.linsolve import spsolve as solve
         return solve(M,b)
         
-    def solve(self, S, G):
+    def solve(self, system, sysargs, syskwargs):
+        S,G = system.getSystem(*sysargs, **syskwargs)
         print "Solve linear system of equations"
         M = S.tocsr()
         b = np.array(G.todense()).squeeze()
@@ -57,14 +58,13 @@ class Computation(object):
         self.basis = psp.constructBasis(problem, basisrule)        
         self.system = systemklass(problem, self.basis, *args, **kwargs)
                 
-    def solution(self, solver, *args, **kwargs):
+    def solution(self, solve, *args, **kwargs):
         ''' Solve the system 
         
             solver: a function that takes a vbsr matrix S and a csr matrix G and returns S \ G
             args, kwargs: additional parameters to pass to the getSystem method
         '''
-        S,G = self.system.getSystem(*args, **kwargs)                
-        x = solver(S, G)
+        x = solve(self.system, args, kwargs)
         return Solution(self.problem, self.basis, x)        
 
 def noop(x): return x

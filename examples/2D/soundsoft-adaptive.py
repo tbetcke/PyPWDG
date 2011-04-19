@@ -1,4 +1,4 @@
-import pypwdg.setup as ps
+import pypwdg.setup.problem as psp
 import pypwdg.core.bases as pcb
 import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
@@ -20,7 +20,7 @@ npoints=array([200,200])
 
 mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 
-problem=ps.Problem(mesh,k,20, bnddata)
+problem=psp.Problem(mesh,k,20, bnddata)
 ibc = paa.InitialPWFBCreator(mesh,k,3,7)
 pas.runadaptive(problem, ibc, "squarescatt", 6, bounds, npoints)
 

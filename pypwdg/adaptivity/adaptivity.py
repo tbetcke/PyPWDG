@@ -6,7 +6,7 @@ Created on 1 Nov 2010
 import pypwdg.parallel.decorate as ppd
 import pypwdg.parallel.distributeddict as ppdd
 import pypwdg.core.bases as pcb
-import pypwdg.setup as ps
+import pypwdg.setup.computation as psc
 import pypwdg.utils.optimisation as puo
 import pypwdg.utils.optx as puoptx
 
@@ -119,18 +119,23 @@ class BasisController(object):
 
 class AdaptiveComputation(object):
     
-    def __init__(self, problem, ibc, factor = 1):
+    def __init__(self, problem, ibc, systemklass, factor = 1, *args, **kwargs):
         self.problem = problem
         self.etobmanager = ppdd.ddictmanager(ppdd.elementddictinfo(problem.mesh, True), True)
         self.etob = self.etobmanager.getDict()
         self.controller = BasisController(problem.mesh, problem.mqs, self.etob, ibc)
         self.factor = factor
         self.nelements = problem.mesh.nelements
+        self.sysargs = args
+        self.syskwargs = kwargs
+        self.systemklass = systemklass
     
-    def solve(self):
+    def solve(self, solve, *args, **kwargs):
         self.etobmanager.sync()   
         self.EtoB = pcb.ElementToBases(self.etob, self.problem.mesh)
-        self.solution = ps.Computation(self.problem, self.EtoB, False).solve()
+        system = self.systemklass(self.problem, self.basis, *self.sysargs, **self.syskwargs)        
+        x = solve(system, args, kwargs)
+        self.solution = psc.Solution(self.problem, self.EtoB, x)
         return self.solution
     
     def adapt(self):
