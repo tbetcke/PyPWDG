@@ -37,7 +37,7 @@ class LeastSquaresFit(object):
         self.qp, qw = quadrule
         self.qwsqrt = np.sqrt(qw).ravel()
         self.urp = u(self.qp).ravel() * self.qwsqrt
-        self.l2urp = math.sqrt(np.vdot(self.urp,self.urp))
+        self.l2urp = math.sqrt(np.abs(np.vdot(self.urp,self.urp)))
     
     def optimise(self, basis):
         basisvals = basis.values(self.qp) * self.qwsqrt.reshape(-1,1)
@@ -55,7 +55,7 @@ def optimalbasis3(linearopt, basisgenerator, iniparams, penalty = None, finalobj
         return err if penalty is None else np.concatenate((err, penalty(params)))
     
     optparams, a, b, msg,ier  = so.leastsq(nonlinearfn, iniparams.flatten(), full_output = True)     
-    print msg, ier
+#    print msg, ier
     return finalobject(optparams)
     
 @put.print_timing    

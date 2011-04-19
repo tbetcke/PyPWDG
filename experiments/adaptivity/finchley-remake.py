@@ -55,9 +55,9 @@ if __name__ == '__main__':
     qrp(qxw, pcb.circleDirections(4), k)
     
     g = pcb.PlaneWaves(pcb.circleDirections(40)[15], k)
-#    g = pcb.FourierHankel([-1,-0.5], [10], k)
+    g = pcb.FourierHankel([-1,-0.5], [10], k)
     g = pcb.BasisReduce(pcb.PlaneWaves(pcb.circleDirections(20)[[5,8]], k), [3,1])
-#    g = pcb.BasisReduce(pcb.BasisCombine([pcb.FourierHankel([-1,-0.5], [0], k), pcb.FourierHankel([-0.2,0.5], [0], k)]), [1,1])
+    g = pcb.BasisReduce(pcb.BasisCombine([pcb.FourierHankel([-1,-0.5], [0], k), pcb.FourierHankel([-0.2,0.5], [0], k)]), [1,1])
 #    g = pcb.FourierBessel([0.25,0.25],[20], k)
 
     t1 = prp.findpw(prp.L2Prod(g, qxw, k), D, maxtheta = 1)
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     print t1
     print t2
 
-    theta, proj, projd, projdd = pwproduniform(g2, qxw, k, 500)
+    theta, proj, projd, projdd = pwproduniform(g, qxw, k, 500)
 #    print errs[0]
     mp.plot(theta, proj[0])
 #    mp.plot(theta, projd[0])

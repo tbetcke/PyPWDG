@@ -1,9 +1,11 @@
 import pypwdg.setup.problem as psp
+import pypwdg.setup.computation as psc
 import pypwdg.core.bases as pcb
 import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
 import pypwdg.adaptivity.adaptivity as paa
-import pypwdg.adaptivity.scripts as pas
+import pypwdg.core.physics as pcp
+import pypwdg.output.solution as pos
 import pypwdg.parallel.main
 
 from numpy import array,sqrt
@@ -20,7 +22,10 @@ npoints=array([200,200])
 
 mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 
-problem=psp.Problem(mesh,k,20, bnddata)
+quadpoints = 15
+
+problem=psp.Problem(mesh,k, bnddata)
 ibc = paa.InitialPWFBCreator(mesh,k,3,7)
-pas.runadaptive(problem, ibc, "squarescatt", 6, bounds, npoints)
+computation = paa.AdaptiveComputation(problem, ibc, pcp.HelmholtzSystem, quadpoints, 1)
+computation.solve(psc.DirectSolver().solve, 6, pos.AdaptiveOutput1(computation, quadpoints, bounds, npoints, "squarescatt").output)
 

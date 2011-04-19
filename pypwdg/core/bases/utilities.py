@@ -131,7 +131,7 @@ class ElementToBases(object):
         """ Return the values of the basis for element eid at points"""
         bases = self.etob.get(eid)
         if bases==None:
-            return np.zeros(len(points),0)
+            return np.zeros((len(points),0))
         else:
             return np.hstack([b.values(points) for b in bases])
     
@@ -142,7 +142,7 @@ class ElementToBases(object):
         """
         bases = self.etob.get(eid)
         if bases==None:
-            return np.zeros(len(points),0) if normal is not None else np.zeros(len(points), 0, points.shape[1])
+            return np.zeros((len(points),0)) if normal is not None else np.zeros((len(points), 0, points.shape[1]))
         else:
             return np.hstack([b.derivs(points, normal) for b in bases])
     
