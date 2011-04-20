@@ -28,11 +28,11 @@ def reflect(linedir, planedirs):
 class HomogenousTrace(object):
     ''' Knows how to trace through one element assuming homogenous material data''' 
     
-    def __init__(self, mesh, reflectingbdys):
+    def __init__(self, mesh, nonreflecting):
         self.mesh = mesh
-        self.reflectingfaces =  np.zeros(mesh.nfaces,dtype=bool)
-        for e in reflectingbdys:
-            self.reflectingfaces[mesh.entityfaces[e].diagonal()!=0] = True        
+        self.reflectingfaces = np.array((mesh.boundary.diagonal() == 1), dtype=bool)
+        for e in nonreflecting:
+            self.reflectingfaces[mesh.entityfaces[e].diagonal()!=0] = False        
         self.neighbourface = mesh.connectivity * np.arange(1, mesh.nfaces+1, dtype=int) - 1
                 
     def trace(self, face, point, direction):

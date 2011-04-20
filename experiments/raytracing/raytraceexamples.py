@@ -1,16 +1,19 @@
+'''
+Created on Apr 20, 2011
+
+@author: joel
+'''
 import pypwdg.core.bases as pcb
 import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
 import pypwdg.setup.problem as psp
-import pypwdg.setup.computation as psc
-import pypwdg.core.physics as pcp
-import pypwdg.output.solution as pos
+import pypwdg.output.basis as pob
 import pypwdg.raytrace.control as prc
 import pypwdg.parallel.main
 
 from numpy import array,sqrt
 
-k = 15
+k = 30
 direction=array([[1.0,1.0]])/sqrt(2)
 g = pcb.PlaneWaves(direction, k)
 
@@ -23,6 +26,7 @@ npoints=array([200,200])
 mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 problem = psp.Problem(mesh, k, bnddata)
 
-computation = psc.Computation(problem, pcb.planeWaveBases(2,k,15), pcp.HelmholtzSystem, 20)
-solution = computation.solution(psc.DirectSolver().solve)
-pos.standardoutput(computation, solution, 20, bounds, npoints, 'soundsoft')
+etods = prc.tracemesh(problem, 30, {10:lambda x:direction})
+etob = [[pcb.PlaneWaves(array(ds), k)] for ds in etods]
+
+pob.vtkbasis(mesh, etob, 'tracedirs.vtu', None)

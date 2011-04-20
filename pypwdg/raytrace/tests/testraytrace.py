@@ -43,17 +43,17 @@ class TestRayTrace(unittest.TestCase):
         for n in range(1,10):
             mesh = tum.regularsquaremesh(n, "BDY")
             faces = mesh.entityfaces["BDY"]
-            tracer = pre.HomogenousTrace(mesh, ["BDY"])
+            tracer = pre.HomogenousTrace(mesh, [])
             
             for f in faces.tocsr().indices:
                 if np.dot(mesh.normals[f], (-1,0)) > 0.5: # look for a face on the left side of the cube
                     point = mesh.directions[f][0] + np.sum(mesh.directions[f][1:-1], axis=0)/2.0 # pick a point in the middle
-                    etods = prc.trace(point, [1,0], f, tracer, 6, -1)
+                    etods = prc.trace(f, point, [1,0], tracer, 6, -1)
                     self.assertEquals(len(etods), 2*n) # one strip contains 2n triangles
                     self.assertEquals(sum([len(ds) for ds in etods.values()]), 2*n*6+1) # each triangle should be painted 6 times, +1 for final reflection
                     
-                    etods = prc.trace(point, [math.sqrt(2),1], f, tracer, -1, 100)
-                    self.assertEquals(sum([len(ds) for ds in etods.values()]), 100) # we should manage to have painted 100 elements
+                    etods = prc.trace(f, point, [math.sqrt(2),1], tracer, -1, 100)
+                    self.assertEquals(sum([len(ds) for ds in etods.values()]), 100) # we should have managed to paint 100 elements
                     break
             
             

@@ -87,7 +87,7 @@ def findpw(ips, diameter, threshold = 0.2, maxtheta = 0):
     for i in range(5):
         f, fd, fdd = ips.products(theta)
         theta = theta - fd[0] / fdd[0]
-        print i, np.vstack((theta, f[0], fd[0], fdd[0])).T
+#        print i, np.vstack((theta, f[0], fd[0], fdd[0])).T
         notclose = np.abs(np.fmod((np.roll(theta,-1) - theta), 2*math.pi)) > (math.pi / (10 *n)) if len(theta) > 1 else theta==theta
         if len(theta) == 2 and notclose.any(): notclose = [True, False]
         notsmall = f[0] >= thresh2 
