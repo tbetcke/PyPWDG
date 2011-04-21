@@ -4,7 +4,7 @@ Created on Apr 18, 2011
 @author: joel
 '''
 import pypwdg.raytrace.element as pre
-import pypwdg.raytrace.planewave as prp
+import pypwdg.adaptivity.planewave as pap
 import pypwdg.utils.quadrature as puq
 import pypwdg.mesh.meshutils as pmmu
 
@@ -43,7 +43,7 @@ def tracefrombdy(problem, bdy, mqs, maxspace, dotrace):
     for f in faces.tocsr().indices:            
         qp = mqs.quadpoints(f)
         qw = mqs.quadweights(f)
-        thetas = prp.findpw(prp.L2Prod(problem.bnddata[bdy], (qp,qw), problem.k), 2, threshold = 0.2, maxtheta = 2)
+        thetas = pap.findpw(pap.L2Prod(problem.bnddata[bdy], (qp,qw), problem.k), 2, threshold = 0.2, maxtheta = 2)
         dirs = np.vstack([np.cos(thetas), np.sin(thetas)]).T
         n = problem.mesh.normals[f]
         ips = -np.dot(dirs, n)
@@ -66,7 +66,7 @@ def tracefrombdy2(problem, bdy, inidirs, pointsperface, dotrace):
             dir = inidirs(p).squeeze()
             dotrace(f, p, dir)
         
-def tracemesh(problem, quadpoints, sources):
+def tracemesh(problem, sources):
     etods = [[] for _ in range(problem.mesh.nelements)]
     tracer = pre.HomogenousTrace(problem.mesh, sources.keys())
     def dotrace(f, p, dir):
@@ -77,7 +77,7 @@ def tracemesh(problem, quadpoints, sources):
         
     for bdy, inidirs in sources.iteritems():
         tracefrombdy2(problem, bdy, inidirs, 3, dotrace)
-    return etods
+    return dict([(e, np.array(ds).reshape(-1, problem.mesh.dim)) for e, ds in enumerate(etods)])
 
         
         

@@ -12,7 +12,7 @@ def absderivs(f, df, ddf, scale = 1):
 class L2Prod(object):
     def __init__(self, g, qxw, k):
         self.qx, qw = qxw    
-        gv = g.values(self.qx).reshape(-1,1) 
+        gv = g(self.qx).reshape(-1,1) 
         self.k = k
         self.gvqw = gv * qw.reshape(-1,1)    
         self.pwnorm2 = sum(qw)

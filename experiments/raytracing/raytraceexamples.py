@@ -14,7 +14,8 @@ import pypwdg.parallel.main
 from numpy import array,sqrt
 
 k = 30
-direction=array([[1.0,1.0]])/sqrt(2)
+#direction=array([[1.0,1.0]])/sqrt(2)
+direction=array([[3,4]])/5.0
 g = pcb.PlaneWaves(direction, k)
 
 bnddata={11:pcbd.zero_dirichlet(),
@@ -26,7 +27,7 @@ npoints=array([200,200])
 mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 problem = psp.Problem(mesh, k, bnddata)
 
-etods = prc.tracemesh(problem, 30, {10:lambda x:direction})
+etods = prc.tracemesh(problem, {10:lambda x:direction})
 etob = [[pcb.PlaneWaves(array(ds), k)] for ds in etods]
 
 pob.vtkbasis(mesh, etob, 'tracedirs.vtu', None)

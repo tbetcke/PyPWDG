@@ -54,7 +54,7 @@ class UniformBasisRule(object):
 
 class FourierBesselBasisRule(object):
     ''' Creates bases consisting of a Fourier-Bessel basis on each element'''
-    def __init__(self, k, orders, mesh):
+    def __init__(self, orders):
         self.orders = orders
     
     def populate(self, einfo):
@@ -90,8 +90,11 @@ class ElementInfo(object):
     
     def __init__(self, mesh, k):
         self.mesh = mesh
-        self.k = k
+        self.kk = k
         self.mems = pmmu.MeshElementMaps(mesh)
+    
+    def k(self, e):
+        return self.kk    
     
     def kp(self, e):
         return lambda p: self.k
