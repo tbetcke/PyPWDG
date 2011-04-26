@@ -30,7 +30,7 @@ class BasisController(object):
     @ppd.parallelmethod(None, None)
     def populate(self, einfo):
         dirs = self.etods[einfo.elementid]
-        print dirs
+#        print dirs
         pw = [pcb.PlaneWaves(dirs,einfo.k)] if len(dirs) else []
         fb = self.fbrule.populate(einfo)
         return pw + fb

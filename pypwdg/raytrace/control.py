@@ -30,12 +30,14 @@ def trace(face, point, direction, tracer, maxref=5, maxelts=-1):
         nextinfo = tracer.trace(face, point, np.array(direction))
 #        print nextinfo, nelts
         if nextinfo is None: break
-        e, face, point, direction = nextinfo 
+        e, face, point, nextdir = nextinfo 
         if laste==e: nrefs-=1
         eds = etods.setdefault(e, [])
+ #       print eds
         if newdir(eds, direction): eds.append(direction) 
         nelts-=1
         laste = e
+        direction = nextdir
     return etods
 
 def tracefrombdy(problem, bdy, mqs, maxspace, dotrace):

@@ -119,7 +119,28 @@ class Mesh(object):
         self._connectivity.eliminate_zeros()
         self._internal = self._connectivity **2
         self._boundary = ss.eye(self.nfaces, self.nfaces) - self._internal
+        self._boundary.eliminate_zeros()
         self.elttofaces = ss.csr_matrix((numpy.ones(self.nfaces), numpy.concatenate(self.etof), numpy.cumsum([0] + map(len, self.etof))))
+        
+        
+        self.entities = set()
+        self.faceentities = np.empty(self.nfaces, dtype=object)
+        
+        vtof = ftov.transpose().tocsr()        
+        for entityid, bnodes in boundaries:
+            vs = set(bnodes)
+            for v in vs:
+                for f in vtof.getrow(v).indices:
+                    if vs.issuperset(self.faces[f]): 
+                        self.entities.add(entityid)            
+                        self.faceentities[f] = entityid
+                
+        bdyunassigned = self._boundary.getnnz() - len(self.faceentities.nonzero()[0])        
+        if bdyunassigned:
+            print "Warning: %s non-internal faces not assigned to physical entities"%bdyunassigned
+            print [self.faces[id] for id in self._boundary.diagonal().nonzero()[0] if self.faceentities[id]==None]
+
+        
         self.meshpart = MeshPart(self)
     
     def partitions(self,nparts):
@@ -161,21 +182,6 @@ class MeshPart(object):
         fpindex[self.fs] = 1
         self.fp = ss.spdiags(fpindex, [0], mesh.nfaces, mesh.nfaces)
         
-        boundaryids = (self.fp * mesh._boundary).diagonal().nonzero()[0]
-        
-        entities = set()
-        faceentities = np.array([None] * mesh.nfaces)
-        
-        for entityid, bnodes in mesh.boundaries:
-            entities.add(entityid)
-            faceentities[boundaryids[(mesh.faces[boundaryids]==bnodes).all(axis=1)]] = entityid
-        
-        self.entityfaces = dict([(entity, ss.spdiags((faceentities == entity) * 1, [0], mesh.nfaces, mesh.nfaces)) for entity in entities])
-        
-        bdyunassigned = len(boundaryids) - len(faceentities.nonzero()[0])        
-        if bdyunassigned:
-            print "Warning: %s non-internal faces not assigned to physical entities"%bdyunassigned
-            print [self.faces[id] for id in boundaryids if faceentities[id]==None]
 
 #        self.directions = ma.masked_all((mesh.nfaces, mesh.dim+1, mesh.dim))
 #        self.normals = ma.masked_all((mesh.nfaces, mesh.dim))
@@ -186,6 +192,8 @@ class MeshPart(object):
         ne[eltpartition] = 0
         self.neighbourelts = ne.nonzero()[0]
         self.__compute_facedata(relevantfaces)
+        self.entityfaces = dict([(entity, self.fp * ss.spdiags((mesh.faceentities == entity) * 1, [0], mesh.nfaces, mesh.nfaces)) for entity in mesh.entities])
+
 #        print "connectivity, ", self.connectivity
         
     
