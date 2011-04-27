@@ -30,10 +30,11 @@ class HomogenousTrace(object):
     
     def __init__(self, mesh, nonreflecting):
         self.mesh = mesh
-        self.reflectingfaces = np.array((mesh.boundary.diagonal() == 1), dtype=bool)
+        self.reflectingfaces = mesh.faceentities != [None]
+        print mesh.faceentities != None
         for e in nonreflecting:
-            self.reflectingfaces[mesh.entityfaces[e].diagonal()!=0] = False        
-        self.neighbourface = mesh.connectivity * np.arange(1, mesh.nfaces+1, dtype=int) - 1
+            self.reflectingfaces[mesh.faceentities == e] = False        
+        self.neighbourface = mesh._connectivity * np.arange(1, mesh.nfaces+1, dtype=int) - 1
                 
     def trace(self, face, point, direction):
         ''' Given an input face, a point on the face and a direction trace a path through the relevant element
