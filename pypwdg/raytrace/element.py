@@ -31,7 +31,6 @@ class HomogenousTrace(object):
     def __init__(self, mesh, nonreflecting):
         self.mesh = mesh
         self.reflectingfaces = mesh.faceentities != [None]
-        print mesh.faceentities != None
         for e in nonreflecting:
             self.reflectingfaces[mesh.faceentities == e] = False        
         self.neighbourface = mesh._connectivity * np.arange(1, mesh.nfaces+1, dtype=int) - 1

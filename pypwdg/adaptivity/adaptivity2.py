@@ -7,6 +7,7 @@ import pypwdg.parallel.decorate as ppd
 import pypwdg.parallel.distributeddict as ppdd
 import pypwdg.core.bases as pcb
 import pypwdg.setup.computation as psc
+import pypwdg.setup.problem as psp
 import pypwdg.adaptivity.planewave as pap
 
 import pypwdg.utils.quadrature as puq
@@ -37,8 +38,10 @@ class BasisController(object):
             
     @ppd.parallelmethod(None, None)
     def adapt(self, basis, x):
-        for e in self.etods.keys():            
-            g = lambda p: np.dot(basis.getValues(e, p), x[basis.indices[e]:basis.indices[e] + basis.sizes[e]])            
+        for e in self.mesh.es:            
+            def g(p):
+#                print basis.getValues(e,p).shape, x[basis.indices[e]:basis.indices[e] + basis.sizes[e]].shape
+                return np.dot(basis.getValues(e, p), x[basis.indices[e]:basis.indices[e] + basis.sizes[e]])            
             ips = pap.L2Prod(g, (self.mqs.quadpoints(e), self.mqs.quadweights(e)), self.k)
             dirs = pap.findpwds(ips, diameter = 2, threshold = 0.05, maxtheta = 5)
             self.etods[e] = dirs.transpose() 
@@ -54,7 +57,7 @@ class AdaptiveComputation(object):
     
     def solve(self, solve, nits, output = None, *args, **kwargs):
         for i in range(nits):
-            self.problem.populateBasis(self.etob, self.controller)
+            psp.localPopulateBasis(self.etob, self.controller, self.problem)
             self.etobmanager.sync()   
             basis = pcb.ElementToBases(self.etob, self.problem.mesh)
             system = self.createsys(basis)

@@ -200,7 +200,7 @@ class Mesh(object):
         normals *= (-numpy.sign(numpy.sum(normals * directions[:,-1,:], axis = 1)) / dets ).reshape((-1,1))
         return directions, normals, dets
     
-#    es = property(lambda self: self.meshpart.es) 
+    es = property(lambda self: self.meshpart.es) 
     fs = property(lambda self: self.meshpart.fs)
     connectivity = property(lambda self: self.meshpart.fp * self._connectivity) 
     internal = property(lambda self: self.meshpart.fp * self._internal)

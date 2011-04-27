@@ -43,8 +43,7 @@ def trace(tp, tracer, maxref=5, maxelts=-1):
     return etods
 
 def etodcombine(etod1,etod2):
-    for e,ds2 in etod2:
-        ds1 = etod1.setdefault(e,[])
+    for ds1, ds2 in zip(etod1, etod2):
         for d in ds2:
             if newdir(ds1, d): ds1.append(d)
     return etod1
@@ -62,9 +61,8 @@ def dotrace(problem, tracepoints, tracer):
     return etods
 
 def getstartingtracepoints(problem, bdy, inidirs, pointsperface):
-    faces = problem.mesh.entityfaces[bdy]   
     tracepoints = []     
-    for f in faces.tocsr().indices:  
+    for f in problem.mesh.faceentities.nonzero()[0]:  
         refp = np.linspace(0,1,pointsperface+1)[1:-1]
         facedirs = problem.mesh.directions[f]
         facep = facedirs[0] + np.dot(refp.reshape(-1,1), facedirs[[1]])
