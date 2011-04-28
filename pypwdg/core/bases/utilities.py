@@ -60,6 +60,16 @@ class FourierBesselBasisRule(object):
     def populate(self, einfo):
         import pypwdg.core.bases.definitions as pcbb        
         return [pcbb.FourierBessel(einfo.origin,self.orders,einfo.k)]
+    
+class GeomIdBasisRule(object):
+    '''Takes a dictionary {Id:BasisRule} to define different basis rules for different geometric identities'''
+    
+    def __init__(self,basisDict):
+        self.basisDict=basisDict
+        
+    def populate(self,einfo):
+        return self.basisDict[einfo.geomId].populate(einfo)
+        
 
 class ProductBasisRule(object):
     ''' Creates bases which are the product of two underlying bases on each element'''
@@ -107,6 +117,9 @@ class ElementInfo(object):
     
     def info(self, e):
         return Info(e, self)
+    
+    def geomId(self,e):
+        return self.mesh.elemIdentity[e]
     
 @ppd.parallel(None, None)
 def localConstructBasis(mesh, etob, basisrule, elementinfo):

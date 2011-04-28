@@ -16,50 +16,64 @@ def newdir(olddirs, d):
 
 TracePoint = cs.namedtuple('TracePoint', 'face, point, direction')
 
-def trace(tp, tracer, maxref=5, maxelts=-1):
-    ''' Given a starting point on a face and direction, trace a ray through a mesh.  
-    
-    tracer: object with a trace method
-    maxref: maximum number of reflections
-    maxelts: maximum number of elements to trace
-    '''
-    etods = {}
-    nrefs = maxref # number of remaining reflections allowed
-    nelts = maxelts # number of remaining elets allowed
-    laste = -1
-    face, point, direction = tp
-    while (nrefs !=0 and nelts !=0):
-        nextinfo = tracer.trace(face, point, np.array(direction))
-#        print nextinfo, nelts
-        if nextinfo is None: break
-        e, face, point, nextdir = nextinfo 
-        if laste==e: nrefs-=1
-        eds = etods.setdefault(e, [])
-#       print eds
-        if newdir(eds, direction): eds.append(direction) 
-        nelts-=1
-        laste = e
-        direction = nextdir
-    return etods
-
 def etodcombine(etod1,etod2):
     for ds1, ds2 in zip(etod1, etod2):
         for d in ds2:
             if newdir(ds1, d): ds1.append(d)
     return etod1
 
-@ppd.parallel(lambda n: lambda problem, tracepoints, tracer: [((problem, tp, tracer),{}) for tp in ppd.partitionlist(n, tracepoints)],
-              etodcombine)
-def dotrace(problem, tracepoints, tracer):
-    etods = [[] for _ in range(problem.mesh.nelements)]
-    for tp in tracepoints:
-        for e, d1s in trace(tp, tracer).iteritems(): 
-            d2s = etods[e]
-            for d in d1s: 
-                if newdir(d2s, d): d2s.append(d)
-                
-    return etods
-
+@ppd.distribute(lambda n: lambda problem, tracepoints, tracer: [((problem, tp, tracer),{}) for tp in ppd.partitionlist(n, tracepoints)],)
+class RayTracing(object):
+    
+    def __init__(self, problem, tracepoints, tracer):
+        self.etods = [[] for _ in range(problem.mesh.nelements)]
+        self.reflections = []
+        self.tracer = tracer
+        for tp in tracepoints: self.trace(tp) 
+    
+    def adddir(self, e, dir):
+        dirs = self.etods[e]
+        if newdir(dirs, dir):
+            dirs.append(dir)
+            return True
+        return False
+    
+    def trace(self, tp, maxref=5, maxelts=-1):
+        ''' Given a starting point on a face and direction, trace a ray through a mesh.  
+        
+        tracer: object with a trace method
+        maxref: maximum number of reflections
+        maxelts: maximum number of elements to trace
+        '''
+        reflections = []
+        nrefs = maxref # number of remaining reflections allowed
+        nelts = maxelts # number of remaining elets allowed
+        laste = -1
+        face, point, direction = tp
+        while (nrefs !=0 and nelts !=0):
+            nextinfo = self.tracer.trace(face, point, np.array(direction))
+    #        print nextinfo, nelts
+            if nextinfo is None: break
+            e, nextface, point, nextdir = nextinfo 
+            if laste==e: # the ray was reflected 
+                nrefs-=1
+                reflections.append((face, direction))
+                    
+            self.adddir(e, direction) 
+            nelts-=1
+            laste = e
+            face = nextface
+            direction = nextdir
+    
+    @ppd.parallelmethod(None, etodcombine)
+    def getDirections(self):
+        return self.etods
+    
+    @ppd.parallelmethod()
+    def getReflections(self):
+        return self.reflections
+        
+    
 def getstartingtracepoints(problem, bdy, inidirs, pointsperface):
     tracepoints = []     
     for f in problem.mesh.faceentities.nonzero()[0]:  
@@ -71,6 +85,12 @@ def getstartingtracepoints(problem, bdy, inidirs, pointsperface):
             tracepoints.append(TracePoint(f, p, dir))
     return tracepoints
 
+def processreflections(problem, reflections):
+    for f, d in reflections:
+        
+    
+    
+
 @put.print_timing        
 def tracemesh(problem, sources):
     tracer = pre.HomogenousTrace(problem.mesh, sources.keys())
@@ -78,7 +98,9 @@ def tracemesh(problem, sources):
     for bdy, inidirs in sources.iteritems():
         tracepoints.extend(getstartingtracepoints(problem, bdy, inidirs, 3))
     
-    etods = dotrace(problem, tracepoints, tracer)
+    rt = RayTracing(problem, tracepoints, tracer)
+    etods = rt.getDirections()
+    
     return dict([(e, np.array(ds).reshape(-1, problem.mesh.dim)) for e, ds in enumerate(etods)])
 
 #def tracefrombdy(problem, bdy, mqs, maxspace, dotrace):

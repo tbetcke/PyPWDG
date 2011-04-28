@@ -7,6 +7,7 @@ Created on Apr 15, 2011
 import numpy as np
 import pypwdg.utils.geometry as pug
 import pypwdg.output.basis as pob
+import pypwdg.core.errors as pce
 
 def writeSolutionVTK(solution, bounds, npoints, realdata=True, fname='solution.vti'):
     from pypwdg.output.vtk_output import VTKStructuredPoints
@@ -23,13 +24,11 @@ def writeSolutionVTK(solution, bounds, npoints, realdata=True, fname='solution.v
 def standardoutput(computation, solution, quadpoints, bounds, npoints, fileroot):
     ''' Dumps the solution to a file and also writes the errors out on a mesh'''
     mesh = computation.problem.mesh
+    errors = pce.combinedError(computation.problem, solution, quadpoints, solution.x)[0]
+    print "Combined Error: ",np.sqrt(sum(errors**2))
     try:
-        writeSolutionVTK(solution, bounds, npoints, fname = fileroot +'.vti')
-        
-        import pypwdg.core.errors as pce
+        writeSolutionVTK(solution, bounds, npoints, fname = fileroot +'.vti')        
         import pypwdg.output.vtk_output as pov
-        errors = pce.combinedError(computation.problem, solution, quadpoints, solution.x)[0]
-        print "Combined Error: ",np.sqrt(sum(errors**2))
         pov.VTKGrid(mesh, errors).write(fileroot + '.vtu')
     except ImportError as e:   
         print "Some or all output probably failed: ",e
