@@ -34,11 +34,11 @@ g = pcb.PlaneWaves(direction, k)
 bnddata={15:pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g)}
 
 bounds=array([[-4,4],[-4,4]],dtype='d')
-npoints=array([500,500])
+npoints=array([400,400])
 
 mesh = pmm.gmshMesh('two_circles.msh',dim=2)
 
-quadpoints = 20
+quadpoints = 10
 
 def elementwiseconstant():
     npw = 12
@@ -52,9 +52,16 @@ def elementwiseconstant():
     pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'twocirclesEWC')
     
 def fullyvariable():
-    npw = 12
-    basisrule = pcb.ProductBasisRule(pcbv.PlaneWaveVariableN(pcb.circleDirections(npw)), pcbr.ReferenceBasisRule(pcbr.Dubiner(1)))
-#    basisrule = pcbv.PlaneWaveVariableN(pcb.circleDirections(npw*3))  
+    npw1 = 20
+    npw2 = 20
+    b1 = pcb.ProductBasisRule(pcbv.PlaneWaveVariableN(pcb.circleDirections(npw1)), pcbr.ReferenceBasisRule(pcbr.Dubiner(1)))
+    b2=  pcbv.PlaneWaveVariableN(pcb.circleDirections(npw2))
+    
+    basisDict={11:b2,12:b1}
+    
+    basisrule = pcb.GeomIdBasisRule(basisDict)
+    
+    #basisrule = pcbv.PlaneWaveVariableN(pcb.circleDirections(npw*3))  
     
     entityton = {11:1.0, 12:QuadBubble(1.0, 2.0)}
     problem = psp.VariableNProblem(entityton, mesh, k, bnddata)
