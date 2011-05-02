@@ -10,7 +10,7 @@ import pypwdg.parallel.main
 
 from numpy import array,sqrt
 
-k = 30
+k = 90
 direction=array([[1.0,1.0]])/sqrt(2)
 g = pcb.PlaneWaves(direction, k)
 
