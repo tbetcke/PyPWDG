@@ -28,6 +28,5 @@ mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 problem = psp.Problem(mesh, k, bnddata)
 
 etods = prc.tracemesh(problem, {10:lambda x:direction})
-etob = [[pcb.PlaneWaves(array(ds), k)] for ds in etods]
-
+etob = [[pcb.PlaneWaves(ds, k)] if len(ds) else [] for ds in etods]
 pob.vtkbasis(mesh, etob, 'tracedirs.vtu', None)

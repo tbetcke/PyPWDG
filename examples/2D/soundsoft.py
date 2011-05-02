@@ -10,7 +10,7 @@ import pypwdg.parallel.main
 
 from numpy import array,sqrt
 
-k = 45
+k = 30
 direction=array([[1.0,1.0]])/sqrt(2)
 g = pcb.PlaneWaves(direction, k)
 
@@ -23,6 +23,6 @@ npoints=array([200,200])
 mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 problem = psp.Problem(mesh, k, bnddata)
 
-computation = psc.Computation(problem, pcb.planeWaveBases(2,k,20), pcp.HelmholtzSystem, 20)
+computation = psc.Computation(problem, pcb.planeWaveBases(2,k,11), pcp.HelmholtzSystem, 15)
 solution = computation.solution(psc.DirectSolver().solve)
 pos.standardoutput(computation, solution, 20, bounds, npoints, 'soundsoft')

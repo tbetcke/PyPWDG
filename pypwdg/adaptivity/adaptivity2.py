@@ -60,6 +60,8 @@ class AdaptiveComputation(object):
             psp.localPopulateBasis(self.etob, self.controller, self.problem)
             self.etobmanager.sync()   
             basis = pcb.ElementToBases(self.etob, self.problem.mesh)
+            print "Basis size: ",basis.getIndices()[-1]
+            print "Average basis size: ", basis.getIndices()[-1]*1.0 / self.problem.mesh.nelements
             system = self.createsys(basis)
             x = solve(system, args, kwargs)
             solution = psc.Solution(self.problem, basis, x)  

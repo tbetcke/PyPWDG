@@ -127,11 +127,11 @@ class Mesh(object):
         self.entities = set()
         self.faceentities = np.empty(self.nfaces, dtype=object)
         
-        vtof = ftov.transpose().tocsr()        
+        self.vtof = ftov.transpose().tocsr()        
         for entityid, bnodes in boundaries:
             vs = set(bnodes)
             for v in vs:
-                for f in vtof.getrow(v).indices:
+                for f in self.vtof.getrow(v).indices:
                     if vs.issuperset(self.faces[f]): 
                         self.entities.add(entityid)            
                         self.faceentities[f] = entityid
