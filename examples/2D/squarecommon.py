@@ -1,5 +1,6 @@
 import pypwdg.core.bases as pcb
 import pypwdg.core.bases.reference as pcbr
+import pypwdg.core.bases.variable as pcbv
 import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
 import pypwdg.setup.problem as psp
@@ -34,7 +35,7 @@ npw = 12
 quadpoints = 20
 
 # Original basis:
-basisrule = pcbr.PlaneWaveVariableN(pcb.planeWaveBases(2,k,npw)
+basisrule = pcbv.PlaneWaveVariableN(pcb.uniformdirs(2,npw))
 # Polynomials only:
 #basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(3))
 # Product basis:
