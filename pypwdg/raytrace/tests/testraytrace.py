@@ -49,13 +49,14 @@ class TestRayTrace(unittest.TestCase):
             for f in faces.tocsr().indices:
                 if np.dot(mesh.normals[f], (-1,0)) > 0.5: # look for a face on the left side of the cube
                     point = mesh.directions[f][0] + np.sum(mesh.directions[f][1:-1], axis=0)/2.0 # pick a point in the middle
-                    etods = prc.trace(prc.TracePoint(f, point, [1,0]), tracer, 6, -1)
-                    self.assertEquals(len(etods), 2*n) # one strip contains 2n triangles
-#                    print etods
-                    self.assertEquals(sum([len(ds) for ds in etods.values()]), 4*n) # each triangle should be painted twice
+                    rt = prc.RayTracing(mesh, [prc.TracePoint(f, point, [1,0])], tracer)
+                    etods = rt.getDirections()
+                    lengths = np.array(map(len, etods))
+                    self.assertEquals(len(lengths.nonzero()[0]), 2*n) # one strip contains 2n triangles
+                    self.assertEquals(sum(lengths), 4*n) # each triangle should be painted twice
                     
-                    etods = prc.trace(prc.TracePoint(f, point, [math.sqrt(2),1]), tracer, -1, 100)
-                    self.assertLessEqual(sum([len(ds) for ds in etods.values()]), 100) # we should have managed to paint 100 elements
+                    etods = prc.RayTracing(mesh, [prc.TracePoint(f, point, [math.sqrt(2),1])], tracer, -1, 100).getDirections()
+                    self.assertLessEqual(sum(map(len, etods)), 100) # we should have managed to paint 100 elements
                     break
             
             

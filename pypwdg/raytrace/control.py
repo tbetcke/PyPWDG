@@ -23,14 +23,14 @@ def etodcombine(etod1,etod2):
             if newdir(ds1, d): ds1.append(d)
     return etod1
 
-@ppd.distribute(lambda n: lambda problem, tracepoints, tracer: [((problem, tp, tracer),{}) for tp in ppd.partitionlist(n, tracepoints)],)
+@ppd.distribute(lambda n: lambda mesh, tracepoints, tracer: [((mesh, tp, tracer),{}) for tp in ppd.partitionlist(n, tracepoints)],)
 class RayTracing(object):
     
-    def __init__(self, problem, tracepoints, tracer):
-        self.etods = [[] for _ in range(problem.mesh.nelements)]
+    def __init__(self, mesh, tracepoints, tracer, maxref = 5, maxelts = -1):
+        self.etods = [[] for _ in range(mesh.nelements)]
         self.reflections = []
         self.tracer = tracer
-        for tp in tracepoints: self.trace(tp) 
+        for tp in tracepoints: self.trace(tp,maxref, maxelts) 
     
     def adddir(self, e, dir):
         dirs = self.etods[e]
@@ -39,7 +39,7 @@ class RayTracing(object):
             return True
         return False
     
-    def trace(self, tp, maxref=5, maxelts=-1):
+    def trace(self, tp, maxref, maxelts):
         ''' Given a starting point on a face and direction, trace a ray through a mesh.  
         
         tracer: object with a trace method
@@ -123,10 +123,10 @@ def tracemesh(problem, sources):
     for bdy, inidirs in sources.iteritems():
         tracepoints.extend(getstartingtracepoints(problem, bdy, inidirs, 3))
     
-    rt = RayTracing(problem, tracepoints, tracer)
+    rt = RayTracing(problem.mesh, tracepoints, tracer)
     etods = rt.getDirections()
     diffpoints = processreflections(problem, rt.getReflections())
-    rtdiff = RayTracing(problem, diffpoints, tracer)
+    rtdiff = RayTracing(problem.mesh, diffpoints, tracer)
 #    print rtdiff.getDirections()
     etodcombine(etods, rtdiff.getDirections())
     return [np.array(ds).reshape(-1, problem.mesh.dim) for ds in etods]
