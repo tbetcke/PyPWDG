@@ -54,7 +54,7 @@ class UniformBasisRule(object):
 
 class FourierBesselBasisRule(object):
     ''' Creates bases consisting of a Fourier-Bessel basis on each element'''
-    def __init__(self, k, orders, mesh):
+    def __init__(self, orders):
         self.orders = orders
     
     def populate(self, einfo):
@@ -100,8 +100,11 @@ class ElementInfo(object):
     
     def __init__(self, mesh, k):
         self.mesh = mesh
-        self.k = k
+        self.kk = k
         self.mems = pmmu.MeshElementMaps(mesh)
+    
+    def k(self, e):
+        return self.kk    
     
     def kp(self, e):
         return lambda p: self.k
@@ -144,7 +147,7 @@ class ElementToBases(object):
         """ Return the values of the basis for element eid at points"""
         bases = self.etob.get(eid)
         if bases==None:
-            return np.zeros(len(points),0)
+            return np.zeros((len(points),0))
         else:
             return np.hstack([b.values(points) for b in bases])
     
@@ -155,7 +158,7 @@ class ElementToBases(object):
         """
         bases = self.etob.get(eid)
         if bases==None:
-            return np.zeros(len(points),0) if normal is not None else np.zeros(len(points), 0, points.shape[1])
+            return np.zeros((len(points),0)) if normal is not None else np.zeros((len(points), 0, points.shape[1]))
         else:
             return np.hstack([b.derivs(points, normal) for b in bases])
     

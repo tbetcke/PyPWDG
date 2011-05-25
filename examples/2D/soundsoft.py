@@ -5,6 +5,7 @@ import pypwdg.setup.problem as psp
 import pypwdg.setup.computation as psc
 import pypwdg.core.physics as pcp
 import pypwdg.output.solution as pos
+import pypwdg.raytrace.control as prc
 import pypwdg.parallel.main
 
 from numpy import array,sqrt
@@ -20,8 +21,12 @@ bounds=array([[-2,2],[-2,2]],dtype='d')
 npoints=array([200,200])
 
 mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
-
 problem = psp.Problem(mesh, k, bnddata)
+<<<<<<< HEAD
 computation = psc.Computation(problem, pcb.planeWaveBases(2,k,40), pcp.HelmholtzSystem, 20)
+=======
+
+computation = psc.Computation(problem, pcb.planeWaveBases(2,k,11), pcp.HelmholtzSystem, 15)
+>>>>>>> 7a43c9ae946f4ad09b33a31334fe634956cb9d8b
 solution = computation.solution(psc.DirectSolver().solve)
 pos.standardoutput(computation, solution, 20, bounds, npoints, 'soundsoft')
