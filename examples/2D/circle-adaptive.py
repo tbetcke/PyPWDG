@@ -11,7 +11,7 @@ import pypwdg.parallel.main
 
 from numpy import array,sqrt
 
-k = 40
+k = 15
 direction=array([[1.0,1.0]])/sqrt(2)
 g = pcb.PlaneWaves(direction, k)
 
@@ -23,7 +23,7 @@ npoints=array([200,200])
 
 mesh = pmm.gmshMesh('circscatt.msh',dim=2)
 
-quadpoints = 15
+quadpoints = 10
 
 problem=psp.Problem(mesh,k, bnddata)
 etods = prc.tracemesh(problem, {12:lambda x:direction})
