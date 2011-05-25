@@ -6,9 +6,12 @@ Created on 1 Nov 2010
 import pypwdg.parallel.decorate as ppd
 import pypwdg.parallel.distributeddict as ppdd
 import pypwdg.core.bases as pcb
-import pypwdg.setup as ps
+import pypwdg.setup.computation as psc
 import pypwdg.utils.optimisation as puo
 import pypwdg.utils.optx as puoptx
+
+import pypwdg.utils.quadrature as puq
+import pypwdg.mesh.meshutils as pmmu
 
 import numpy as np
 
@@ -73,9 +76,11 @@ class InitialPWFBCreator(object):
 @ppd.distribute()
 class BasisController(object):
     
-    def __init__(self, mesh, mqs, etob, ibc):
-        self.mqs = mqs
+    def __init__(self, mesh, quadpoints, etob, ibc):
         self.mesh = mesh
+        fquad, _ = puq.quadrules(mesh.dim, quadpoints)
+        self.mqs = pmmu.MeshQuadratures(mesh, fquad)
+
         self.etobc = dict([(e, ibc(e)) for e in mesh.partition])
         self.etonbcs = {}
         self.etob = etob
@@ -119,23 +124,36 @@ class BasisController(object):
 
 class AdaptiveComputation(object):
     
-    def __init__(self, problem, ibc, factor = 1):
+    def __init__(self, problem, ibc, systemklass, quadpoints, factor = 1, *args, **kwargs):
         self.problem = problem
         self.etobmanager = ppdd.ddictmanager(ppdd.elementddictinfo(problem.mesh, True), True)
         self.etob = self.etobmanager.getDict()
-        self.controller = BasisController(problem.mesh, problem.mqs, self.etob, ibc)
+        self.quadpoints = quadpoints
+        self.controller = BasisController(problem.mesh, quadpoints, self.etob, ibc)
+        self.etobmanager.sync()   
         self.factor = factor
         self.nelements = problem.mesh.nelements
+        self.sysargs = args
+        self.syskwargs = kwargs
+        self.systemklass = systemklass
     
-    def solve(self):
-        self.etobmanager.sync()   
-        self.EtoB = pcb.ElementToBases(self.etob, self.problem.mesh)
-        self.solution = ps.Computation(self.problem, self.EtoB, False).solve()
-        return self.solution
+    def solve(self, solve, nits, output = None, *args, **kwargs):
+        for i in range(nits):
+            basis = pcb.ElementToBases(self.etob, self.problem.mesh)
+            system = self.systemklass(self.problem, basis, self.quadpoints, *self.sysargs, **self.syskwargs)
+            x = solve(system, args, kwargs)
+            solution = psc.Solution(self.problem, basis, x)  
+            if output: output(i, solution)
+            if i == nits-1: break
+            self.adapt(solution)
+            self.etobmanager.sync()   
     
-    def adapt(self):
-        etonbcs = self.controller.getNearbyBases(self.EtoB.indices, self.solution.x)
-        oldn = self.EtoB.indices[-1]
+        return solution
+    
+    def adapt(self, solution):
+        
+        etonbcs = self.controller.getNearbyBases(solution.basis.indices, solution.x)
+        oldn = solution.basis.indices[-1]
         gain = np.ones((self.nelements, 3)) * -1
         gain[:,0] = 0
         bestbcs = np.empty((self.nelements, 3),dtype=int)

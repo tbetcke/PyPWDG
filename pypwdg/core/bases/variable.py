@@ -25,9 +25,12 @@ class EntityNElementInfo(pcbu.ElementInfo):
     def __init__(self, mesh, k, entityton):
         pcbu.ElementInfo.__init__(self, mesh, k)
         self.entityton = entityton
+
+    def k(self, e):
+        return self.kp(self.origin(e))
                     
     def kp(self, e):
         entity = self.mesh.elemIdentity[e]
         n = self.entityton[entity]
-        if callable(n): return lambda p: n(p) * self.k
-        else: return lambda p: n * self.k
+        if callable(n): return lambda p: n(p) * self.kk
+        else: return lambda p: n * self.kk

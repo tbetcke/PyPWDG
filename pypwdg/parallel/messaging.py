@@ -14,7 +14,7 @@ import time
 
 import operator
 
-comm = mpi.COMM_WORLD
+#comm = mpi.COMM_WORLD
 
 class ArrayHandler(object):
     """ An ArrayHandler is used in conjunction with the pickle persistency mechanism to collect numpy arrays so that they

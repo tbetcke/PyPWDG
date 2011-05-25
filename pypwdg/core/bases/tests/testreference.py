@@ -34,7 +34,7 @@ class TestReference(unittest.TestCase):
                 
                 scale = np.max(vd, axis=1).reshape(-1,1)
                 scale[scale==0.0] = 1.0
-                np.testing.assert_array_almost_equal(vhd / scale, vd / scale, decimal = 4)
+                np.testing.assert_array_almost_equal(vhd / scale, vd / scale, decimal = 3)
             
             
                 
