@@ -223,7 +223,7 @@ class Mesh(object):
     
         # this is 100x faster than applying numpy.linalg.norm to each entry
         dets = numpy.sqrt(numpy.sum(normals * normals, axis = 1))
-        if dim==1: dets=ones(dets.shape,dtype=numpy.float64)
+        if self.dim==1: dets=ones(dets.shape,dtype=numpy.float64)
                 
         normals *= (-numpy.sign(numpy.sum(normals * directions[:,-1,:], axis = 1)) / dets ).reshape((-1,1))
         return directions, normals, dets
