@@ -32,12 +32,15 @@ def circleDirections(n):
     return np.hstack((np.cos(theta), np.sin(theta)))
 
 def uniformdirs(dim, npw):
-    if dim==2:
+    
+    if dim==1:
+        return np.array([[1],[-1]],dtype=np.float64)
+    elif dim==2:
         return circleDirections(npw)
-    else:
+    elif dim==3:
         return cubeRotations(cubeDirections(npw))
     
-def planeWaveBases(dim, k, nplanewaves):
+def planeWaveBases(dim, k, nplanewaves=10):
     ''' Return an object that populates a plane wave basis'''
     import pypwdg.core.bases.definitions as pcbb
     dirs = uniformdirs(dim, nplanewaves)

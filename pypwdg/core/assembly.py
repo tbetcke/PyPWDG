@@ -43,6 +43,7 @@ class Assembly(object):
             rv: Right Vandermonde object
             qws: Callable giving quadrature weights for each face
         """
+        
         DD = LocalInnerProducts(lv.getValues, rv.getValues, qws)
         DN = LocalInnerProducts(lv.getValues, rv.getDerivs, qws)
         ND = LocalInnerProducts(lv.getDerivs, rv.getValues, qws)

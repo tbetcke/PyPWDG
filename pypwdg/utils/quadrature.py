@@ -35,7 +35,8 @@ def legendrequadrature(n):
 
 def pointquadrature():
     """Dummy quadrature rule for faces of 1D DG"""
-    return numpy.array([]),numpy.array([1])
+    
+    return numpy.zeros((1,0)),numpy.array([1])
 
 def squarequadrature(n):
     x00,w00 = legendrequadrature(n)

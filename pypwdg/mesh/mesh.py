@@ -11,7 +11,7 @@ import scipy.sparse as ss
 import pypwdg.parallel.decorate as ppd
 from pypwdg.mesh.gmsh_reader import gmsh_reader
 
-def lineMesh(points=[0,1],nelems=[2],physIds=[1],bndIds=[10,11]):
+def lineMesh(points=[0,1],nelems=[20],physIds=[1],bndIds=[10,11]):
     """Construct a mesh from a given interval
     
        INPUT:
@@ -223,9 +223,10 @@ class Mesh(object):
     
         # this is 100x faster than applying numpy.linalg.norm to each entry
         dets = numpy.sqrt(numpy.sum(normals * normals, axis = 1))
-        if self.dim==1: dets=ones(dets.shape,dtype=numpy.float64)
                 
         normals *= (-numpy.sign(numpy.sum(normals * directions[:,-1,:], axis = 1)) / dets ).reshape((-1,1))
+        if self.dim==1: dets=numpy.ones(dets.shape,dtype=numpy.float64)
+
         return directions, normals, dets
     
     es = property(lambda self: self.meshpart.es) 
