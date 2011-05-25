@@ -22,11 +22,6 @@ npoints=array([200,200])
 
 mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 problem = psp.Problem(mesh, k, bnddata)
-<<<<<<< HEAD
-computation = psc.Computation(problem, pcb.planeWaveBases(2,k,40), pcp.HelmholtzSystem, 20)
-=======
-
 computation = psc.Computation(problem, pcb.planeWaveBases(2,k,11), pcp.HelmholtzSystem, 15)
->>>>>>> 7a43c9ae946f4ad09b33a31334fe634956cb9d8b
 solution = computation.solution(psc.DirectSolver().solve)
 pos.standardoutput(computation, solution, 20, bounds, npoints, 'soundsoft')
