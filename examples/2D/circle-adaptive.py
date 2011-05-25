@@ -27,7 +27,7 @@ quadpoints = 15
 
 problem=psp.Problem(mesh,k, bnddata)
 etods = prc.tracemesh(problem, {12:lambda x:direction})
-controller = paa.BasisController(mesh, quadpoints, etods, k, nfb=7)
+controller = paa.BasisController(mesh, quadpoints, etods, k, nfb=5)
 computation = paa.AdaptiveComputation(problem, controller, pcp.HelmholtzSystem, quadpoints, 1)
 computation.solve(psc.DirectSolver().solve, 6, pos.AdaptiveOutput1(computation, quadpoints, bounds, npoints, "circscatt").output)
 

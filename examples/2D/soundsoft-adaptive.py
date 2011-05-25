@@ -11,7 +11,7 @@ import pypwdg.parallel.main
 
 from numpy import array,sqrt
 
-k = 90
+k = 45
 direction=array([[1.0,1.0]])/sqrt(2)
 g = pcb.PlaneWaves(direction, k)
 
@@ -23,12 +23,12 @@ npoints=array([200,200])
 
 mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 
-quadpoints = 30
+quadpoints = 15
 
 problem=psp.Problem(mesh,k, bnddata)
 etods = prc.tracemesh(problem, {10:lambda x:direction})
 controller = paa.BasisController(mesh, quadpoints, etods, k, nfb=5)
-computation = paa.AdaptiveComputation(problem, controller, pcp.HelmholtzSystem, quadpoints, alpha=5,beta=0.05,delta=5)
+computation = paa.AdaptiveComputation(problem, controller, pcp.HelmholtzSystem, quadpoints)
 computation.solve(psc.DirectSolver().solve, 6, pos.AdaptiveOutput1(computation, quadpoints, bounds, npoints, "squarescatt").output)
 
 
