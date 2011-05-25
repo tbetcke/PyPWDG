@@ -38,7 +38,7 @@ npoints=array([400,400])
 
 mesh = pmm.gmshMesh('two_circles.msh',dim=2)
 
-quadpoints = 10
+quadpoints = 15
 
 def elementwiseconstant():
     npw = 12
@@ -52,9 +52,9 @@ def elementwiseconstant():
     pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'twocirclesEWC')
     
 def fullyvariable():
-    npw1 = 20
-    npw2 = 20
-    b1 = pcb.ProductBasisRule(pcbv.PlaneWaveVariableN(pcb.circleDirections(npw1)), pcbr.ReferenceBasisRule(pcbr.Dubiner(1)))
+    npw1 = 15 
+    npw2 = 15
+    b1 = pcb.ProductBasisRule(pcbv.PlaneWaveVariableN(pcb.circleDirections(npw1)),pcbr.ReferenceBasisRule(pcbr.Dubiner(2)))
     b2=  pcbv.PlaneWaveVariableN(pcb.circleDirections(npw2))
     
     basisDict={11:b2,12:b1}

@@ -33,6 +33,10 @@ def legendrequadrature(n):
     x00,w00 = scipy.special.orthogonal.p_roots(n)
     return (x00.reshape(-1,1)+1)/2, w00/2
 
+def pointquadrature():
+    """Dummy quadrature rule for faces of 1D DG"""
+    return numpy.array([]),numpy.array([1])
+
 def squarequadrature(n):
     x00,w00 = legendrequadrature(n)
     g = numpy.mgrid[0:n,0:n].reshape(2,-1)
@@ -41,10 +45,13 @@ def squarequadrature(n):
     return x, w
 
 def quadrules(dim, nquadpoints):
-    if dim == 2:
+    if dim == 1:
+        fquad = pointquadrature()
+        equad = legendrequadrature(nquadpoints)
+    elif dim == 2:
         fquad = legendrequadrature(nquadpoints)
         equad = trianglequadrature(nquadpoints)
-    else:
+    elif dim == 3:
         fquad = trianglequadrature(nquadpoints)
         equad = tetquadrature(nquadpoints)
     

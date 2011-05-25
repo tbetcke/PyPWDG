@@ -11,6 +11,36 @@ import scipy.sparse as ss
 import pypwdg.parallel.decorate as ppd
 from pypwdg.mesh.gmsh_reader import gmsh_reader
 
+def lineMesh(points=[0,1],nelems=[2],physIds=[1],bndIds=[10,11]):
+    """Construct a mesh from a given interval
+    
+       INPUT:
+       points    - An array [p0,p1,...,pN] defining the boundary points
+                   of the physical identities. Have, p0<p1<...<pN. p0 and
+                   pN are global boundary points. The interior points are
+                   boundaries between physical entitites.
+       nelems    - Array of length N defining the number of the elements in
+                   each physical identity
+       physIds   - Array of length N defining the physical Identities of the
+                   elements
+       bndIds    - Array of length 2 defining the boundary identitites
+    """
+    nodes=np.zeros((0,1),dtype=np.float64)
+    for i in range(len(points)-1):
+        nodes=np.vstack((nodes,points[i]+(points[i+1]-points[i])*np.arange(nelems[i],dtype=np.float64).reshape(nelems[i],1)/nelems[i]))
+    nodes=np.vstack((nodes,np.array([points[-1]])))
+    elements=[[i,i+1] for i in range(len(nodes)-1)]    
+    elemIdentity=[]
+    for i in range(len(nelems)): elemIdentity+=[physIds[i]]*nelems[i]
+    boundaries=[(bndIds[0],(0,)),(bndIds[1],(len(nodes)-1,))]
+    return Mesh(nodes, elements, elemIdentity, boundaries, 1)
+    
+    
+    
+        
+    
+
+
 def gmshMesh(fname, dim):
     ''' Construct a Mesh from a gmsh dictionary '''
     
@@ -104,12 +134,14 @@ class Mesh(object):
         # The vertices associated with each face
         faces = numpy.array([tuple(e[0:i]+e[i+1:nev]) for e in elements for i in range(0,nev)])
         self.faces = faces
+        
         # The "opposite" vertex for each face    
         self.nonfacevertex = numpy.array([e[i] for e in elements for i in range(0,nev)])    
         self.ftoe = np.repeat(np.arange(self.nelements), nev)
         
         self.nfaces=len(faces)
         self.etof = np.arange(self.nfaces).reshape((-1,nev))
+        
                 
         ftov = ss.csr_matrix((numpy.ones(self.nfaces * dim), faces.ravel(), np.arange(0, self.nfaces+1)*dim), dtype=int)
         ftov2=(ftov*ftov.transpose()).tocsr() # Multiply to get connectivity.
@@ -172,6 +204,7 @@ class MeshPart(object):
         
         self.entityfaces = dict([(entity, ss.spdiags((faceentities == entity) * 1, [0], mesh.nfaces, mesh.nfaces)) for entity in entities])
         
+        
         bdyunassigned = len(boundaryids) - len(faceentities.nonzero()[0])        
         if bdyunassigned:
             print "Warning: %s non-internal faces not assigned to physical entities"%bdyunassigned
@@ -216,23 +249,31 @@ class MeshPart(object):
         directions = numpy.transpose(dirs, (0,2,1))
         
         normals=numpy.zeros((len(relevantfaces),self.mesh.dim))
+        print directions
         
-        if self.mesh.dim==2:
-            # Put normal vectors 
+        if self.mesh.dim==1:
+            normals[:,0]=directions[:,1,0]
+        elif mesh.dim==2:
             normals[:,0]=directions[:,1,1]
             normals[:,1]=-directions[:,1,0]
-        else:
+        elif mesh.dim==3:
             normals[:,0]=directions[:,1,1]*directions[:,2,2]-directions[:,2,1]*directions[:,1,2]
             normals[:,1]=directions[:,1,2]*directions[:,2,0]-directions[:,1,0]*directions[:,2,2]
             normals[:,2]=directions[:,1,0]*directions[:,2,1]-directions[:,2,0]*directions[:,1,1]
-
+            
+        
+        print normals
+        
         # this is 100x faster than applying numpy.linalg.norm to each entry
         dets = numpy.sqrt(numpy.sum(normals * normals, axis = 1))
                 
         normals *= (-numpy.sign(numpy.sum(normals * directions[:,-1,:], axis = 1)) / dets ).reshape((-1,1))
         self.directions = dict(zip(relevantfaces, directions))
         self.normals = dict(zip(relevantfaces, normals))
-        self.dets = dict(zip(relevantfaces, dets))
+        if self.mesh.dim==1:
+            self.dets=dict(zip(relevantfaces,[1]*len(dets)))
+        else:
+            self.dets = dict(zip(relevantfaces, dets))
 
         
     

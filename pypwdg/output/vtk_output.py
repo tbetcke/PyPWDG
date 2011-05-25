@@ -62,12 +62,22 @@ class VTKGrid(object):
         self.__points.SetNumberOfPoints(mesh.nnodes)
                       
         # Store the points in the VTK Structure
-        if mesh.dim == 2:
+        if mesh.dim == 1:
+            for (i, n) in enumerate(mesh.nodes): self.__points.InsertPoint(i, (n[0], 0.0, 0.0))
+        elif mesh.dim == 2:
             for (i, n) in enumerate(mesh.nodes): self.__points.InsertPoint(i, (n[0], n[1], 0.0))
-        else:
+        elif mesh.dim == 3:
             for (i, n) in enumerate(mesh.nodes): self.__points.InsertPoint(i, (n[0], n[1], n[2]))
+        
+        if mesh.dim == 1:
+            def create_cell(elem):
+                line = vtk.vtkLine()
+                ids = line.GetPointIds()
+                ids.SetId(0, elem[0])
+                ids.SetId(1, elem[1])
+                return line
            
-        if mesh.dim == 2:
+        elif mesh.dim == 2:
             def create_cell(elem):
                 triangle = vtk.vtkTriangle()
                 ids = triangle.GetPointIds()
