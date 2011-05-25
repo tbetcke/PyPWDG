@@ -14,7 +14,7 @@ class PlaneWaveVariableN(object):
         self.dirs = dirs
         
     def populate(self, einfo):
-        return [pcbb.PlaneWaves(self.dirs, einfo.kp(einfo.origin.reshape(1,-1)))]        
+        return [pcbb.PlaneWaves(self.dirs, einfo.k)]        
 
 
 class EntityNElementInfo(pcbu.ElementInfo):
@@ -27,7 +27,7 @@ class EntityNElementInfo(pcbu.ElementInfo):
         self.entityton = entityton
 
     def k(self, e):
-        return self.kp(self.origin(e))
+        return self.kp(e)(self.origin(e))
                     
     def kp(self, e):
         entity = self.mesh.elemIdentity[e]
