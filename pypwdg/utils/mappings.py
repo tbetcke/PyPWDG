@@ -19,7 +19,7 @@ class Affine(object):
     def __calcinverse(self):
         if self.__inverse == None:
             invlinear = nl.inv(self.linear)
-            invoffset = np.dot(self.offset, invlinear)
+            invoffset = -np.dot(self.offset, invlinear)
             self.__inverse = Affine(invoffset, invlinear, self)
         return self.__inverse
     

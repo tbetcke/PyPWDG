@@ -43,3 +43,18 @@ class Dubiner(object):
     
     def derivs(self, x):
         return pup.DubinerTriangle(self.k, x).derivs().transpose([1,2,0])
+    
+class Legendre1D(object):
+    """ 1D basis from Legendre Polynomials"""
+    
+    def __init__(self,n):
+        self.n = n+1
+        
+    def values(self, x):
+        return pup.jacobidnorm(self.n-1,0,0,0,x.ravel())
+    
+    def derivs(self, x):
+        vals=pup.jacobidnorm(self.n-1,0,0,1,x.ravel())
+        return vals[...,np.newaxis]
+    
+    
