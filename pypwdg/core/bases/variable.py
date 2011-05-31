@@ -8,6 +8,8 @@ Created on Apr 12, 2011
 import pypwdg.core.bases.definitions as pcbb        
 import pypwdg.core.bases.utilities as pcbu    
 
+import numpy as np
+
 class PlaneWaveVariableN(object):
     ''' Construct PlaneWave basis objects based on a variable n'''
     def __init__(self, dirs):
@@ -33,4 +35,4 @@ class EntityNElementInfo(pcbu.ElementInfo):
         entity = self.mesh.elemIdentity[e]
         n = self.entityton[entity]
         if callable(n): return lambda p: n(p) * self.kk
-        else: return lambda p: n * self.kk
+        else: return lambda p: np.array([n * self.kk])

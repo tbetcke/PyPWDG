@@ -3,15 +3,17 @@ import pypwdg.setup.computation as psc
 import pypwdg.core.bases as pcb
 import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
+import pypwdg.core.bases.reference as pcbr
 import pypwdg.adaptivity.adaptivity2 as paa
 import pypwdg.core.physics as pcp
 import pypwdg.output.solution as pos
 import pypwdg.raytrace.control as prc
+import pypwdg.output.basis as pob
 import pypwdg.parallel.main
 
 from numpy import array,sqrt
 
-k = 45
+k = 30
 direction=array([[1.0,1.0]])/sqrt(2)
 g = pcb.PlaneWaves(direction, k)
 
@@ -23,17 +25,25 @@ npoints=array([200,200])
 
 mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 
-quadpoints = 15
+quadpoints = 20
+p=3
 
-problem=psp.Problem(mesh,k, bnddata)
+entityton ={9:1}
+problem=psp.VariableNProblem(entityton, mesh,k, bnddata)
 etods = prc.tracemesh(problem, {10:lambda x:direction})
-controller = paa.BasisController(mesh, quadpoints, etods, k, nfb=5)
-computation = paa.AdaptiveComputation(problem, controller, pcp.HelmholtzSystem, quadpoints)
-computation.solve(psc.DirectSolver().solve, 6, pos.AdaptiveOutput1(computation, quadpoints, bounds, npoints, "squarescatt").output)
 
+etob = [[pcb.PlaneWaves(ds, k)] if len(ds) else [] for ds in etods]
+pob.vtkbasis(mesh,etob,'soundsoftrays.vtu',None)
 
-#problem=psp.Problem(mesh,k, bnddata)
-#ibc = paa.InitialPWFBCreator(mesh,k,3,7)
-#computation = paa.AdaptiveComputation(problem, ibc, pcp.HelmholtzSystem, quadpoints, 1)
-#computation.solve(psc.DirectSolver().solve, 6, pos.AdaptiveOutput1(computation, quadpoints, bounds, npoints, "squarescatt").output)
+b=pcb.PlaneWaveFromDirectionsRule(etods)
+b1=pcb.ProductBasisRule(b,pcbr.ReferenceBasisRule(pcbr.Dubiner(p)))
+b2=pcbr.ReferenceBasisRule(pcbr.Dubiner(p))
+
+computation = psc.Computation(problem, b2, pcp.HelmholtzSystem, quadpoints)
+
+#solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
+#pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'soundsoft_pol')
+#print solution.getError('Dirichlet')
+#print solution.getError('Neumann')
+#print solution.getError('Boundary')
 

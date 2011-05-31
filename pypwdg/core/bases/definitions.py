@@ -78,19 +78,24 @@ class FourierHankelBessel(Basis):
 #        print np.hstack((points, points - self.__origin, theta, r, np.exp(1j * self.__orders * theta)))
         return self.rfn(self.__orders,self.__k * r) * np.exp(1j * self.__orders * theta)
     
-    def derivs(self, points, n):
-        poffset = points-self.__origin
-        r,theta = self.rtheta(poffset)
-        ent = np.exp(1j * self.__orders * theta)
-        dr = (self.__k * self.rfnd(self.__orders, self.__k * r, 1) * ent)
-        du = 1j * self.__orders * self.rfn(self.__orders, self.__k *r) * ent
-        x = poffset[:,0].reshape(-1,1)
-        y = poffset[:,1].reshape(-1,1)
-        r2 = r**2
-        Js = np.hstack((x/r, -y/r2, y/r, x/r2)).reshape((-1,1,2,2))
-        nJs = np.sum(n.reshape(-1,1,2,1) * Js, axis=2)        
-        dru = np.concatenate((dr[:,:,np.newaxis], du[:,:,np.newaxis]), axis=2)
-        return np.sum(nJs * dru, axis=2)
+    def derivs(self, points, n=None):
+        if n is None:
+            nx=np.array([1.0,0.0])
+            ny=np.array([0.0,1.0])            
+            return np.hstack((self.derivs(points,nx),self.derivs(points,ny)))[...,np.newaxis,...]
+        else:
+            poffset = points-self.__origin
+            r,theta = self.rtheta(poffset)
+            ent = np.exp(1j * self.__orders * theta)
+            dr = (self.__k * self.rfnd(self.__orders, self.__k * r, 1) * ent)
+            du = 1j * self.__orders * self.rfn(self.__orders, self.__k *r) * ent
+            x = poffset[:,0].reshape(-1,1)
+            y = poffset[:,1].reshape(-1,1)
+            r2 = r**2
+            Js = np.hstack((x/r, -y/r2, y/r, x/r2)).reshape((-1,1,2,2))
+            nJs = np.sum(n.reshape(-1,1,2,1) * Js, axis=2)        
+            dru = np.concatenate((dr[:,:,np.newaxis], du[:,:,np.newaxis]), axis=2)
+            return np.sum(nJs * dru, axis=2)
 
     def __str__(self):
         return "FHB basis "+ str(self.__orders)

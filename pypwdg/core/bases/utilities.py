@@ -66,6 +66,27 @@ class FourierBesselBasisRule(object):
     def populate(self, einfo):
         import pypwdg.core.bases.definitions as pcbb        
         return [pcbb.FourierBessel(einfo.origin,self.orders,einfo.k)]
+
+class PlaneWaveFromDirectionsRule(object):
+    """Takes a list of directions for each element and returns a corresponding
+       Plane Wave basis.
+       
+       If there is no direction for an element a Fourier-Bessel fct. of degree
+       zero is used instead.
+    """
+    
+    def __init__(self, etods):
+        self.etods=etods
+        
+    def populate(self, einfo):
+        import pypwdg.core.bases.definitions as pcbb
+        id=einfo.info.elementid
+        if len(self.etods[id])==0: 
+            return [pcbb.FourierBessel(einfo.origin,0,einfo.k)]
+        else:
+            return [pcbb.PlaneWaves(self.etods[id],einfo.k)]
+        
+        
     
 class GeomIdBasisRule(object):
     '''Takes a dictionary {Id:BasisRule} to define different basis rules for different geometric identities'''
