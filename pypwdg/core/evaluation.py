@@ -67,6 +67,7 @@ class StructuredPointsEvaluator(object):
                 vals[pointidxs] += numpy.dot(v, self.x[vidx0: vidx1])
                 pointcount[pointidxs]+=1
         return self.filter(vals), pointcount
+    
 
 
 

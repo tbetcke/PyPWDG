@@ -33,8 +33,6 @@ def standardoutput(computation, solution, quadpoints, bounds, npoints, fileroot)
     except ImportError as e:   
         print "Some or all output probably failed: ",e
         
-def output1D(computation, solution, quadpoints, bounds, npoints, fileroot):
-    pass
 
 def comparetrue(bounds, npoints, g, solution):
     ''' Compare an approximate solution to the true solution

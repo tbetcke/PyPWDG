@@ -4,6 +4,7 @@ Created on Apr 12, 2011
 @author: joel
 '''
 import pypwdg.core.evaluation as pce
+import pypwdg.core.errors as pces
 import pypwdg.setup.problem as psp
 import numpy as np
 
@@ -74,14 +75,45 @@ class Solution(object):
         self.mesh = problem.mesh
         self.basis = basis
         self.x = x
+        self.problem=problem
+        self.errors=None
         
     def getEvaluator(self, filter = noop):
         return pce.StructuredPointsEvaluator(self.mesh, self.basis, filter, self.x)
                  
-    def evaluate(self, structuredpoints):
-        vals, count = self.getEvaluator().evaluate(structuredpoints)
+    def evaluate(self, structuredpoints, returnPoints=False, filter = noop):
+        vals, count = self.getEvaluator(filter).evaluate(structuredpoints)
         count[count==0] = 1
-        return vals / count
+        if returnPoints:
+            return vals / count, structuredpoints.toArray()
+        else:
+            return vals / count
+     
+    def computeErrors(self,quadpoints=10):
+        d,n,bnd=pces.EvalElementError(self.mesh,quadpoints,self.basis,self.problem.bnddata).evaluate(self.x)
+        self.errors={'ElemDirichlet': np.sqrt(d),
+                    'ElemNeumann'  : 1.0/self.problem.k*np.sqrt(n),
+                    'ElemBoundary' : np.sqrt(bnd),
+                    'Dirichlet'    : np.sqrt(np.sum(d)),
+                    'Neumann'      : 1.0/self.problem.k*np.sqrt(np.sum(n)),
+                    'Boundary'     : np.sqrt(np.sum(bnd))}
+        self.errors['ElemCombined']=np.sqrt(self.errors['ElemDirichlet']**2+self.errors['ElemNeumann']**2
+                                    +self.errors['ElemBoundary']**2)
+        self.errors['Combined']=np.sqrt(self.errors['Dirichlet']**2+self.errors['Neumann']**2
+                                        +self.errors['Boundary']**2)
         
+        
+    def getError(self,key):
+        """Return Error
+        
+           INPUT:
+           key   - One of 'ElemDirichlet', 'ElemNeumann', 'ElemBoundary',
+                   'Dirichlet', 'Neumann', 'Boundary'
+        """
+        
+        if self.errors is None: self.computeErrors()
+        return self.errors[key]
+    
+    
         
     

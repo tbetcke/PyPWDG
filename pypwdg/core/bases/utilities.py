@@ -34,7 +34,10 @@ def circleDirections(n):
 def uniformdirs(dim, npw):
     
     if dim==1:
-        return np.array([[1],[-1]],dtype=np.float64)
+        if npw==1:
+            return np.array([[1],[-1]],dtype=np.float64)
+        else:
+            return np.array([[1]],dtype=np.float64)
     elif dim==2:
         return circleDirections(npw)
     elif dim==3:

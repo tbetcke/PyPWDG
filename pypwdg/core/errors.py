@@ -65,7 +65,7 @@ class EvalElementError(object):
 def combinedError(problem, solution, quadpoints, x):
     
     (error_dirichlet2, error_neumann2, error_boundary2) = EvalElementError(problem.mesh, quadpoints, solution.basis, problem.bnddata).evaluate(x)
-    error_combined2 = error_dirichlet2 + (error_neumann2 + error_boundary2)/(problem.k ** 2)
+    error_combined2 = error_dirichlet2 + error_boundary2 + error_neumann2/(problem.k ** 2)
     return map(np.sqrt, (error_combined2,error_dirichlet2, error_neumann2, error_boundary2))     
 
     

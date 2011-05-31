@@ -59,6 +59,7 @@ class StructuredPoints(object):
         self.strides = [np.prod(npoints[i+1:]) for i in range(len(npoints))]
         self.dim = bounds.shape[1]
         self.length = np.prod(npoints)
+        self.bounds=bounds
     
     def getPoints(self, vertices):
         """ Returns a tuple (idxs, points) where points contains all the points that are inside
@@ -84,6 +85,11 @@ class StructuredPoints(object):
             points[...,i]+=(axisidxs[i]*(u-l)*1.0/n + l)
             
         return idxs.ravel(), points.reshape((-1,self.dim))
+    
+    def toArray(self):
+        """Return points as numpy array """
+        
+        return self.getPoints(self.bounds)[1]
         
 def elementToStructuredPoints(structuredpoints, mesh, eid):
     vertices = np.array(mesh.elements[eid])
