@@ -66,6 +66,16 @@ class FourierBesselBasisRule(object):
     def populate(self, einfo):
         import pypwdg.core.bases.definitions as pcbb        
         return [pcbb.FourierBessel(einfo.origin,self.orders,einfo.k)]
+    
+class FourierHankelBasisRule(object):
+    ''' Creates bases consisting of Hankel fct. on each element'''
+    def __init__(self,origins,orders):
+        self.orders=orders
+        self.origins=origins
+        
+    def populate(self, einfo):
+        import pypwdg.core.bases.definitions as pcbb
+        return ([ pcbb.FourierHankel(o,self.orders,einfo.k) for o in self.origins])
 
 class PlaneWaveFromDirectionsRule(object):
     """Takes a list of directions for each element and returns a corresponding
@@ -86,7 +96,15 @@ class PlaneWaveFromDirectionsRule(object):
         else:
             return [pcbb.PlaneWaves(self.etods[id],einfo.k)]
         
+class UnionBasisRule(object):
+    """Return the union of two basis rules"""
+    
+    def __init__(self,rules):
+        self.rules=rules
         
+    def populate(self, einfo):
+        import pypwdg.core.bases.definitions as pcbb
+        return [pcbb.BasisCombine([b for rule in self.rules for b in rule.populate(einfo)])]
     
 class GeomIdBasisRule(object):
     '''Takes a dictionary {Id:BasisRule} to define different basis rules for different geometric identities'''

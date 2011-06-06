@@ -96,7 +96,7 @@ def processreflections(problem, reflections):
     vtof.eliminate_zeros()
     dim = problem.mesh.dim
     offset = 1E-3 # we can't raytrace from a vertex, so this is how much we'll move inside each face from the verte
-    dirs = pcbu.uniformdirs(dim, 24) # We're going to trace N uniform rays from each vertex (for 2D)
+    dirs = pcbu.uniformdirs(dim, 0) # We're going to trace N uniform rays from each vertex (for 2D)
     for f, d in reflections: # We've been given a list of previous reflections as (face, direction) pairs
         for v in problem.mesh.faces[f]: # what vertices are associated with this face?
             if v not in vertices: # If we haven't already considered this vertex (N.B. this could have been done with vtof)
@@ -121,7 +121,7 @@ def tracemesh(problem, sources):
     tracer = pre.HomogenousTrace(problem.mesh, sources.keys())
     tracepoints = []
     for bdy, inidirs in sources.iteritems():
-        tracepoints.extend(getstartingtracepoints(problem, bdy, inidirs, 10))
+        tracepoints.extend(getstartingtracepoints(problem, bdy, inidirs, 50))
     
     rt = RayTracing(problem.mesh, tracepoints, tracer)
     etods = rt.getDirections()

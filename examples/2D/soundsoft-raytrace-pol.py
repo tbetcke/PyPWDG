@@ -15,7 +15,7 @@ import pypwdg.parallel.main
 from numpy import array,sqrt
 import numpy as np
 
-k = 15
+k = 20
 direction=array([[1.0,1.0]])/sqrt(2)
 g = pcb.PlaneWaves(direction, k)
 
@@ -28,28 +28,29 @@ npoints=array([200,200])
 mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 
 quadpoints = 20
-p=3
+p=2
 
 entityton ={9:1}
 problem=psp.VariableNProblem(entityton, mesh,k, bnddata)
 etods = prc.tracemesh(problem, {10:lambda x:direction})
 
-for idx in range(len(etods)):
-    if len(etods[idx])==0: 
-        etods[idx]=direction
-    else:
-        tmp=np.dot(etods[idx],direction.T)
-        if min(tmp)<1-1E-5: etods[idx]=np.vstack((etods[idx],direction))
 
 etob = [[pcb.PlaneWaves(ds, k)] if len(ds) else [] for ds in etods]
 pob.vtkbasis(mesh,etob,'soundsoftrays.vtu',None)
 
 b0=pcbv.PlaneWaveVariableN(pcb.circleDirections(20))
 b=pcb.PlaneWaveFromDirectionsRule(etods)
+origins=np.array([[-.5,-.5],[-.5,.5],[.5,-.5],[.5,.5]])
+h=pcb.FourierHankelBasisRule(origins,[0])
+h2=pcb.ProductBasisRule(h,pcbr.ReferenceBasisRule(pcbr.Dubiner(p)))
+
 b1=pcb.ProductBasisRule(b,pcbr.ReferenceBasisRule(pcbr.Dubiner(p)))
+bh=pcb.UnionBasisRule([h2,b1])
+
+
 b2=pcbr.ReferenceBasisRule(pcbr.Dubiner(p))
 
-computation = psc.Computation(problem, b1, pcp.HelmholtzSystem, quadpoints)
+computation = psc.Computation(problem, bh, pcp.HelmholtzSystem, quadpoints)
 
 solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
 pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'soundsoft_pol')
