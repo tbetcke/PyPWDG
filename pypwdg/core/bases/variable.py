@@ -35,4 +35,4 @@ class EntityNElementInfo(pcbu.ElementInfo):
         entity = self.mesh.elemIdentity[e]
         n = self.entityton[entity]
         if callable(n): return lambda p: n(p) * self.kk
-        else: return lambda p: np.array([n * self.kk])
+        else: return lambda p: np.array([n*self.kk])

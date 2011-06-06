@@ -121,7 +121,7 @@ def tracemesh(problem, sources):
     tracer = pre.HomogenousTrace(problem.mesh, sources.keys())
     tracepoints = []
     for bdy, inidirs in sources.iteritems():
-        tracepoints.extend(getstartingtracepoints(problem, bdy, inidirs, 3))
+        tracepoints.extend(getstartingtracepoints(problem, bdy, inidirs, 10))
     
     rt = RayTracing(problem.mesh, tracepoints, tracer)
     etods = rt.getDirections()
