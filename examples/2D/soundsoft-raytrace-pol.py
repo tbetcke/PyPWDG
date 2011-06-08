@@ -15,7 +15,7 @@ import pypwdg.parallel.main
 from numpy import array,sqrt
 import numpy as np
 
-k = 20
+k = 25
 direction=array([[1.0,1.0]])/sqrt(2)
 g = pcb.PlaneWaves(direction, k)
 
@@ -29,6 +29,9 @@ mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 
 quadpoints = 20
 p=2
+beta=(1.0*p**2)/.2
+alpha=1.0/.2
+delta=1./.2
 
 entityton ={9:1}
 problem=psp.VariableNProblem(entityton, mesh,k, bnddata)
@@ -50,8 +53,7 @@ bh=pcb.UnionBasisRule([h2,b1])
 
 b2=pcbr.ReferenceBasisRule(pcbr.Dubiner(p))
 
-computation = psc.Computation(problem, bh, pcp.HelmholtzSystem, quadpoints)
-
+computation = psc.Computation(problem, bh, pcp.HelmholtzSystem, quadpoints,alpha=alpha,beta=beta,delta=delta)
 solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
 pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'soundsoft_pol')
 print solution.getError('Dirichlet')
