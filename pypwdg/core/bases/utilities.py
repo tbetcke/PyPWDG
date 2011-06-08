@@ -129,14 +129,14 @@ class ProductBasisRule(object):
 def getSizes(etob, mesh):
     return np.array([sum([b.n for b in etob.get(e,[])]) for e in range(mesh.nelements)])    
 
-class Info(object):
+class SingleElementInfo(object):
     ''' Helper class to make the einfo parameters to the basis rules look like structs'''
-    def __init__(self, elementid, populator):
+    def __init__(self, elementid, elementinfo):
         self.elementid = elementid
-        self.populator = populator
+        self.elementinfo = elementinfo
         
     def __getattr__( self, name ):
-        return self.populator.__getattribute__(name)(self.elementid)
+        return self.elementinfo.__getattribute__(name)(self.elementid)
 
 class ElementInfo(object):
     ''' General abstraction that provides information about elements used by basis objects.  This is the
@@ -161,7 +161,7 @@ class ElementInfo(object):
         return self.mems.getMap(e)
     
     def info(self, e):
-        return Info(e, self)
+        return SingleElementInfo(e, self)
     
     def geomId(self,e):
         return self.mesh.elemIdentity[e]

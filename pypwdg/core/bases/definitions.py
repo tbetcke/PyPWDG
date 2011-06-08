@@ -134,18 +134,27 @@ class FourierHankel(FourierHankelBessel):
 
 
 class BasisReduce(Basis):
-    """ Reduce a basis object to return just one function """
-    def __init__(self, pw, x):
-        self.pw = pw
-        self.x = x
-        assert len(x)==pw.n
-        self.n = 1
+    """ Reduce a basis object
+    
+        basis: a Basis object
+        x: a vector of length basis.n or a matrix of dimension N x basis.n
         
-    def values(self, points):
-        return np.dot(self.pw.values(points), self.x).reshape(-1,1)
+        The reduced basis functions are linear combinations of basis, weighted by each row of x 
+    """
+    def __init__(self, basis, x):
+        self.basis = basis
+        self.x = np.atleast_2d(x)
+        assert self.x.shape[1]==basis.n
+        self.n = self.x.shape[0]
 
-    def derivs(self, points, n):
-        return np.dot(self.pw.derivs(points, n), self.x).reshape(-1,1)
+    def reduce(self, vals):
+        return np.atleast_2d(np.dot(self.x, vals.transpose())).transpose()
+
+    def values(self, points):
+        return self.reduce(self.basis.values(points))
+
+    def derivs(self, points, n=None):
+        return self.reduce(self.basis.derivs(points, n))
 
 
 class BasisCombine(object):
@@ -157,7 +166,7 @@ class BasisCombine(object):
     def values(self, points):
         return np.hstack([b.values(points) for b in self.bases])
         
-    def derivs(self, points, n):
+    def derivs(self, points, n = None):
         return np.hstack([b.derivs(points, n) for b in self.bases])
 
     
