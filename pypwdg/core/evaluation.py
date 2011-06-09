@@ -57,13 +57,14 @@ class StructuredPointsEvaluator(object):
     @parallelmethod(reduceop = tuplesum)
 #    @print_timing
     def evaluate(self, structuredpoints):
-        vals = numpy.zeros(structuredpoints.length, dtype=numpy.complex128)
+        outputshape = structuredpoints.length if len(self.x.shape) == 1 else (structuredpoints.length, self.x.shape[1])
+        vals = numpy.zeros(outputshape, dtype=numpy.complex128)
         pointcount = numpy.zeros(structuredpoints.length, dtype=int)
         for e in self.mesh.partition:
             pointidxs, points = elementToStructuredPoints(structuredpoints, self.mesh, e)
             if len(pointidxs):
                 v = self.elttobasis.getValues(e, points)
-                (vidx0,vidx1) = self.elttobasis.getIndices()[e:e+2]
+                (vidx0,vidx1) = self.elttobasis.getIndices()[e:e+2]       
                 vals[pointidxs] += numpy.dot(v, self.x[vidx0: vidx1])
                 pointcount[pointidxs]+=1
         return self.filter(vals), pointcount

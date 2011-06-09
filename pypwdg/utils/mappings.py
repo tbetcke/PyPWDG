@@ -15,7 +15,10 @@ class Affine(object):
     
     def apply(self, p):
         return (np.dot(p, self.linear) + self.offset)
-        
+    
+    def det(self, p):
+        return nl.det(self.linear) 
+    
     def __calcinverse(self):
         if self.__inverse == None:
             invlinear = nl.inv(self.linear)
