@@ -31,7 +31,7 @@ class SVDBasisReduceRule(object):
         if n == 0 : 
             n = len(s)
         else :
-            print "Reducing basis from ",len(s)," to ",n,"; s = ",s
+            print "Reducing basis from ",len(s)," to ",n
         M = s.reshape(-1,1)[:n] * vh.conjugate()[:n] # this is a tad confusing.  BasisReduce accepts the transpose of the post-multiplication matrix, so we only need to do the conjugate here.
         return [pcbd.BasisReduce(basis, M)]
         

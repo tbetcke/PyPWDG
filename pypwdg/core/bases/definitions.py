@@ -81,8 +81,10 @@ class FourierHankelBessel(Basis):
     def derivs(self, points, n=None):
         if n is None:
             nx=np.array([1.0,0.0])
-            ny=np.array([0.0,1.0])            
-            return np.hstack((self.derivs(points,nx),self.derivs(points,ny)))[...,np.newaxis,...]
+            ny=np.array([0.0,1.0]) 
+            
+            d =  np.dstack((self.derivs(points,nx)[...,np.newaxis],self.derivs(points,ny)[...,np.newaxis]))
+            return d
         else:
             poffset = points-self.__origin
             r,theta = self.rtheta(poffset)
@@ -148,7 +150,9 @@ class BasisReduce(Basis):
         self.n = self.x.shape[0]
 
     def reduce(self, vals):
-        return np.atleast_2d(np.dot(self.x, vals.transpose())).transpose()
+        v = np.tensordot(vals, self.x, (1, 1))
+        if len(vals.shape) == 3: v = v.transpose([0,2,1])
+        return v
 
     def values(self, points):
         return self.reduce(self.basis.values(points))

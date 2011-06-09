@@ -17,7 +17,7 @@ import pypwdg.parallel.main
 
 import numpy as np
 
-k = 10
+k = 20
 direction=np.array([[1.0,1.0]])/np.sqrt(2)
 #g = pcb.PlaneWaves(direction, k)
 g = pcb.FourierHankel([-2,-2], [0], k)
@@ -34,7 +34,7 @@ npoints=np.array([500,500])
 mesh = pmm.gmshMesh('square.msh',dim=2)
 print mesh.nelements
 
-npw = 10
+npw = 15
 quadpoints = 15
 
 # Original basis:

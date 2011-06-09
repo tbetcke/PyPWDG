@@ -12,6 +12,10 @@ import pypwdg.raytrace.control as prc
 import pypwdg.output.basis as pob
 import pypwdg.parallel.main
 
+import pypwdg.core.bases.reduced as pcbred
+import pypwdg.utils.quadrature as puq
+
+
 from numpy import array,sqrt
 import numpy as np
 
@@ -53,7 +57,10 @@ bh=pcb.UnionBasisRule([h2,b1])
 
 b2=pcbr.ReferenceBasisRule(pcbr.Dubiner(p))
 
-computation = psc.Computation(problem, bh, pcp.HelmholtzSystem, quadpoints,alpha=alpha,beta=beta,delta=delta)
+basisrule = pcbred.SVDBasisReduceRule(puq.trianglequadrature(quadpoints), bh, threshold=1E-5)
+
+
+computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, quadpoints,alpha=alpha,beta=beta,delta=delta)
 solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
 pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'soundsoft_pol')
 print solution.getError('Dirichlet')
