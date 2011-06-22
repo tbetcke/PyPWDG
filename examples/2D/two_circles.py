@@ -20,25 +20,25 @@ class QuadBubble(object):
         self.a = a
     
     def __call__(self, p):
-        r2 = np.sum(p**2, axis=1)
+        r2 = np.sum(p**2, axis=-1)
         return self.a - r2 * (self.a-1.0) / self.R**2
     
 import pypwdg.parallel.main
 
 from numpy import array
 
-k = 30
+k = 40
 direction=array([[1.0,0]])
 g = pcb.PlaneWaves(direction, k)
 
 bnddata={15:pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g)}
 
 bounds=array([[-4,4],[-4,4]],dtype='d')
-npoints=array([400,400])
+npoints=array([600,600])
 
 mesh = pmm.gmshMesh('two_circles.msh',dim=2)
 
-quadpoints = 15
+quadpoints = 30
 
 def elementwiseconstant():
     npw = 12
