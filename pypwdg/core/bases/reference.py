@@ -31,6 +31,9 @@ class Reference(pcbd.Basis):
         derivs = np.dot(self.reference.derivs(self.mapi.apply(x)),self.mapi.linear.transpose())
         return derivs if n is None else np.sum(derivs.transpose([0,2,1]) * n[..., np.newaxis], axis = 1)  
     
+    def laplacian(self, x):
+        pass
+    
 class Dubiner(object):
     """ At some point, this should probably try to (pre-)cache results.  """
     
@@ -56,5 +59,9 @@ class Legendre1D(object):
     def derivs(self, x):
         vals=pup.jacobidnorm(self.n-1,0,0,1,x.ravel())
         return vals[...,np.newaxis]
+    
+    def laplacian(self, x):
+        return pup.jacobidnorm(self.n-1, 0,0,2, x.ravel())
+
     
     
