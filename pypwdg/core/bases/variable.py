@@ -29,7 +29,7 @@ class EntityNElementInfo(pcbu.ElementInfo):
         self.entityton = entityton
 
     def k(self, e):
-        return self.kp(e)(self.origin(e))
+        return self.kp(e)(np.array([self.origin(e)]))
                     
     def kp(self, e):
         entity = self.mesh.elemIdentity[e]
