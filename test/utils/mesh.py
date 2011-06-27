@@ -30,7 +30,7 @@ def regularsquaremesh(n = 1, bdytag="BDY"):
     n1 = n+1
     points = np.linspace(0,1,n1)[np.mgrid[0:n1,0:n1]].reshape(2,-1).transpose()
     lowerleftpoints = np.arange(n1*n1).reshape(n1,n1)[0:n,0:n].reshape(-1,1)
-    elements = [tuple(e) for e in (lowerleftpoints + np.array([[0,n1,n1+1,0,1,n1+1]])).reshape(-1,3)]
+    elements = [list(e) for e in (lowerleftpoints + np.array([[0,n1,n1+1,0,1,n1+1]])).reshape(-1,3)]
     bdy1 = np.vstack((np.arange(n), np.arange(1,n1))).transpose()
     bdyfaces = np.vstack((bdy1, bdy1 + n1*n, bdy1*n1, bdy1*n1 + n))
     boundary = [(bdytag, tuple(bf)) for bf in bdyfaces]

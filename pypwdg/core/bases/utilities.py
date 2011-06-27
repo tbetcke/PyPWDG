@@ -166,6 +166,24 @@ class ElementInfo(object):
     def geomId(self,e):
         return self.mesh.elemIdentity[e]
     
+    def volume(self, e):
+        def vq(quadrule):
+            meqs = pmmu.MeshElementQuadratures(self.mesh, quadrule) 
+            return meqs.quadpoints(e), meqs.quadweights(e)
+        return vq
+    
+    def boundary(self, e):
+        def bq(quadrule):
+            mfqs = pmmu.MeshQuadratures(self.mesh, quadrule) 
+            fs = self.mesh.etof[e]
+            qp = np.vstack((mfqs.quadpoints(f) for f in fs))
+            fqw = [mfqs.quadweights(f) for f in fs]
+            qw = np.concatenate(fqw)
+            ns = self.mesh.normals[fs].repeat(map(len, fqw), axis=0)
+            return qp,qw,ns
+        return bq
+            
+    
 @ppd.parallel(None, None)
 def localConstructBasis(mesh, etob, basisrule, elementinfo):
     ''' Helper function to initialise the element to basis map in each partition'''  

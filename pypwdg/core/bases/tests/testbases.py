@@ -7,8 +7,12 @@ import unittest
 
 import pypwdg.core.bases as pcb
 import test.utils.mesh as tum
-import pypwdg.utils.polynomial as pup
+import pypwdg.core.bases.utilities as pcbu
+import pypwdg.utils.geometry as pug
+
 import numpy
+import numpy as np
+import numpy.random as nr
 
 
 class TestBases(unittest.TestCase):
@@ -50,3 +54,50 @@ class TestBases(unittest.TestCase):
                 vh = fb.values(points + n * h)
                 d = fb.derivs(points, n)
                 numpy.testing.assert_array_almost_equal(d, (vh - v0)/h, decimal=4)
+
+def basisDerivatives(basisrules, meshes, structuredpoints, k):
+    # Tests that we get the correct directional derivatives 
+    N = 5
+    h = 1E-5
+    for mesh in meshes:
+        ei = pcbu.ElementInfo(mesh, k)
+        for e in range(mesh.nelements):
+            _, points = pug.elementToStructuredPoints(structuredpoints, mesh, e)
+            # generate some random normals
+            if points is not None and len(points):
+                nn = nr.random((len(points),2))
+                n = nn / np.sqrt(np.sum(nn**2, axis=1)).reshape(-1,1)
+                for basisrule in basisrules:
+                    basis = basisrule.populate(ei.info(e))[0]
+                    
+                    vd = basis.derivs(points)
+                    vl = basis.laplacian(points)
+                    vp = basis.values(points)
+                    
+                    vph = [basis.values(points + dx) for dx in [[h,0],[0,h], [-h,0], [0,-h]]]
+                    vdh = np.dstack([vph[0] - vph[2], vph[1] - vph[3]])/(2*h)
+                    vlh = (sum(vph) - 4*vp) / (h**2)
+                    
+                    vdn = basis.derivs(points, n)
+                    vdnh = (basis.values(points + n * h) - basis.values(points - n * h)) / (2*h) # compute the derivatives in mesh coordinates using finite differences
+                    
+                    np.testing.assert_allclose(vdnh, vdn, rtol=1E-5, atol=1E-5)
+                    np.testing.assert_allclose(vdh, vd, rtol=1E-5, atol=1E-5)
+                    np.testing.assert_allclose(vlh, vl, rtol=1E-3, atol=1E-4)
+        
+
+class TestBasisDerivatives(unittest.TestCase):
+    def testDerivatives(self):
+        k = 10
+#        meshes = [tum.regularsquaremesh(2)]
+        meshes = tum.meshes2d()
+        structuredpoints = pug.StructuredPoints([[0,0],[1.0,1.0]], [20,30])
+        rules = [pcbu.planeWaveBases(2, k),
+                 pcbu.FourierBesselBasisRule(range(-4,5)),
+                 pcbu.FourierHankelBasisRule([[-1,-1]], range(-4,5))]
+        basisDerivatives(rules, meshes, structuredpoints, k)
+                 
+                 
+        
+     
+        

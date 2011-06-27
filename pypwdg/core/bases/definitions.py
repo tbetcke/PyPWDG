@@ -40,8 +40,8 @@ class PlaneWaves(TrefftzBasis):
     
     def __init__(self, directions, k):
         """ directions should be a n x dim array of directions.  k is the wave number """
-        TrefftzBasis.init(self, k)
-        self.directions = directions.transpose()
+        TrefftzBasis.__init__(self, k)
+        self.directions = np.atleast_2d(directions).transpose()
         self.__k = k
     
     def values(self,x):
@@ -51,7 +51,7 @@ class PlaneWaves(TrefftzBasis):
         n is ignored
         The return value is a m x self.n array
         """
-        return np.exp(1j * self.__k * np.dot(x, self.directions))
+        return np.exp(1j * self.__k * np.dot(x, self.directions)).reshape(-1, self.directions.shape[1])
     
     def derivs(self,x,n=None):
         """ return the directional derivatives of the plane-waves at points x and direction n 
@@ -75,7 +75,7 @@ class PlaneWaves(TrefftzBasis):
 class FourierHankelBessel(TrefftzBasis):
     
     def __init__(self, origin, orders, k):
-        TrefftzBasis.init(self, k)        
+        TrefftzBasis.__init__(self, k)  
         self.__origin = np.array(origin).reshape(1,2)
         self.__orders = np.array(orders).reshape(1,-1)
         self.__k = k

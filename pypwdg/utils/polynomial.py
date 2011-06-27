@@ -98,6 +98,8 @@ def laplacian(k):
         
         N.B. would be easy to generalise this to any polynomial basis (indeed, the calculation
         of the mass matrix is currently superfluous as the Dubiner basis is orthonomal)
+        
+        THIS IS NOT USED - see p.c.b.reference.py for the alternative implemenation
     '''
     tp, tw = puq.trianglequadrature(k+1)
     dt = DubinerTriangle(k,tp)

@@ -6,6 +6,8 @@ Created on Aug 4, 2010
 
 import scipy.special.orthogonal
 import numpy
+import numpy as np
+import math
     
 def trianglequadrature(n):
     """ Degree n quadrature points and weights on a triangle (0,0)-(1,0)-(0,1)"""
@@ -18,6 +20,18 @@ def trianglequadrature(n):
     x = numpy.outer(x01s, numpy.ones(x00s.shape)).reshape(-1,1)
     y = numpy.outer(1-x01s, x00s).reshape(-1,1)
     return numpy.hstack((x, y)), w
+
+def triangleboundary(n):
+    ex, ew = legendrequadrature(n)
+    # Now do the boundary integrals
+    ew = ew.reshape(-1,1)
+    ep1 = np.hstack((ex, np.zeros_like(ex)))
+    ep2 = np.hstack((np.zeros_like(ex),ex))
+    ep3 = np.hstack((ex,1-ex))
+    p = np.vstack((ep1,ep2,ep3))
+    w = np.vstack((ew,ew,ew*math.sqrt(2)))
+    n = np.vstack((np.tile(n,ew.shape) for n in ([0,-1], [-1,0], [math.sqrt(1.0/2), math.sqrt(1.0/2)])))
+    return p,w,n
 
 def tetquadrature(n):
     txy, tw = trianglequadrature(n)
