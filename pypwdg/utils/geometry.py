@@ -53,6 +53,8 @@ class StructuredPoints(object):
     """
     
     def __init__(self, bounds, npoints):
+        bounds = np.array(bounds, dtype='d')
+        npoints = np.array(npoints)
         self.lower = np.min(bounds, 0) # self.lower is the most negative vertex
         self.upper = np.max(bounds, 0) # self.upper is the most positive vertex
         self.npoints = npoints

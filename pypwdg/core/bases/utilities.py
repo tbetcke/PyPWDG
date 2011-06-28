@@ -152,7 +152,7 @@ class ElementInfo(object):
         return self.kk    
     
     def kp(self, e):
-        return lambda p: self.k
+        return lambda p: self.kk
         
     def origin(self, e):
         return np.sum(self.mesh.nodes[self.mesh.elements[e]], axis=0) / len(self.mesh.elements[e])
@@ -165,6 +165,24 @@ class ElementInfo(object):
     
     def geomId(self,e):
         return self.mesh.elemIdentity[e]
+    
+    def volume(self, e):
+        def vq(quadrule):
+            meqs = pmmu.MeshElementQuadratures(self.mesh, quadrule) 
+            return meqs.quadpoints(e), meqs.quadweights(e)
+        return vq
+    
+    def boundary(self, e):
+        def bq(quadrule):
+            mfqs = pmmu.MeshQuadratures(self.mesh, quadrule) 
+            fs = self.mesh.etof[e]
+            qp = np.vstack((mfqs.quadpoints(f) for f in fs))
+            fqw = [mfqs.quadweights(f) for f in fs]
+            qw = np.concatenate(fqw)
+            ns = self.mesh.normals[fs].repeat(map(len, fqw), axis=0)
+            return qp,qw,ns
+        return bq
+            
     
 @ppd.parallel(None, None)
 def localConstructBasis(mesh, etob, basisrule, elementinfo):
@@ -187,7 +205,7 @@ class ElementToBases(object):
         self.etob = etob
         self.sizes = np.array([sum([b.n for b in etob.get(e,[])]) for e in range(mesh.nelements)])     
         self.indices = np.cumsum(np.concatenate(([0], self.sizes))) 
-        
+    
     def getValues(self, eid, points):
         """ Return the values of the basis for element eid at points"""
         bases = self.etob.get(eid)
@@ -206,6 +224,15 @@ class ElementToBases(object):
             return np.zeros((len(points),0)) if normal is not None else np.zeros((len(points), 0, points.shape[1]))
         else:
             return np.hstack([b.derivs(points, normal) for b in bases])
+
+    def getLaplacian(self, eid, points):
+        """ Return the laplacian of the basis for element eid at points"""
+        bases = self.etob.get(eid)
+        if bases==None:
+            return np.zeros((len(points),0))
+        else:
+            return np.hstack([b.laplacian(points) for b in bases])
+
     
     def getSizes(self):
         return self.sizes

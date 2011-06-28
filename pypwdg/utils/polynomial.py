@@ -7,6 +7,7 @@ Created on Mar 31, 2011
 '''
 import numpy as np
 import scipy.special.orthogonal as sso 
+import pypwdg.utils.quadrature as puq
 
 def jacobidnorm(N,a,b,d,x):
     """ Return the dth derivative of the [d,N] shifted Jacobi(a,b) polynomials at x
@@ -90,5 +91,33 @@ class DubinerTriangle(object):
         etagrad = np.array([Deta1, Deta2])
         return np.sum(self.J[...,np.newaxis] * etagrad[np.newaxis,...], axis=1)
         
-
+def laplacian(k):
+    ''' Calculate the laplacian matrix for the Dubiner basis.
+    
+        Returns L where \nabla^2 u = u . L for any vandermonde matrix u
+        
+        N.B. would be easy to generalise this to any polynomial basis (indeed, the calculation
+        of the mass matrix is currently superfluous as the Dubiner basis is orthonomal)
+        
+        THIS IS NOT USED - see p.c.b.reference.py for the alternative implemenation
+    '''
+    tp, tw = puq.trianglequadrature(k+1)
+    dt = DubinerTriangle(k,tp)
+    vtp = dt.values() 
+    dtp = dt.derivs() 
+    mass = np.tensordot(vtp * tw, vtp, (0,0))
+    stiffness = -np.tensordot(dtp * tw, dtp, ((0,1),(0,1)))
+    ex, ew = puq.legendrequadrature(k+1)
+    # Now do the boundary integrals
+    ew = ew.reshape(-1,1)
+    ep1 = np.hstack((ex, np.zeros_like(ex)))
+    ep2 = np.hstack((np.zeros_like(ex),ex))
+    ep3 = np.hstack((ex,1-ex))
+    for p, n in ((ep1,[0,-1]),(ep2,[-1,0]), (ep3, [1,1])):
+        dt = DubinerTriangle(k, p)
+        vn = np.tensordot(dt.derivs(), np.array(n), (0,0)) 
+        stiffness+=np.tensordot(dt.values() * ew, vn, (0,0))
+        
+    return np.linalg.solve(mass, stiffness)
+    
           

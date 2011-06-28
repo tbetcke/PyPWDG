@@ -71,6 +71,9 @@ class ElementVandermondes(object):
     
     def getDerivs(self, eltid):
         return self.__elttobasis.getDerivs(eltid, self.__points(eltid), None)
+    
+    def getLaplacians(self, eltid):
+        return self.__elttobasis.getLaplacian(eltid, self.__points(eltid))
         
         
 class LocalInnerProducts(object):

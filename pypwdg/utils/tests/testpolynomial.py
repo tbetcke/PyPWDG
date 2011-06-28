@@ -80,4 +80,22 @@ class TestDubiner(unittest.TestCase):
             dtV = dt.values()
             l2 = np.dot(dtV.T, w * dtV)
             np.testing.assert_almost_equal(l2, np.eye(dtV.shape[1],dtV.shape[1]))
-        
+
+class TestLaplacian(unittest.TestCase):
+    
+    def testLaplaceZero(self):
+        ''' Test that the linear polynomials will have a zero laplacian'''
+        L = pup.laplacian(1)
+        np.testing.assert_almost_equal(L, 0, decimal=5) 
+
+    def testLaplacian(self):
+        ''' Use finite differences to check the Lapalcian calculations'''
+        N = 6
+        h = 1E-4
+        x,w = puq.trianglequadrature(5)
+        for k in range(1,N):
+            v = pup.DubinerTriangle(k, x).values()
+            L = pup.laplacian(k)
+            Lv = np.dot(v, L)
+            Lhv = (sum([pup.DubinerTriangle(k, x+xh).values() for xh in ([0,h],[0,-h],[h,0],[-h,0])]) - 4*v)/(h**2)
+            np.testing.assert_almost_equal(Lv, Lhv, decimal=3)

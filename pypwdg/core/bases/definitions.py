@@ -24,12 +24,24 @@ class Basis(object):
     def derivs(self,x,n = None):
         pass
     
+    @abc.abstractmethod
+    def laplacian(self, x):
+        pass
+
+class TrefftzBasis(Basis):
     
-class PlaneWaves(Basis):
+    def __init__(self, k):
+        self.k = k
+    
+    def laplacian(self, x):
+        return -self.k**2 * self.values(x)
+
+class PlaneWaves(TrefftzBasis):
     
     def __init__(self, directions, k):
         """ directions should be a n x dim array of directions.  k is the wave number """
-        self.directions = directions.transpose()
+        TrefftzBasis.__init__(self, k)
+        self.directions = np.atleast_2d(directions).transpose()
         self.__k = k
     
     def values(self,x):
@@ -39,7 +51,7 @@ class PlaneWaves(Basis):
         n is ignored
         The return value is a m x self.n array
         """
-        return np.exp(1j * self.__k * np.dot(x, self.directions))
+        return np.exp(1j * self.__k * np.dot(x, self.directions)).reshape(-1, self.directions.shape[1])
     
     def derivs(self,x,n=None):
         """ return the directional derivatives of the plane-waves at points x and direction n 
@@ -60,9 +72,10 @@ class PlaneWaves(Basis):
     """ the number of functions """
     n=property(lambda self: self.directions.shape[1])
     
-class FourierHankelBessel(Basis):
+class FourierHankelBessel(TrefftzBasis):
     
     def __init__(self, origin, orders, k):
+        TrefftzBasis.__init__(self, k)  
         self.__origin = np.array(origin).reshape(1,2)
         self.__orders = np.array(orders).reshape(1,-1)
         self.__k = k
@@ -159,6 +172,9 @@ class BasisReduce(Basis):
 
     def derivs(self, points, n=None):
         return self.reduce(self.basis.derivs(points, n))
+    
+    def laplacian(self, points):
+        return self.reduce(self.basis.laplacian(points))
 
 
 class BasisCombine(object):
@@ -173,6 +189,8 @@ class BasisCombine(object):
     def derivs(self, points, n = None):
         return np.hstack([b.derivs(points, n) for b in self.bases])
 
+    def laplacian(self, points):
+        return np.hstack([b.laplacian(points) for b in self.bases])
     
     def __str__(self):
         return "".join(map(str,self.bases))
@@ -213,4 +231,16 @@ class Product(Basis):
         v2 = self.basis2.values(x)
         d2 = self.basis2.derivs(x, n)
         return self.prod(v1, d2) + self.prod(d1, v2)
+    
+    def laplacian(self, x):
+        v1 = self.basis1.values(x)
+        v2 = self.basis2.values(x)
+        l1 = self.basis1.laplacian(x)
+        l2 = self.basis2.laplacian(x)
+
+        d1 = self.basis1.derivs(x).transpose(2,0,1) # move the component axis to the front
+        d2 = self.basis2.derivs(x).transpose(2,0,1)
+        d1d2 = np.sum(map(self.prod, d1,d2),axis=0)
+        return self.prod(v1,l2) + self.prod(l1, v2) + 2 * d1d2
+        
         

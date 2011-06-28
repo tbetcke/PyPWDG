@@ -29,7 +29,7 @@ class Test(unittest.TestCase):
         rb = pcbd.BasisReduce(basis, x)
         self.assertEquals(rb.values(points).shape, (NP,1))
         self.assertEquals(rb.derivs(points, [1,0]).shape, (NP,1))
-        self.assertEquals(rb.derivs(points).shape, (NP,2,1))
+        self.assertEquals(rb.derivs(points).shape, (NP,1,2))
 
         self.assertEquals(rb.values(points[0]).shape, (1,1))
         
@@ -38,7 +38,7 @@ class Test(unittest.TestCase):
         rb = pcbd.BasisReduce(basis, m)
         self.assertEquals(rb.values(points).shape, (NP,N))
         self.assertEquals(rb.derivs(points, [1,0]).shape, (NP,N))
-        self.assertEquals(rb.derivs(points).shape, (NP,2,N))
+        self.assertEquals(rb.derivs(points).shape, (NP,N,2))
 
 def testEquivalentBases(b1, b2, mesh, structuredpoints):
     ''' Test that 2 bases are equivalent (at a set of points) 
