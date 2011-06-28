@@ -27,7 +27,7 @@ def standardoutput(computation, solution, quadpoints, bounds, npoints, fileroot)
     errors = pce.combinedError(computation.problem, solution, quadpoints)[0]
     print "Combined Error: ",np.sqrt(sum(errors**2))
     volerrors = pce.volumeerrors(computation.problem, quadpoints, solution)
-    print "Volume Error / k^2: ", np.sqrt(sum(volerrors **2)) / computation.problem.k
+    print "Volume Error / k^2: ", np.sqrt(sum(volerrors **2)) / (computation.problem.k **2)
     try:
         writeSolutionVTK(solution, bounds, npoints, fname = fileroot +'.vti')        
         import pypwdg.output.vtk_output as pov
