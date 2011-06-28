@@ -13,13 +13,41 @@ import pypwdg.mesh.meshutils as pmmu
 import pypwdg.core.bases.utilities as pcbu
 import pypwdg.utils.quadrature as puq
 
+
+@distribute()
+class EvalElementResiduals(object):
+    def __init__(self, problem, quadpoints, basis):
+        _, self.equad = puq.quadrules(problem.mesh.dim, quadpoints)
+        self.basis = basis
+        self.problem = problem
+        
+    @parallelmethod()
+    def evaluate(self, x):
+        ei = pcbu.ElementInfo(self.problem.mesh, self.problem.k)
+        idxs = self.basis.getIndices()
+        elem_error=np.zeros(self.problem.mesh.nelements)        
+        for e in self.problem.mesh.partition:
+            xe = x[idxs[e]:idxs[e+1]]
+            info = ei.info(e)
+            p,w = info.volume(self.equad)
+            v = np.dot(self.basis.getValues(e, p), xe)
+            l = np.dot(self.basis.getLaplacian(e, p), xe)
+            k = info.kp(p)
+            pres = l + k**2 * v
+            elem_error[e] = np.vdot(pres, pres * w.ravel())
+        return elem_error
+    
+def volumeerrors(problem, quadpoints, solution):
+    return np.sqrt(EvalElementResiduals(problem, quadpoints, solution.basis).evaluate(solution.x))
+
+
 @distribute()
 class EvalElementError(object):
     def __init__(self, mesh, quadpoints, basis, bnddata):
         self.mesh = mesh 
         fquad, _ = puq.quadrules(mesh.dim, quadpoints)
         facequads = pmmu.MeshQuadratures(mesh, fquad)
-
+        
         self.vs = pcv.LocalVandermondes(mesh, basis, facequads)
         self.weights = facequads.quadweights
         self.bnddata = bnddata
@@ -28,7 +56,6 @@ class EvalElementError(object):
             bdyetob = pcbu.UniformElementToBases(data, mesh)
             bdyvandermondes = pcv.LocalVandermondes(mesh, bdyetob, facequads)        
             self.bndvs.append(bdyvandermondes)
-
             
     @parallelmethod(reduceop = tuplesum)
     def evaluate(self, x):
@@ -62,10 +89,11 @@ class EvalElementError(object):
         
         return elem_error_dirichlet.real, elem_error_neumann.real, elem_error_bnd.real
     
-def combinedError(problem, solution, quadpoints, x):
+def combinedError(problem, solution, quadpoints):
     
-    (error_dirichlet2, error_neumann2, error_boundary2) = EvalElementError(problem.mesh, quadpoints, solution.basis, problem.bnddata).evaluate(x)
+    (error_dirichlet2, error_neumann2, error_boundary2) = EvalElementError(problem.mesh, quadpoints, solution.basis, problem.bnddata).evaluate(solution.x)
     error_combined2 = error_dirichlet2 + error_boundary2 + error_neumann2/(problem.k ** 2)
     return map(np.sqrt, (error_combined2,error_dirichlet2, error_neumann2, error_boundary2))     
+    
 
     

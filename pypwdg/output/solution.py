@@ -24,8 +24,10 @@ def writeSolutionVTK(solution, bounds, npoints, realdata=True, fname='solution.v
 def standardoutput(computation, solution, quadpoints, bounds, npoints, fileroot):
     ''' Dumps the solution to a file and also writes the errors out on a mesh'''
     mesh = computation.problem.mesh
-    errors = pce.combinedError(computation.problem, solution, quadpoints, solution.x)[0]
+    errors = pce.combinedError(computation.problem, solution, quadpoints)[0]
     print "Combined Error: ",np.sqrt(sum(errors**2))
+    volerrors = pce.volumeerrors(computation.problem, quadpoints, solution)
+    print "Volume Error: ", np.sqrt(sum(volerrors **2))
     try:
         writeSolutionVTK(solution, bounds, npoints, fname = fileroot +'.vti')        
         import pypwdg.output.vtk_output as pov

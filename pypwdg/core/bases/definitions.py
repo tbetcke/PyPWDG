@@ -174,7 +174,7 @@ class BasisReduce(Basis):
         return self.reduce(self.basis.derivs(points, n))
     
     def laplacian(self, points):
-        return self.reduce(self.basis.lapalcian(points))
+        return self.reduce(self.basis.laplacian(points))
 
 
 class BasisCombine(object):
