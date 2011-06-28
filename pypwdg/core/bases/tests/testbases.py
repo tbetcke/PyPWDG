@@ -8,6 +8,7 @@ import unittest
 import pypwdg.core.bases as pcb
 import test.utils.mesh as tum
 import pypwdg.core.bases.utilities as pcbu
+import pypwdg.core.bases.reference as pcbr
 import pypwdg.utils.geometry as pug
 
 import numpy
@@ -54,6 +55,17 @@ class TestBases(unittest.TestCase):
                 vh = fb.values(points + n * h)
                 d = fb.derivs(points, n)
                 numpy.testing.assert_array_almost_equal(d, (vh - v0)/h, decimal=4)
+                
+    def testDerivatives(self):
+        k = 10
+#        meshes = [tum.regularsquaremesh(2)]
+        meshes = tum.meshes2d()
+        structuredpoints = pug.StructuredPoints([[0.01,0.01],[0.99,0.99]], [20,30])
+        rules = [pcbu.planeWaveBases(2, k),
+                 pcbu.FourierBesselBasisRule(range(-4,5)),
+                 pcbu.FourierHankelBasisRule([[-1,-1]], range(-4,5)),
+                 pcbu.ProductBasisRule(pcbu.planeWaveBases(2, k, 3),pcbr.ReferenceBasisRule(pcbr.Dubiner(0)))]
+        basisDerivatives(rules, meshes, structuredpoints, k)
 
 def basisDerivatives(basisrules, meshes, structuredpoints, k):
     # Tests that we get the correct directional derivatives 
@@ -86,16 +98,7 @@ def basisDerivatives(basisrules, meshes, structuredpoints, k):
                     np.testing.assert_allclose(vlh, vl, rtol=1E-3, atol=1E-4)
         
 
-class TestBasisDerivatives(unittest.TestCase):
-    def testDerivatives(self):
-        k = 10
-#        meshes = [tum.regularsquaremesh(2)]
-        meshes = tum.meshes2d()
-        structuredpoints = pug.StructuredPoints([[0,0],[1.0,1.0]], [20,30])
-        rules = [pcbu.planeWaveBases(2, k),
-                 pcbu.FourierBesselBasisRule(range(-4,5)),
-                 pcbu.FourierHankelBasisRule([[-1,-1]], range(-4,5))]
-        basisDerivatives(rules, meshes, structuredpoints, k)
+#class TestBasisDerivatives(unittest.TestCase):
                  
                  
         

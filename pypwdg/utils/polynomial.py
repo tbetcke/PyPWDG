@@ -68,6 +68,7 @@ class DubinerTriangle(object):
     def __init__(self,k, p):
         x = p[:,0]
         y = p[:,1]
+        y[y==1]=0.999999 # Okay Timo.  I'm ready. fire me now.  
         self.eta2 = y
         self.eta1 = x / (1-y)  
         self.k = k

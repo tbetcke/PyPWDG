@@ -16,10 +16,11 @@ import numpy as np
 class TestReference(unittest.TestCase):
     
     def testReference(self):        
-        mesh = tum.regularsquaremesh(2)
+        meshes = [tum.regularsquaremesh(2)]
+        meshes = tum.examplemeshes2d()
         structuredpoints = pug.StructuredPoints([[0.01,0.01],[0.99,0.99]], [20,30])
-        rules = [pcbr.ReferenceBasisRule(pcbr.Dubiner(p)) for p in range(6)]
-        pcbtt.basisDerivatives(rules, [mesh], structuredpoints, k=1.0)
+        rules = [pcbr.ReferenceBasisRule(pcbr.Dubiner(p)) for p in range(3)]
+        pcbtt.basisDerivatives(rules, meshes, structuredpoints, k=1.0)
 
     
     

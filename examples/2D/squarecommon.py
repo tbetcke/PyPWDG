@@ -17,7 +17,7 @@ import pypwdg.parallel.main
 
 import numpy as np
 
-k = 20
+k = 10
 direction=np.array([[1.0,1.0]])/np.sqrt(2)
 #g = pcb.PlaneWaves(direction, k)
 g = pcb.FourierHankel([-2,-2], [0], k)
@@ -34,21 +34,23 @@ npoints=np.array([500,500])
 mesh = pmm.gmshMesh('square.msh',dim=2)
 print mesh.nelements
 
-npw = 15
-quadpoints = 15
+npw = 12
+quadpoints = 10
 
 # Original basis:
-basisrule = pcbv.PlaneWaveVariableN(pcb.uniformdirs(2,npw))
+pw = pcbv.PlaneWaveVariableN(pcb.uniformdirs(2,npw))
 # Polynomials only:
 #basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(3))
 # Product basis:
 #basisrule = pcb.ProductBasisRule(pcb.planeWaveBases(2,k,npw), pcbr.ReferenceBasisRule(pcbr.Dubiner(1)))
 
+basisrule=pcb.ProductBasisRule(pw,pcbr.ReferenceBasisRule(pcbr.Dubiner(0)))
+#basisrule = pw
 basisrule = pcbred.SVDBasisReduceRule(puq.trianglequadrature(quadpoints), basisrule)
 
 problem = psp.Problem(mesh, k, bnddata)
 computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, quadpoints)
-solution = computation.solution(psc.DirectSolver().solve)
+solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
 
 pos.comparetrue(bounds, npoints, g, solution)
 pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'square')
