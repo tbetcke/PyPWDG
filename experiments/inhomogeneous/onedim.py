@@ -25,21 +25,23 @@ def ssmatrix(A):
     return ss.csr_matrix((Ad, Ai, Ap))
 
 #def fenics1dhelmholtz(N, p, k):
-N = 50
-p = 3
-k = 80
+N = 100
+p = 5
+k = 30
 mesh = UnitInterval(N)
 V = FunctionSpace(mesh, 'Lagrange', p)
 u = TrialFunction(V)
 v = TestFunction(V)
 gr = Expression("cos(k*x[0])")
 gi = Expression("sin(k*x[0])")
+nx = Expression("exp(4*x[0]*(1-x[0])+1)")
+
 n = FacetNormal(mesh)
 
 gr.k = k
 gi.k = k
 
-a = (dot(grad(u), grad(v)) - k**2 * (inner(u,v)))*dx
+a = (dot(grad(u), grad(v)) - k**2 * nx**2 * (inner(u,v)))*dx
 b = k * dot(u,v) * ds 
 
 f = (gr * v * (1.0+n))*ds
@@ -57,9 +59,12 @@ print X
 x = uBLASVector(len(X))
 x[:] = X.real.copy()
 xfn = Function(V,x) 
-p = plot(xfn)
+plot(xfn)
 #
-    
+finemesh = UnitInterval(N*p)
+Vfine = FunctionSpace(finemesh, 'Lagrange', 1)
+xfine = interpolate(xfn, Vfine)
+plot(xfine)
 #    
 #    
 #
