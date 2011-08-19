@@ -40,6 +40,8 @@ def fenics1dhelmholtz(N, p, k):
 #    nx = Constant(1.0)
     n = FacetNormal(mesh)
     
+    A = as_matrix(((gr, gi),(-gi,gr)))
+    
     gr.k = k
     gi.k = k
     
