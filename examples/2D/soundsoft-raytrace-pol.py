@@ -34,7 +34,7 @@ mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 
 
 quadpoints = 30
-p=3
+p=4
 t=p**2
 g=.6
 
@@ -66,7 +66,7 @@ bh=pcb.UnionBasisRule([h2,b1])
 
 b2=pcbr.ReferenceBasisRule(pcbr.Dubiner(p))
 
-basisrule = bh #cbred.SVDBasisReduceRule(puq.trianglequadrature(quadpoints), bh, threshold=1E-5)
+basisrule = pcbred.SVDBasisReduceRule(puq.trianglequadrature(quadpoints), bh, threshold=1E-5)
 
 
 computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, quadpoints,alpha=alpha,beta=beta,delta=delta)
