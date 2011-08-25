@@ -98,8 +98,8 @@ pp2s = range(1,6)
 pw2s = range(5,27,4)
 
 pwerr = np.zeros((len(ns), len(pw1s)))
-polyerr = np.zeros((len(ns), len(pw1s)))
-polydirerr = np.zeros((len(ns), len(pw1s)))
+polyerr = np.zeros((len(ns), len(pp1s)))
+polydirerr = np.zeros((len(ns), len(pp1s)))
 polypwerr = np.zeros((len(ns), len(pp2s), len(pw2s)))
 
 print "ns: ",ns
