@@ -49,3 +49,9 @@ class Proxy(object):
     def __setstate__(self, state):
         self.__klass, self.__id = state
         self.subject = workerobjects.get(self.__id)
+        
+    def __del__(self):
+        if self.subject is None:
+            print "Proxy has been collected"
+            
+        

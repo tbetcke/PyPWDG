@@ -11,14 +11,30 @@ import pypwdg.setup.problem as psp
 import pypwdg.setup.computation as psc
 import pypwdg.core.physics as pcp
 import pypwdg.output.solution as pos
+import pypwdg.output.mploutput as pom
 import test.utils.mesh as tum
 import numpy as np
+import math
+import matplotlib.pyplot as mp
 
 class harmonic1():
+    ''' Harmonic function s * ((x+t)^2 - (y+t)^2), with s and t chosen such that the gradient has length 1 at (0,0) and self.scale at (1,1)''' 
+    
+    def __init__(self, scale):
+        self.s = (scale - 1) / (2*math.sqrt(2))
+        self.t = 1/(2 * math.sqrt(2)*self.s)
+        
     def values(self, x):
-        return (x[:,0]**2 - x[:,1]**2).reshape(-1,1)
+        return ((x[:,0]+self.t)**2 - (x[:,1]+self.t)**2).reshape(-1,1)*self.s
     def gradient(self, x):
-        return x * [2,-2] 
+        return (x+[self.t,self.t]) * [2,-2] *self.s
+
+class NormOfGradient():
+    def __init__(self, S):
+        self.S = S
+
+    def __call__(self, x):
+        return np.sqrt(np.sum(self.S.gradient(x)**2, axis=1))
 
 class HarmonicDerived(pcb.Basis):
     def __init__(self, k, S):
@@ -37,37 +53,105 @@ class HarmonicDerived(pcb.Basis):
     def laplacian(self, x):
         return -self.k**2 * self.values(x)
 
+class PlaneWaveFromDirectionsRule(object):
+    
+    def __init__(self, S):
+        self.S = S
+        
+    def populate(self, einfo):
+        import pypwdg.core.bases.definitions as pcbb
+        dir = self.S.gradient(einfo.origin)
+        dir = dir / math.sqrt(np.sum(dir**2))    
+        return [pcbb.PlaneWaves(dir,einfo.k)]
+
 import pypwdg.parallel.main
 
 from numpy import array,sqrt
 
-k = 20
-S = harmonic1()
+k = 40
+scale = 6.0
+S = harmonic1(scale)
 
-direction=array([[1.0,1.0]])/sqrt(2)
 g = HarmonicDerived(k, S)
 
 bdytag = "BDY"
 
 #bnddata={bdytag:pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g=g)}
 bnddata={bdytag:pcbd.dirichlet(g)}
+entityton ={1:NormOfGradient(S)}
 
 bounds=array([[0,1],[0,1]],dtype='d')
-npoints=array([100,100])
+npoints=array([200,200])
 
-n = 20
-mesh = tum.regularsquaremesh(n, bdytag)
+def geterr(problem, basisrule):
+    computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, 15)
+    solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
+#    mp.close()
+#    pom.output2dsoln(bounds, solution, npoints)
+#    pos.standardoutput(computation, solution, 20, bounds, npoints, None)
+    return pos.comparetrue(bounds, npoints, g, solution)
 
-basisrule = pcbv.PlaneWaveVariableN(pcb.circleDirections(12))
-#basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(3))
+ns = range(1,8)+range(8,16,2)+range(16,32,4)
+pw1s = range(7,35,2)
+pp1s = range(1,8)
+pp2s = range(1,6)
+pw2s = range(5,27,4)
 
+pwerr = np.zeros((len(ns), len(pw1s)))
+polyerr = np.zeros((len(ns), len(pw1s)))
+polydirerr = np.zeros((len(ns), len(pw1s)))
+polypwerr = np.zeros((len(ns), len(pp2s), len(pw2s)))
 
-entityton ={1:lambda x: np.sqrt(np.sum(S.gradient(x)**2, axis=1))}
-problem=psp.VariableNProblem(entityton, mesh,k, bnddata)
-#problem = psp.Problem(mesh, k, bnddata)
+print "ns: ",ns
+print "pw1s: ", pw1s
+print "pp1s: ", pp1s
+print "pw2s: ", pw2s
+print "pp2s: ", pp2s
 
+for ni, n in enumerate(ns):
+    mesh = tum.regularsquaremesh(n, bdytag)
+    problem=psp.VariableNProblem(entityton, mesh,k, bnddata)
+    
+    for pi,p in enumerate(pw1s):
+        basisrule = pcbv.PlaneWaveVariableN(pcb.circleDirections(p))
+        pwerr[ni,pi] = geterr(problem, basisrule)
 
-computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, 15)
-solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
-pos.comparetrue(bounds, npoints, g, solution)
-pos.standardoutput(computation, solution, 20, bounds, npoints, 'pwconvergence')
+    #    basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(9))
+        #basisrule = pcb.planeWaveBases(2, k, 20) 
+        #basisrule = pcb.ProductBasisRule(pcbv.PlaneWaveVariableN(pcb.circleDirections(13)), pcbr.ReferenceBasisRule(pcbr.Dubiner(1)))
+        
+    #    pom.output2dfn(bounds, entityton[1], npoints)
+    #    pom.output2dfn(bounds, g.values, npoints)
+        
+            
+    for pi,p in enumerate(pp1s):   
+        basisrule = pcb.ProductBasisRule(PlaneWaveFromDirectionsRule(S), pcbr.ReferenceBasisRule(pcbr.Dubiner(p)))
+        polydirerr[ni,pi] = geterr(problem, basisrule)
+        basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(p))
+        polyerr[ni,pi] = geterr(problem, basisrule)
+
+    for ppi, pp in enumerate(pp2s):
+        for pwi, pw in enumerate(pw2s):
+            basisrule = pcb.ProductBasisRule(pcbv.PlaneWaveVariableN(pcb.circleDirections(pw)), pcbr.ReferenceBasisRule(pcbr.Dubiner(pp)))
+            polypwerr[ni,ppi,pwi] = geterr(problem, basisrule)
+    
+    print "n = ", n
+    print pwerr[ni]
+    print polyerr[ni]
+    print polydirerr[ni]
+    print polypwerr[ni]
+    
+#        mp.close()
+#        pom.output2dsoln(bounds, solution, npoints)
+#    pos.standardoutput(computation, solution, 20, bounds, npoints, None)
+
+print "ns: ",ns
+print "pw1s: ", pw1s
+print "pp1s: ", pp1s
+print "pw2s: ", pw2s
+print "pp2s: ", pp2s
+
+print pwerr
+print polyerr
+print polydirerr
+print polypwerr

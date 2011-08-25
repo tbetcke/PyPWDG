@@ -28,12 +28,13 @@ def standardoutput(computation, solution, quadpoints, bounds, npoints, fileroot)
     print "Combined Error: ",np.sqrt(sum(errors**2))
     volerrors = pce.volumeerrors(computation.problem, quadpoints, solution)
     print "Volume Error / k^2: ", np.sqrt(sum(volerrors **2)) / (computation.problem.k **2)
-    try:
-        writeSolutionVTK(solution, bounds, npoints, fname = fileroot +'.vti')        
-        import pypwdg.output.vtk_output as pov
-        pov.VTKGrid(mesh, errors).write(fileroot + '.vtu')
-    except ImportError as e:   
-        print "Some or all output probably failed: ",e
+    if fileroot is not None:
+        try:
+            writeSolutionVTK(solution, bounds, npoints, fname = fileroot +'.vti')        
+            import pypwdg.output.vtk_output as pov
+            pov.VTKGrid(mesh, errors).write(fileroot + '.vtu')
+        except ImportError as e:   
+            print "Some or all output probably failed: ",e
         
 
 def comparetrue(bounds, npoints, g, solution):
@@ -49,7 +50,10 @@ def comparetrue(bounds, npoints, g, solution):
     gvals[idx] = g.values(points)
     l2g = np.sqrt(np.vdot(gvals, gvals) / sp.length)
     perr = solution.evaluate(sp) - gvals
-    print "L2 error in solution: ",np.abs(np.sqrt(np.vdot(perr,perr) / sp.length) / l2g)
+    relerr = np.abs(np.sqrt(np.vdot(perr,perr) / sp.length) / l2g)
+    print "Relative L2 error in solution: ", relerr
+    return relerr
+    
 
 
 class AdaptiveOutput1(object):

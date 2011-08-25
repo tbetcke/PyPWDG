@@ -37,8 +37,8 @@ class DirectSolver(object):
         
     def solve(self, system, sysargs, syskwargs):
         S,G = system.getSystem(*sysargs, **syskwargs)
-        print "Solve linear system of equations"
         M = S.tocsr()
+        print "Solve linear system of equations ",M.shape
         b = np.array(G.todense()).squeeze()
         x = self.solvemethod(M,b).squeeze()
         print "Relative residual: ", np.linalg.norm(M * x -b) / np.linalg.norm(x)
