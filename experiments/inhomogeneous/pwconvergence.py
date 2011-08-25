@@ -108,11 +108,14 @@ print "pp1s: ", pp1s
 print "pw2s: ", pw2s
 print "pp2s: ", pp2s
 
+MAXDOF = 500000
+
 for ni, n in enumerate(ns):
     mesh = tum.regularsquaremesh(n, bdytag)
     problem=psp.VariableNProblem(entityton, mesh,k, bnddata)
     
     for pi,p in enumerate(pw1s):
+        if p * n * n * 2 > MAXDOF: break
         basisrule = pcbv.PlaneWaveVariableN(pcb.circleDirections(p))
         pwerr[ni,pi] = geterr(problem, basisrule)
 
@@ -125,6 +128,7 @@ for ni, n in enumerate(ns):
         
             
     for pi,p in enumerate(pp1s):   
+        if p * (p+1) * n * n > MAXDOF: break
         basisrule = pcb.ProductBasisRule(PlaneWaveFromDirectionsRule(S), pcbr.ReferenceBasisRule(pcbr.Dubiner(p)))
         polydirerr[ni,pi] = geterr(problem, basisrule)
         basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(p))
@@ -132,6 +136,7 @@ for ni, n in enumerate(ns):
 
     for ppi, pp in enumerate(pp2s):
         for pwi, pw in enumerate(pw2s):
+            if pp * (pp+1) * n * n * pw > MAXDOF: break
             basisrule = pcb.ProductBasisRule(pcbv.PlaneWaveVariableN(pcb.circleDirections(pw)), pcbr.ReferenceBasisRule(pcbr.Dubiner(pp)))
             polypwerr[ni,ppi,pwi] = geterr(problem, basisrule)
     
