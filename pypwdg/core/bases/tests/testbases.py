@@ -6,7 +6,7 @@ Created on Dec 19, 2010
 import unittest
 
 import pypwdg.core.bases as pcb
-import test.utils.mesh as tum
+import pypwdg.test.utils.mesh as tum
 import pypwdg.core.bases.utilities as pcbu
 import pypwdg.core.bases.reference as pcbr
 import pypwdg.utils.geometry as pug

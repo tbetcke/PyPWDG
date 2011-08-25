@@ -9,7 +9,7 @@ import math
 import pypwdg.raytrace.element as pre
 import pypwdg.raytrace.control as prc
 
-import test.utils.mesh as tum
+import pypwdg.test.utils.mesh as tum
 
 class TestHomogeneous(unittest.TestCase):
 

@@ -12,7 +12,7 @@ import pypwdg.setup.computation as psc
 import pypwdg.core.physics as pcp
 import pypwdg.output.solution as pos
 import pypwdg.output.mploutput as pom
-import test.utils.mesh as tum
+import pypwdg.test.utils.mesh as tum
 import numpy as np
 import math
 import matplotlib.pyplot as mp

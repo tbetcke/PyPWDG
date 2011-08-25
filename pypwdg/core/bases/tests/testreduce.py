@@ -15,7 +15,7 @@ import pypwdg.utils.geometry as pug
 
 import numpy as np
 
-import test.utils.mesh as tum
+import pypwdg.test.utils.mesh as tum
 
 class Test(unittest.TestCase):
 

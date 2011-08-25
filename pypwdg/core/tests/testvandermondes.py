@@ -9,7 +9,7 @@ import pypwdg.core.vandermonde as pcv
 import pypwdg.mesh.meshutils as pmm
 
 import unittest
-import test.utils.mesh as tum
+import pypwdg.test.utils.mesh as tum
         
 import numpy
         

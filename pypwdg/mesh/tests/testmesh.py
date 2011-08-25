@@ -5,7 +5,7 @@ Created on Aug 6, 2010
 '''
 import unittest
 
-import test.utils.mesh as tum
+import pypwdg.test.utils.mesh as tum
 import scipy.sparse as ss
 
 class TestMesh(unittest.TestCase):
