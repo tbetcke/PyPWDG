@@ -27,7 +27,7 @@ class DirectSolver(object):
     
     def pardisoSolve(self, M, b):
         from pymklpardiso.linsolve import solve
-        (x, error) = solve(M,b.squeeze())
+        (x, error) = solve(M,b.squeeze(),msglvl=0)
         if not error == 0: raise Exception("Pardiso Error")
         return x
     
