@@ -9,7 +9,6 @@ import pypwdg.parallel.messaging as ppm
 
 import functools
 import pypwdg.parallel.proxy as ppp
-import uuid
 import sys
 import inspect
 import types
@@ -112,14 +111,14 @@ def distribute(scatterargs=None):
         if mpiloaded and comm.rank == 0:      
             @functools.wraps(klass)            
             def new(klass, *args, **kwargs):
-                id = uuid.uuid4()
+                proxy = ppp.Proxy(klass)
+                
                 if scatterargs is None:
-                    scatteredargs = [((klass, id) + args,kwargs)]*(comm.size-1)
+                    scatteredargs = [((klass, proxy.__id__) + args,kwargs)]*(comm.size-1)
                 else:
-                    scatteredargs = [((klass, id) + s[0], s[1]) for s in scatterargs(comm.size-1)(*args, **kwargs)]
+                    scatteredargs = [((klass, proxy.__id__) + s[0], s[1]) for s in scatterargs(comm.size-1)(*args, **kwargs)]
 
                 ppm.scatterfncall(ppp.createproxy, scatteredargs)
-                proxy = ppp.Proxy(klass, id)
                 for name, m in inspect.getmembers(klass, inspect.ismethod):
                     pmdata = parallelmethods.get(m.im_func)
                     if pmdata is not None:
@@ -154,9 +153,9 @@ def immutable(klass):
         def new(klass, *arg, **kw):
             obj = object.__new__(klass)
             obj.__init__(*arg, **kw)
-            id = uuid.uuid4()
-            ppm.scatterfncall(ppp.registerproxy, [((id, obj),{})] * (comm.size-1))
-            return ppp.Proxy(klass, id, obj) 
+            proxy = ppp.Proxy(klass, obj)
+            ppm.scatterfncall(ppp.registerproxy, [((proxy.__id__, obj),{})] * (comm.size-1))
+            return proxy 
         klass.__new__ = staticmethod(new)
     return klass
 

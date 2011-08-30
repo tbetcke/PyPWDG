@@ -11,6 +11,7 @@ import numpy as np
 import cPickle
 import cStringIO
 import time
+import collections as c
 
 import operator
 
@@ -156,6 +157,11 @@ def masterrecv():
         values.append(up.load())
     return values
 
+asyncfncalls = c.deque()
+
+def asyncfncall(fn, args, reduceop = None):
+    asyncfncalls.appendleft((fn, args, reduceop))
+
 def scatterfncall(fn, args, reduceop=None):
     """ Scatter function calls to the worker processes
     
@@ -172,6 +178,9 @@ def scatterfncall(fn, args, reduceop=None):
         tasks.append((fn, a[0], a[1]))
     mastersend(tasks)
     values = masterrecv()
+    
+    if len(asyncfncalls): 
+        scatterfncall(*asyncfncalls.popleft())
     return values if reduceop is None else reduce(reduceop, values)
 
 

@@ -16,6 +16,7 @@ import pypwdg.test.utils.mesh as tum
 import numpy as np
 import math
 import matplotlib.pyplot as mp
+import gc
 
 class harmonic1():
     ''' Harmonic function s * ((x+t)^2 - (y+t)^2), with s and t chosen such that the gradient has length 1 at (0,0) and self.scale at (1,1)''' 
@@ -94,6 +95,8 @@ def geterr(problem, basisrule):
 ns = range(1,8)+range(8,16,2)+range(16,33,4)
 pw1s = range(7,40,2)
 pp1s = range(1,11)
+pw1s = range(7,20,2)
+pp1s = range(1,6)
 pp2s = range(1,6)
 pw2s = range(5,27,4)
 
@@ -146,6 +149,7 @@ for ni, n in enumerate(ns):
     print polyerr[ni]
     print polydirerr[ni]
     print polypwerr[ni]
+    print gc.collect()
     
 #        mp.close()
 #        pom.output2dsoln(bounds, solution, npoints)
