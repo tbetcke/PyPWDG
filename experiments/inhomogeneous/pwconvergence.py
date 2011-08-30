@@ -68,8 +68,8 @@ import pypwdg.parallel.main
 
 from numpy import array,sqrt
 
-k = 40
-scale = 6.0
+k = 20
+scale = 4.0
 S = harmonic1(scale)
 
 g = HarmonicDerived(k, S)
@@ -91,9 +91,9 @@ def geterr(problem, basisrule):
 #    pos.standardoutput(computation, solution, 20, bounds, npoints, None)
     return pos.comparetrue(bounds, npoints, g, solution)
 
-ns = range(1,8)+range(8,16,2)+range(16,32,4)
-pw1s = range(7,35,2)
-pp1s = range(1,8)
+ns = range(1,8)+range(8,16,2)+range(16,33,4)
+pw1s = range(7,40,2)
+pp1s = range(1,11)
 pp2s = range(1,6)
 pw2s = range(5,27,4)
 
@@ -136,6 +136,7 @@ for ni, n in enumerate(ns):
 
     for ppi, pp in enumerate(pp2s):
         for pwi, pw in enumerate(pw2s):
+            break
             if pp * (pp+1) * n * n * pw > MAXDOF: break
             basisrule = pcb.ProductBasisRule(pcbv.PlaneWaveVariableN(pcb.circleDirections(pw)), pcbr.ReferenceBasisRule(pcbr.Dubiner(pp)))
             polypwerr[ni,ppi,pwi] = geterr(problem, basisrule)
@@ -153,10 +154,10 @@ for ni, n in enumerate(ns):
 print "ns: ",ns
 print "pw1s: ", pw1s
 print "pp1s: ", pp1s
-print "pw2s: ", pw2s
-print "pp2s: ", pp2s
+#print "pw2s: ", pw2s
+#print "pp2s: ", pp2s
 
 print pwerr
 print polyerr
 print polydirerr
-print polypwerr
+#print polypwerr
