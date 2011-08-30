@@ -95,8 +95,6 @@ def geterr(problem, basisrule):
 ns = range(1,8)+range(8,16,2)+range(16,33,4)
 pw1s = range(7,40,2)
 pp1s = range(1,11)
-pw1s = range(7,20,2)
-pp1s = range(1,6)
 pp2s = range(1,6)
 pw2s = range(5,27,4)
 
