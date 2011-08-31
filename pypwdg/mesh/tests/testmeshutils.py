@@ -7,7 +7,7 @@ import unittest
 
 import pypwdg.mesh.meshutils as pmmu
 import pypwdg.utils.quadrature as puq
-import test.utils.mesh as tum
+import pypwdg.test.utils.mesh as tum
 
 import numpy as np
 import math

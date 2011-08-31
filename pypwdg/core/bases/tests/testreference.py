@@ -9,7 +9,7 @@ import pypwdg.core.bases.reference as pcbr
 import pypwdg.utils.geometry as pug
 import pypwdg.core.bases.tests.testbases as pcbtt
 
-import test.utils.mesh as tum
+import pypwdg.test.utils.mesh as tum
 
 import numpy as np        
 

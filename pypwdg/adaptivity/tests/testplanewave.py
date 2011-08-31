@@ -8,7 +8,7 @@ import unittest
 import pypwdg.utils.quadrature as puq
 import pypwdg.core.bases as pcb
 import pypwdg.adaptivity.planewave as prp
-import test.utils.mesh as tum
+import pypwdg.test.utils.mesh as tum
 import pypwdg.mesh.meshutils as pmmu
 import pypwdg.core.boundary_data as pcbd
 import numpy as np
