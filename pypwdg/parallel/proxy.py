@@ -30,10 +30,10 @@ def getnewproxyuid():
     up the worker processes'''
     uid = uuid.uuid4()
     uidint = uid.int
+    cs = comm.size # don't want to have to access comm potentially after mpi has been finalized
     def uidcallback(uidref):
-        if mpiloaded and comm.rank == 0:
-            logging.log(logging.INFO, 'Distributing unregister for %s'%(uidint))
-            ppm.asyncfncall(unregisterproxy, [((uuid.UUID(int = uidint),),{})] * (comm.size-1))        
+        logging.log(logging.INFO, 'Distributing unregister for %s'%(uidint))
+        ppm.asyncfncall(unregisterproxy, [((uuid.UUID(int = uidint),),{})] * (cs-1))        
     uidweakrefs[uid] = weakref.ref(uid, uidcallback)
     return uid
     
