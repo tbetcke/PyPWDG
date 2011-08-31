@@ -16,7 +16,7 @@ Created on Sep 14, 2010
 
 @author: joel
 '''
-from pypwdg.parallel.mpiload import mpiloaded, comm
+from pypwdg.parallel.mpiload import *
 import pypwdg.parallel.messaging as ppm
 import weakref
 import uuid
