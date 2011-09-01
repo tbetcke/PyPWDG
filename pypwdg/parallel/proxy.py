@@ -4,9 +4,9 @@ ppd.distribute or ppd.immutable)
 
 If the proxy is collected on the master process, it gets collected on the worker processes.  This
 shouldn't be a big deal.  If the master object gets collected, there's no way for the worker objects
-to communicated.  You shouldn't have used a Proxy! (N.B. this is a little unfair - it's possible there might
-be different usage patterns across different applications.  In any case - keep the master proxy alive and all 
-will be well.
+to communicate.  You shouldn't have used a Proxy! (N.B. this is a little unfair - it's possible there might
+be different usage patterns of a library across different applications.  In any case - keep the 
+master proxy alive and all will be well).
 
 There's an important, but hopefully benign limitation: Returning a proxy back to the master process will
 possible cause odd things to happen.  Since it's hard to see why you would do this (how do you reduce
