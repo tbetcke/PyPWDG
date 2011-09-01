@@ -41,32 +41,38 @@ class FaceMapping:
         - Allow for other interpolation options for p         
     '''
     
-    def __init__(self, vertices, subsimplex, surface, interpolationpoints = 10):
+    def __init__(self, vertices, subsimplexids, surface, interpolationpoints = 10):
         
-        dim = len(vertices)-1
-        ssdim = len(subsimplex)-1
-        self.barycentric = np.linalg.inv(np.hstack((vertices, np.ones(len(vertices),1))))
+        self.dim = len(vertices)-1
+        ssdim = len(subsimplexids)-1
+        self.barycentric = np.linalg.inv(np.hstack((vertices, np.ones((len(vertices),1)))))
         
         # The documentation lies a bit.  In fact, we're going to determine pp : FF \rightarrow U, where
         # FF is the reference simplex and so f = s \circ pp \circ \phi^{-1}, where \phi: FF \rightarrow F
         # is a chart mapping for the flat face, F 
         if ssdim >0:
-            refpoints = uniformreferencepoints(ssdim-1, interpolationpoints) # Get a grid of points on the reference simplex 
-            barycentricrefpoints = np.hstack(refpoints, 1-np.sum(refpoints, axis=1).reshape(-1,1))
-            sspoints = np.dot(barycentricrefpoints, vertices[:,subsimplex])
+            refpoints = uniformreferencepoints(ssdim, interpolationpoints) # Get a grid of points on the reference (sub)simplex 
+            barycentricrefpoints = np.hstack((refpoints, 1-np.sum(refpoints, axis=1).reshape(-1,1)))
+            sspoints = np.dot(barycentricrefpoints, vertices[subsimplexids, :])
             
             sssurfparams = np.array(map(nearestpoint, sspoints)) # For each point, x \in F, find the point in y \in U that such that s(y) minimises |s(y) - x|
-            self.p = [si.LinearNDInterpolator(refpoints, params) for params in sssurfparams.transpose()]
+            ps = [si.LinearNDInterpolator(refpoints, params) for params in sssurfparams.transpose()]
+            self.f = lambda x : surface(np.hstack([p(x)for p in ps]))
         else:
-            y = nearestpoint(vertices[subsimplex])
-            self.p = lambda x : y
+            y = nearestpoint(vertices[subsimplexids])
+            self.f = lambda x : y
         
-        self.vertices = vertices
-        self.subsimplex = subsimplex
+        self.ssidx = subsimplexids
+        self.nonssidx = np.setdiff1d(np.arange(self.dim+1), self.ssverts, True)
+        self.nonssvertices = vertices[self.nonssidx]
         
     def apply(self, x):
         barycoords = np.dot(x, self.barycentric)
-        
+        ssbarycoords = barycoords[:,self.ssidx[:-1]]
+        curvemappoints = self.f(ssbarycoords)
+        nonssbarycoords = barycoords[:,self.nonssidx]
+        noncurvemappoints = np.dot(nonssbarycoords, self.nonssvertices)
+        return curvemappoints + noncurvemappoints
         
         
          
