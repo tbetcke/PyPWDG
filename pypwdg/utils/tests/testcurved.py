@@ -90,18 +90,25 @@ class Test(unittest.TestCase):
         subsimplexids = np.array([0,1])
         surface = lambda t: np.hstack((np.sin(t), np.cos(t)))
         fm = puc.CurvedMapping(vertices, subsimplexids, surface)
-        N = 3
+        N = 10
         x,w = puq.trianglequadrature(N)
-        p = np.vstack((np.linspace(0,1,11), np.linspace(1,0,11))).transpose()
+        x = x.real
+        xm = fm.apply(x)
+        
         
         dets = puc.determinants(puc.jacobians(fm.apply, x))
-        pp = puc.uniformreferencepoints(2, 5)
-        cp = fm.apply(pp)
-        print pp
-        print np.sqrt(cp[:,0]**2 + cp[:,1]**2) / np.sum(pp,axis=1)
-        print puc.determinants(puc.jacobians(fm.apply,pp))
+         
         self.assertAlmostEqual(sum(w), 0.5)
-        self.assertAlmostEqual(sum(w.ravel() * dets.ravel()), math.pi/4)
+        np.testing.assert_almost_equal(np.sqrt(xm[:,0]**2 + xm[:,1]**2) / np.sum(x,axis=1), 1) # tests that lines x+y = const map to arcs
+        print sum(w.ravel() * dets.ravel()), math.pi/4
+        self.assertAlmostEqual(sum(w.ravel() * dets.ravel()), math.pi/4,places=3) # test that the integration change of variables works
+        
+        p = np.vstack((np.linspace(0,1,11), np.linspace(1,0,11))).transpose()
+        cp = fm.apply(p)
+        theta = np.arctan(cp[:,1] / cp[:,0])
+        dtheta = np.diff(theta)
+        np.testing.assert_almost_equal(dtheta, dtheta[::-1]) # simple symmetry test
+
         
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testCurve1']

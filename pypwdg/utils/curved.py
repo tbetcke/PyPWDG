@@ -10,7 +10,7 @@ import numpy as np
 def nearestpoint(x, S):
     ''' S is a chart.  x is a point.  returns y, where y minimises |S(y) - x|'''
     x = x.reshape(1,-1)
-    return so.fmin_powell(lambda y: np.sum((S(y) - x)**2), np.zeros(x.shape[1]-1), disp=False)
+    return so.fmin_powell(lambda y: np.sum((S(y) - x)**2), np.zeros(x.shape[1]-1), disp=False,xtol=1E-6,ftol=1E-6)
 
 def uniformreferencepoints(dim, n):
     ''' Gives a uniform grid of points on the reference dim-simplex with spacing 1/n'''
@@ -54,8 +54,9 @@ class CurvedMapping:
             subparams = np.array(map(nearestpoint, subpoints, [surface]*len(subpoints))) # For each point, x \in F, find the point in y \in U that such that S(y) minimises |S(y) - x|
             # Now construct the mapping, self.f, which maps from points on the reference sub-simplex to M
             if subdim==1:
-                p = si.interp1d(refpoints.ravel(), subparams)
-                self.f = lambda x : surface(p(x))
+#                p = si.interp1d(refpoints.ravel(), subparams)
+                p = si.InterpolatedUnivariateSpline(refpoints.ravel(), subparams)
+                self.f = lambda x : surface(p(x.ravel()).reshape(-1,1))
             else:
                 ps = [si.LinearNDInterpolator(refpoints, params) for params in subparams.transpose()]
                 self.f = lambda x : surface(np.hstack([p(x)for p in ps]))
@@ -71,16 +72,24 @@ class CurvedMapping:
         barycoords = np.dot(appendcolumn(x), self.barycentric) # convert x into barycentric coordinates
         barycoords[barycoords < 0] = 0
         barycoords[barycoords > 1] = 1 # otherwise the interpolator can get upset - rounding error comes from pinv
-        ssbarycoords = barycoords[:,self.subidx] # extract the barycentric coordinates associated with the mapped sub-simplex
-        curvemappoints = self.f(ssbarycoords[:,:-1]) # map them (we use the first m-1 barycentric coordinates, because those were the reference points)
-        noncurvemappoints = np.dot(barycoords[:,self.otheridx], self.othervertices) # now map the barycentric coordinates not associated with the sub-simplex
-        return curvemappoints*np.sum(ssbarycoords,axis=1).reshape(-1,1) + noncurvemappoints # And add everything up
+        otherbarycoords = barycoords[:,self.otheridx]
+        subbarycoords = barycoords[:,self.subidx] # extract the barycentric coordinates associated with the mapped sub-simplex
+        sumsbc = np.sum(subbarycoords, axis=1).reshape(-1,1)
+        curvemappoints = self.f(subbarycoords[:,:-1]/sumsbc) # map them (we use the first m-1 barycentric coordinates, because those were the reference points)
+        noncurvemappoints = np.dot(otherbarycoords, self.othervertices) # now map the barycentric coordinates not associated with the sub-simplex
+        return curvemappoints*sumsbc + noncurvemappoints # And add everything up
         
-def jacobians(f, points, eps=1E-6):
+def jacobians(f, points, eps=1E-4):
     ''' Numerical approximation of the Jacobian of f at points'''
     n,dim = points.shape    
     h = np.eye(dim)[np.newaxis, ...]*eps
     points = points[:,np.newaxis,:]
+#    print points
+#    print (points + h).reshape(-1,dim)
+#    print (points - h).reshape(-1,dim)
+#    print f((points + h).reshape(-1,dim))
+#    print f((points - h).reshape(-1,dim))
+    
     df = f((points + h).reshape(-1,dim)) - f((points - h).reshape(-1,dim))
     jacs = df.reshape(n,dim,-1) / (2*eps)
     return jacs
