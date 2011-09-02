@@ -74,10 +74,24 @@ class CurvedMapping:
         ssbarycoords = barycoords[:,self.subidx] # extract the barycentric coordinates associated with the mapped sub-simplex
         curvemappoints = self.f(ssbarycoords[:,:-1]) # map them (we use the first m-1 barycentric coordinates, because those were the reference points)
         noncurvemappoints = np.dot(barycoords[:,self.otheridx], self.othervertices) # now map the barycentric coordinates not associated with the sub-simplex
-        
         return curvemappoints*np.sum(ssbarycoords,axis=1).reshape(-1,1) + noncurvemappoints # And add everything up
         
-        
+def jacobians(f, points, eps=1E-6):
+    ''' Numerical approximation of the Jacobian of f at points'''
+    n,dim = points.shape    
+    h = np.eye(dim)[np.newaxis, ...]*eps
+    points = points[:,np.newaxis,:]
+    df = f((points + h).reshape(-1,dim)) - f((points - h).reshape(-1,dim))
+    jacs = df.reshape(n,dim,-1) / (2*eps)
+    return jacs
          
-        
+def determinants(jacobians):
+    j = jacobians
+    n, d1,d2 = j.shape
+    if d1==1 and d2==1:
+        return jacobians.ravel()
+    if d1==2 and d2==2:
+        return j[:,0,0] * j[:,1,1] - j[:,0,1]*j[:,1,0]
+    else:
+        return np.array(map(np.linalg.det, jacobians))
         
