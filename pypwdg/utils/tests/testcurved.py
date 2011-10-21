@@ -84,11 +84,17 @@ class Test(unittest.TestCase):
         np.testing.assert_almost_equal(mpoints, np.dot(points, M))
 
     def testDeterminants(self):
-        ''' In this test, we map the triangle to a quarter-circle and check that we calculate the correct determinants'''
+        ''' In this test, we map the hypotenuse of the reference triangle to an arc of a circle and check that we calculate the correct determinants'''
         n = 2
         vertices = np.vstack((np.eye(n), np.zeros((1,n))))
         subsimplexids = np.array([0,1])
-        surface = lambda t: np.hstack((np.sin(t), np.cos(t)))
+        radius = 3
+        adjacent = math.sqrt(radius**2 - 1.0/2)
+        surface = lambda t: np.hstack((np.sin(t), np.cos(t)))*radius+1.0/2-adjacent*math.sqrt(1.0/2)
+        halfangle = math.asin(math.sqrt(2) / (2*radius))
+        print halfangle, adjacent
+        area = 1.0/2 + halfangle * radius**2 - adjacent * math.sqrt(1.0/2)
+        
         fm = puc.CurvedMapping(vertices, subsimplexids, surface)
         N = 10
         x,w = puq.trianglequadrature(N)
@@ -98,10 +104,9 @@ class Test(unittest.TestCase):
         
         dets = puc.determinants(puc.jacobians(fm.apply, x))
          
-        self.assertAlmostEqual(sum(w), 0.5)
-        np.testing.assert_almost_equal(np.sqrt(xm[:,0]**2 + xm[:,1]**2) / np.sum(x,axis=1), 1) # tests that lines x+y = const map to arcs
-        print sum(w.ravel() * dets.ravel()), math.pi/4
-        self.assertAlmostEqual(sum(w.ravel() * dets.ravel()), math.pi/4,places=3) # test that the integration change of variables works
+        self.assertAlmostEqual(sum(w), 0.5)        
+        print sum(w.ravel() * dets.ravel()), area
+        self.assertAlmostEqual(sum(w.ravel() * dets.ravel()), area,places=3) # test that the integration change of variables works
         
         p = np.vstack((np.linspace(0,1,11), np.linspace(1,0,11))).transpose()
         cp = fm.apply(p)
