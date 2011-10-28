@@ -33,6 +33,15 @@ class Test(unittest.TestCase):
         
                        
 
+class TestUtils(unittest.TestCase):
+    def testGradient(self):
+        N = 10
+        f = lambda x: x[:,0]**2 + x[:,1]**2
+        x = np.random.rand(N,2)
+        g = prw.gradient(f, 1E-7)
+        gx = g(x)
+        self.assertEquals(gx.shape, (N,2))
+        np.testing.assert_almost_equal(gx, x * 2)
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testFillIn']

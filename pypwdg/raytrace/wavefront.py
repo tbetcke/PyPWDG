@@ -12,8 +12,11 @@ def norm(a):
 def gradient(fn, h):
     def g(x):
         dim = x.shape[1]
-        xh = x + np.identity(dim)[np.newaxis,...]*h
-        fnxh = map() 
+        xh = x + np.identity(dim)[:,np.newaxis,:]*h
+        fnx = fn(x)
+        fnxh = map(lambda xh : fn(xh) - fnx, xh)
+        return np.array(fnxh).transpose() / h
+    return g
 
 def onestep(x, p, slowness, gradslowness, deltat):
     s = slowness(x)[:,np.newaxis]
