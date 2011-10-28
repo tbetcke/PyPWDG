@@ -7,8 +7,13 @@ import numpy as np
 from collections import namedtuple
 
 def norm(a):
-    print a.shape
     return np.sqrt(np.sum(a**2,axis=1))
+
+def gradient(fn, h):
+    def g(x):
+        dim = x.shape[1]
+        xh = x + np.identity(dim)[np.newaxis,...]*h
+        fnxh = map() 
 
 def onestep(x, p, slowness, gradslowness, deltat):
     s = slowness(x)[:,np.newaxis]
@@ -50,12 +55,15 @@ def wavefront(x0,p0,slowness,gradslowness,deltat,n,tol):
     x,p = x0,p0
     wavefronts = []
     forwardidxs = []
+    if gradslowness is None:
+        gradslowness
     for _ in range(n):
         xi,pi,fwdidx = fillin(x,p,tol)
         wavefronts.append((x,p))
         forwardidxs.append(fwdidx)
         x,p = onestep(xi,pi,slowness,gradslowness,deltat)
-    return wavefront, forwardidxs
+    return wavefronts, forwardidxs
+    
     
 
         
