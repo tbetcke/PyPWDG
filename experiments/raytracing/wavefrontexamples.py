@@ -5,6 +5,10 @@ Created on Oct 28, 2011
 '''
 import matplotlib.pyplot as mp
 import pypwdg.raytrace.wavefront as prw
+import pypwdg.output.mploutput as pom
+import pypwdg.core.bases as pcb
+import pypwdg.raytrace.basisrules as prb
+import pypwdg.test.utils.mesh as ptum
 import numpy as np
 
 def plotwavefront(wavefronts, forwardidxs = None):
@@ -19,6 +23,14 @@ def plotwavefront(wavefronts, forwardidxs = None):
             x01s.append(np.dstack((x0,xf)))
         xy = np.vstack(x01s)
         mp.plot(xy[:,0,:].T, xy[:,1,:].T, 'k:')
+
+def plotmesh(wavefronts, forwardidxs, mesh, bdys):
+    vtods = prw.nodesToPhases(wavefronts, forwardidxs, mesh, bdys)
+    etods = prb.etodsfromvtods(mesh, vtods)
+    etob = [[pcb.PlaneWaves(ds, k=10)] if len(ds) else [] for ds in etods]
+    pom.showmesh(mesh)
+    pom.showdirections(mesh, etob,scale=20)
+    
 
 def trivialwavefront(c, N = 50):
     slowness = lambda x: np.ones(len(x)) /c
@@ -41,7 +53,7 @@ def linearmaterial():
 def bubblematerial(c = 1, N = 20):
     R = 0.2
     R2 = R**2
-    alpha = 0.2
+    alpha = 0.3
     def slowness(x):
         r2 = np.sum((x - [0.5,0.3])**2, axis=1)
         return (r2 > R2)/c + (r2 <= R2) * (1 + (R2 - r2)*alpha / R2) / c
@@ -49,5 +61,9 @@ def bubblematerial(c = 1, N = 20):
     x0 = np.vstack((np.linspace(0,1,N), np.zeros(N))).T
     p0 = np.vstack((np.zeros(N), np.ones(N))).T
     wfs, idxs = prw.wavefront(x0, p0, slowness, gradslowness, 0.1, 1.2/c, 0.1)
+    mp.subplot(1,2,1)
     plotwavefront(wfs, idxs)
+    mesh = ptum.regularsquaremesh(12, "BDY")
+    mp.subplot(1,2,2)
+    plotmesh(wfs, idxs, mesh, ["BDY"])
     
