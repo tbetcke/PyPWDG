@@ -31,6 +31,8 @@ def plotmesh(wavefronts, forwardidxs, mesh, bdys):
     pom.showmesh(mesh)
     pom.showdirections(mesh, etob,scale=20)
     
+def solvesystem(wavefronts, forwardidxs):
+    pass
 
 def trivialwavefront(c, N = 50):
     slowness = lambda x: np.ones(len(x)) /c

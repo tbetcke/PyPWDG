@@ -14,7 +14,7 @@ def normaliseandcompact(dirs):
     for d in normeddirs:
         newdir = True
         for cd in cdirs:
-            if np.dot(cd,d) > 1 - 1E-4:
+            if np.dot(cd,d) > 1 - 1E-2:
                 newdir = False
                 break
         if newdir: cdirs.append(d)
