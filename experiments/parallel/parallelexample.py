@@ -5,7 +5,7 @@ Created on Oct 31, 2011
 '''
 import pypwdg.parallel.decorate as ppd
 
-@ppd.parallel(ppd.partitionlist)
+@ppd.parallel(lambda n: lambda somelist: ppd.partitionlist(n,somelist))
 def myexpensivefn(somelist):
     return sum([x**2 for x in somelist])
 
