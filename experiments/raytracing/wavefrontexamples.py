@@ -33,7 +33,16 @@ def getetob(wavefronts, forwardidxs, mesh, bdys):
     return etob
 
 def solvesystem(wavefronts, forwardidxs):
-    pass
+    direction=np.array([[1.0,1.0]])/np.sqrt(2)
+    #g = pcb.PlaneWaves(direction, k)
+    g = pcb.FourierHankel([-2,-2], [0], k)
+    impbd = pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g)
+    
+    #bnddata={7:impbd, 
+    #         8:impbd}
+    bnddata={7:pcbd.dirichlet(g), 
+             8:pcbd.dirichlet(g)}
+
 
 def trivialwavefront(c, N = 50):
     slowness = lambda x: np.ones(len(x)) /c
@@ -52,15 +61,16 @@ def linearmaterial():
     p0 = np.vstack((np.zeros(N), np.ones(N))).T
     wfs, idxs = prw.wavefront(x0, p0, slowness, gradslowness, 0.05, 1.5, 1)
     plotwavefront(wfs, idxs)
-    
-def bubblematerial(c = 1, N = 20):
-    R = 0.2
-    R2 = R**2
-    alpha = 0.3
+
+def bubble(c = 1, R = 0.2, alpha = 0.3):
     def slowness(x):
         r2 = np.sum((x - [0.5,0.3])**2, axis=1)
         return (r2 > R2)/c + (r2 <= R2) * (1 + (R2 - r2)*alpha / R2) / c
     gradslowness = prw.gradient(slowness, 1E-6)
+    return slowness, gradslowness
+    
+def bubblematerial(c = 1, N = 20):
+    slowness, gradslowness = bubble(c)
     x0 = np.vstack((np.linspace(0,1,N), np.zeros(N))).T
     p0 = np.vstack((np.zeros(N), np.ones(N))).T
     wfs, idxs = prw.wavefront(x0, p0, slowness, gradslowness, 0.1, 1.2/c, 0.1)
