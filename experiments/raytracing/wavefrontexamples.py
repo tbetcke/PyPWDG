@@ -25,24 +25,6 @@ def plotwavefront(wavefronts, forwardidxs = None):
             x01s.append(np.dstack((x0,xf)))
         xy = np.vstack(x01s)
         mp.plot(xy[:,0,:].T, xy[:,1,:].T, 'k:')
-    
-def getetob(wavefronts, forwardidxs, mesh, bdys):
-    vtods = prw.nodesToPhases(wavefronts, forwardidxs, mesh, bdys)
-    etods = prb.etodsfromvtods(mesh, vtods)
-    etob = [[pcb.PlaneWaves(ds, k=10)] if len(ds) else [] for ds in etods]
-    return etob
-
-def solvesystem(wavefronts, forwardidxs):
-    direction=np.array([[1.0,1.0]])/np.sqrt(2)
-    #g = pcb.PlaneWaves(direction, k)
-    g = pcb.FourierHankel([-2,-2], [0], k)
-    impbd = pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g)
-    
-    #bnddata={7:impbd, 
-    #         8:impbd}
-    bnddata={7:pcbd.dirichlet(g), 
-             8:pcbd.dirichlet(g)}
-
 
 def trivialwavefront(c, N = 50):
     slowness = lambda x: np.ones(len(x)) /c
@@ -63,6 +45,7 @@ def linearmaterial():
     plotwavefront(wfs, idxs)
 
 def bubble(c = 1, R = 0.2, alpha = 0.3):
+    R2 = R**2
     def slowness(x):
         r2 = np.sum((x - [0.5,0.3])**2, axis=1)
         return (r2 > R2)/c + (r2 <= R2) * (1 + (R2 - r2)*alpha / R2) / c
@@ -77,11 +60,8 @@ def bubblematerial(c = 1, N = 20):
     mp.subplot(1,2,1)
     plotwavefront(wfs, idxs)
     mesh = ptum.regularsquaremesh(12, "BDY")
-    etob = getetob(wfs, idxs, mesh, "BDY")
+    etob = prb.getetob(wfs, idxs, mesh, "BDY")
     mp.subplot(1,2,2)
     pom.showmesh(mesh)
     pom.showdirections(mesh, etob,scale=20)
-    bnddata={"BND:pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g=g)}
-
-    problem = psp.Problem(mesh, k, bnddata)
     
