@@ -12,7 +12,7 @@ def image(v, npoints, bounds):
     z = v.reshape(npoints)
     
     mp.figure()
-    c = mp.imshow(z, extent=bounds.ravel(), origin='lower', alpha = 0.7)
+    c = mp.imshow(z.T, extent=bounds.ravel(), origin='lower', alpha = 0.7)
     mp.colorbar(c)
 
 

@@ -34,7 +34,15 @@ def getetob(wavefronts, forwardidxs, mesh, bdys):
     etob = [[pcb.PlaneWaves(ds, k=10)] if len(ds) else [] for ds in etods]
     return etob
 
-
+class RaytracedBasisRule(object):
+    ''' Construct PlaneWave basis objects based on a variable n'''
+    def __init__(self, vtods):
+        self.vtods = vtods
+        
+    def populate(self, einfo):
+        dirs = normaliseandcompact(sum([self.vtods[v] for v in einfo.vertices],[]))        
+        return [pcbb.PlaneWaves(dirs, einfo.k)]        
+    
 
 
 #

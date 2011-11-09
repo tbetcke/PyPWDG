@@ -8,6 +8,7 @@ import numpy as np
 import pypwdg.utils.geometry as pug
 import pypwdg.output.basis as pob
 import pypwdg.core.errors as pce
+import pypwdg.output.mploutput as pom
 
 def writeSolutionVTK(solution, bounds, npoints, realdata=True, fname='solution.vti'):
     from pypwdg.output.vtk_output import VTKStructuredPoints
@@ -21,7 +22,7 @@ def writeSolutionVTK(solution, bounds, npoints, realdata=True, fname='solution.v
     vtk_structure.create_vtk_structured_points(bounds,npoints)
     vtk_structure.write_to_file(fname)
     
-def standardoutput(computation, solution, quadpoints, bounds, npoints, fileroot):
+def standardoutput(computation, solution, quadpoints, bounds, npoints, fileroot = None, mploutput = False):
     ''' Dumps the solution to a file and also writes the errors out on a mesh'''
     mesh = computation.problem.mesh
     errors = pce.combinedError(computation.problem, solution, quadpoints)[0]
@@ -35,6 +36,8 @@ def standardoutput(computation, solution, quadpoints, bounds, npoints, fileroot)
             pov.VTKGrid(mesh, errors).write(fileroot + '.vtu')
         except ImportError as e:   
             print "Some or all output probably failed: ",e
+    if mploutput:
+        pom.output2dsoln(bounds, solution, npoints)
         
 
 def comparetrue(bounds, npoints, g, solution):

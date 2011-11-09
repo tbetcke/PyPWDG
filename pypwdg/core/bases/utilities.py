@@ -182,6 +182,9 @@ class ElementInfo(object):
             ns = self.mesh.normals[fs].repeat(map(len, fqw), axis=0)
             return qp,qw,ns
         return bq
+    
+    def vertices(self, e):
+        return self.mesh.elements[e]
             
     
 @ppd.parallel(None, None)

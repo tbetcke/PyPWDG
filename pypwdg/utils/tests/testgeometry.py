@@ -10,6 +10,19 @@ import pypwdg.test.utils.mesh as tum
 
 import numpy as np
 
+class TestStructurePoints(unittest.TestCase):
+    def testBounds(self):
+        bounds = [[0,0],[1,1]]
+        N = 11
+        npoints = [N,N]
+        sp = pug.StructuredPoints(bounds, npoints)
+        idxs, points = sp.getPoints(bounds)        
+        np.testing.assert_array_equal(idxs, np.arange(N*N))
+        np.testing.assert_array_equal(points[idxs], points)
+        idxs, points = sp.getPoints([[-1,-1],[2,2]])
+        np.testing.assert_array_equal(idxs, np.arange(N*N))
+        np.testing.assert_array_equal(points[idxs], points)
+
 class TestPointsToElement(unittest.TestCase):
 
 

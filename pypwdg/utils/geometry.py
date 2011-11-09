@@ -65,25 +65,28 @@ class StructuredPoints(object):
     
     def getPoints(self, vertices):
         """ Returns a tuple (idxs, points) where points contains all the points that are inside
-            the convex hull of vertices and idxs are their corresponding global indices
-            """ 
+            the hypercube whose opposite vertices are given by vertices and idxs 
+            are their corresponding global indices
+        """ 
         intervals = self.npoints - 1    
-        elower = np.max((self.lower, np.amin(vertices,axis = 0)),0) # find the negative vertex of ebounds
-        eupper = np.min((self.upper, np.amax(vertices,0)),0) # find the positive vertex of ebounds
+        elower = np.amin(vertices,axis = 0) # find the minimum vertex 
+        eupper = np.amax(vertices,0) # find the maximum
         
-        print eupper - self.upper, intervals * (eupper - self.lower) / (self.upper - self.lower), intervals, np.ceil(intervals * (eupper - self.lower) / (self.upper - self.lower))
+#        print eupper - self.upper, intervals * (eupper - self.lower) / (self.upper - self.lower), intervals, np.ceil(intervals * (eupper - self.lower) / (self.upper - self.lower))
         
         # find the lower and upper bounds for the indices that we need
         lower = np.floor(intervals * (elower - self.lower) / (self.upper - self.lower)).astype(int)
         upper = np.ceil(intervals * (eupper - self.lower) / (self.upper - self.lower)).astype(int)+1
-        print lower, upper
+        lower = np.max((lower, np.zeros(self.dim, dtype=int)), axis=0)
+        upper = np.min((upper, self.npoints), axis=0)
+#        print lower, upper
         # We're going to take advantage of numpy array broadcasting and assemble a hypercube.
         # of indices and points.  The first step is to work out how to reshape the indices in each
         # axis.        
         shapes = np.ones((self.dim, self.dim)) - 2*np.eye(self.dim)
         axisidxs = [np.arange(l,u).reshape(shape) for l,u,shape in zip(lower, upper, shapes)]
-        print axisidxs
-        print self.strides
+#        print axisidxs
+#        print self.strides
         idxs = sum([axisidx * stride for axisidx, stride in zip(axisidxs, self.strides)])
         points = np.zeros(idxs.shape + (self.dim,))
         # A for loop.  Kill me now.
