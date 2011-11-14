@@ -18,7 +18,7 @@ import pypwdg.utils.quadrature as puq
 
 import numpy as np
 
-k = 40
+k = 80
 direction=np.array([[0.0,1.0]])
 g = pcb.PlaneWaves(direction, k)
 #g = pcb.FourierHankel([-2,-2], [0], k)
@@ -34,6 +34,7 @@ npoints=np.array([500,500])
 
 npw = 7
 quadpoints = 10
+pdeg = 3
 
 c = 1
 N = 20
@@ -48,7 +49,7 @@ wavefronts, forwardidxs = prw.wavefront(x0, p0, slow, gradslow, 0.1, 1.2/c, 0.1)
 pw = pcbv.PlaneWaveVariableN(pcb.uniformdirs(2,npw))
 
 # Polynomials only:
-poly = pcbr.ReferenceBasisRule(pcbr.Dubiner(2))
+poly = pcbr.ReferenceBasisRule(pcbr.Dubiner(pdeg))
 prodpw = pcb.ProductBasisRule(pw, poly)
 
 # Product basis:
@@ -69,13 +70,16 @@ for n in [4,8,16]:
     rt = prb.RaytracedBasisRule(vtods)
     prodrt = pcb.ProductBasisRule(rt, poly)
     basisrule = prodrt
-    basisrule = pcbred.SVDBasisReduceRule(puq.trianglequadrature(quadpoints), basisrule)
+#    basisrule = pcbred.SVDBasisReduceRule(puq.trianglequadrature(quadpoints), basisrule)
     entityton = {volentity:lambda p : 1.0 / slow(p)}
 
     bnddata = {bdytag: impbd}
     problem = psp.VariableNProblem(entityton, mesh, k, bnddata)
     
-    computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, quadpoints)
+    alpha = pdeg ^2 * n  / k
+    beta = k / (pdeg * n) 
+    
+    computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, quadpoints, alpha = alpha, beta = beta)
     solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
     
     #pos.comparetrue(bounds, npoints, g, solution)
