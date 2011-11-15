@@ -15,7 +15,7 @@ import pypwdg.parallel.main
 import pypwdg.test.utils.mesh as ptum
 import pypwdg.core.bases.reduced as pcbred
 import pypwdg.utils.quadrature as puq
-
+import pypwdg.raytrace.wavefront as prw
 import numpy as np
 
 k = 80
@@ -32,18 +32,28 @@ impbd = pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g)
 bounds=np.array([[0,1],[0,1]],dtype='d')
 npoints=np.array([500,500])
 
-npw = 7
-quadpoints = 10
+npw = 15
+quadpoints = 8
 pdeg = 3
 
 c = 1
-N = 20
-slow, gradslow = w.bubble(c,0.2,0.3)
+N = 20    
+
+slow = w.bubble(c,0.1,0.3)
+gradslow = prw.gradient(slow, 1E-6)
+class Recip:
+    def __init__(self, f):
+        self.f = f
+    def __call__(self, p):
+        return 1.0/ self.f(p)
+speed = Recip(slow)
+#slow, gradslow = w.hump(c,0.2,0.1,0.3)
+
 #entityton = {6:1}
 
 x0 = np.vstack((np.linspace(0,1,N),np.zeros(N))).T
 p0 = np.vstack((np.zeros(N),np.ones(N))).T
-wavefronts, forwardidxs = prw.wavefront(x0, p0, slow, gradslow, 0.1, 1.2/c, 0.1)
+wavefronts, forwardidxs = prw.wavefront(x0, p0, slow, gradslow, 0.1, 1.4/c, 0.1)
 
 # Original basis:
 pw = pcbv.PlaneWaveVariableN(pcb.uniformdirs(2,npw))
@@ -71,7 +81,7 @@ for n in [4,8,16]:
     prodrt = pcb.ProductBasisRule(rt, poly)
     basisrule = prodrt
 #    basisrule = pcbred.SVDBasisReduceRule(puq.trianglequadrature(quadpoints), basisrule)
-    entityton = {volentity:lambda p : 1.0 / slow(p)}
+    entityton = {volentity:speed}
 
     bnddata = {bdytag: impbd}
     problem = psp.VariableNProblem(entityton, mesh, k, bnddata)

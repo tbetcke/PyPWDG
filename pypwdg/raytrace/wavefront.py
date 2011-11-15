@@ -11,20 +11,21 @@ import math
 def norm(a):
     return np.sqrt(np.sum(a**2,axis=1))
 
-def gradient(fn, h):
+class gradient:
     ''' Utility that creates a gradient function from a function using forward differences 
     Args:
         fn: function to take a gradient of
         h:  step-size for forward difference
-    Returns:
-        A gradient function
     '''
-    def g(x):
-        xh = x + np.identity(x.shape[1])[:,np.newaxis,:]*h
-        fnx = fn(x)
-        fnxh = map(lambda xh : fn(xh) - fnx, xh)
-        return np.array(fnxh).transpose() / h
-    return g
+    def __init__(self, fn, h):
+        self.h = h
+        self.fn = fn
+    
+    def __call__(self,x):
+        xh = x + np.identity(x.shape[1])[:,np.newaxis,:]*self.h
+        fnx = self.fn(x)
+        fnxh = map(lambda xh : self.fn(xh) - fnx, xh)
+        return np.array(fnxh).transpose() / self.h
 
 def onestep(x, p, slowness, gradslowness, deltat):
     ''' Advance a wavefront by one step.  Currently just uses forward Euler

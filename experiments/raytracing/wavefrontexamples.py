@@ -44,13 +44,22 @@ def linearmaterial():
     wfs, idxs = prw.wavefront(x0, p0, slowness, gradslowness, 0.05, 1.5, 1)
     plotwavefront(wfs, idxs)
 
-def bubble(c = 1, R = 0.2, alpha = 0.3):
-    R2 = R**2
+class bubble:
+    def __init__(self, c = 1, R = 0.2, alpha = 0.3, O = [0.5,0.3]):
+        self.R2 = R**2
+        self.c = c
+        self.alpha = alpha
+        self.O = O
+    
+    def __call__(self,x):
+            r2 = np.sum((x - self.O)**2, axis=1)
+            return (1 + (r2 <= self.R2) * (1 + (self.R2 - r2)*self.alpha / self.R2)) / self.c
+    
+def hump(c = 1, yc = 0.3, yr = 0.1, alpha = 0.3):
     def slowness(x):
-        r2 = np.sum((x - [0.5,0.3])**2, axis=1)
-        return (r2 > R2)/c + (r2 <= R2) * (1 + (R2 - r2)*alpha / R2) / c
-    gradslowness = prw.gradient(slowness, 1E-6)
-    return slowness, gradslowness
+        yparabola = (x[:,1] - yc)**2 / (yr**2) - 1
+        return  (1 + (yparabola < 0) * yparabola * (-alpha))*c
+    return slowness, prw.gradient(slowness, 1E-6)
     
 def bubblematerial(c = 1, N = 20):
     slowness, gradslowness = bubble(c)
