@@ -27,6 +27,12 @@ class gradient:
         fnxh = map(lambda xh : self.fn(xh) - fnx, xh)
         return np.array(fnxh).transpose() / self.h
 
+class Recip:
+    def __init__(self, f):
+        self.f = f
+    def __call__(self, p):
+        return 1.0/ self.f(p)
+
 def onestep(x, p, slowness, gradslowness, deltat):
     ''' Advance a wavefront by one step.  Currently just uses forward Euler
     Args:

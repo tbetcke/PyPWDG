@@ -41,12 +41,7 @@ N = 20
 
 slow = w.bubble(c,0.1,0.3)
 gradslow = prw.gradient(slow, 1E-6)
-class Recip:
-    def __init__(self, f):
-        self.f = f
-    def __call__(self, p):
-        return 1.0/ self.f(p)
-speed = Recip(slow)
+speed = prw.Recip(slow)
 #slow, gradslow = w.hump(c,0.2,0.1,0.3)
 
 #entityton = {6:1}
