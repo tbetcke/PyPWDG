@@ -117,7 +117,7 @@ def analytichconvergence(maxN, k = 20, scale = 4.0):
     variableNhConvergence(Ns, nfn, bdycond, poly, fo.process, k, scale)
 
     for err in [0, 0.01, 0.1]:
-        rt = PlaneWaveFromDirectionsRule(S)
+        rt = PlaneWaveFromDirectionsRule(S, err)
         fo = FileOutput(fileroot + 'rt-err%s'%err, str(Ns), g, bounds, npoints)
         variableNhConvergence(Ns, nfn, bdycond, rt, fo.process, k, scale)
         for p in [1,2,3,4]:
@@ -131,7 +131,7 @@ def analytichconvergence(maxN, k = 20, scale = 4.0):
 import pypwdg.parallel.main
 
 if __name__ == '__main__':
-    analytichconvergence(30)
+    analytichconvergence(2)
     
     
     
