@@ -153,7 +153,7 @@ def analyticconvergencepwprod(maxN, k = 20, scale = 4.0):
     bdycond = pcbd.dirichlet(g)
     
     npw = 15
-    Ns = genNs(math.pow(2,1.0/3),1,maxN+1)
+    Ns = genNs(math.pow(2,1.0/2),1,maxN+1)
 
     
     pw = pcbv.PlaneWaveVariableN(pcb.circleDirections(npw))
