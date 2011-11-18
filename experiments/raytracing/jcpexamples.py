@@ -138,6 +138,24 @@ def analytichconvergence(maxN, k = 20, scale = 4.0):
             fo = FileOutput(fileroot + 'poly%srt-err%s'%(p,err), str(Ns), g, bounds, npoints)
             variableNhConvergence(Ns, nfn, bdycond, polyrt, fo.process, k, scale, p)
 
+def analyticconvergencepwprod(maxN, k = 20, scale = 4.0):
+    fileroot = "hconv.k%s.scale%s"%(k,scale)
+    bounds=np.array([[0,1],[0,1]],dtype='d')
+    npoints=np.array([k * scale * 10,k * scale * 10], dtype=int)
+    S = harmonic1(scale)
+    g = HarmonicDerived(k, S)   
+    nfn = NormOfGradient(S)
+    bdycond = pcbd.dirichlet(g)
+    
+    npw = 15
+    Ns = range(1,maxN+1)
+    pw = pcbv.PlaneWaveVariableN(pcb.circleDirections(npw))
+    
+    for p in [1,2,3,4]:
+        poly = pcbr.ReferenceBasisRule(pcbr.Dubiner(p))
+        polypw = pcb.ProductBasisRule(poly, pw)
+        fo = FileOutput(fileroot + 'pw%spoly%s'%(npw,p), str(Ns), g, bounds, npoints)
+        variableNhConvergence(Ns, nfn, bdycond, polypw, fo.process, k, scale, p)
 
 def showtruesoln(k, scale):
     S = harmonic1(scale)
@@ -184,10 +202,17 @@ hconvk20scale40uniformpw15 = [1.0234037976, 1.0955093305, 1.09411538088, 1.33408
 
 def plotanalytic():
     h = 1.0 / np.arange(1, 31)
-    mp.loglog(h, uniformpw15)
+    mp.loglog(h, hconvk20scale40uniformpw15)
+    mp.figure()
+    mp.loglog(h, hconvk20scale40poly2)
     mp.figure()
     mp.loglog(h, np.transpose([hconvk20scale40rterr0, hconvk20scale40poly1rterr0, hconvk20scale40poly2rterr0, hconvk20scale40poly3rterr0, hconvk20scale40poly4rterr0]))
-
+    mp.figure()
+    mp.loglog(h, np.transpose([hconvk20scale40rterr02, hconvk20scale40poly1rterr02, hconvk20scale40poly2rterr02, hconvk20scale40poly3rterr02, hconvk20scale40poly4rterr02]))
+    mp.figure()
+    mp.loglog(h, np.transpose([hconvk20scale40rterr002, hconvk20scale40poly1rterr002, hconvk20scale40poly2rterr002, hconvk20scale40poly3rterr002, hconvk20scale40poly4rterr002]))
+    mp.figure()
+    mp.loglog(h, np.transpose([hconvk20scale40poly2rterr0, hconvk20scale40poly2rterr002, hconvk20scale40poly2rterr02]))
 
 import pypwdg.parallel.main
 
@@ -195,7 +220,7 @@ import pypwdg.parallel.main
 
 if __name__ == '__main__':
     pass    
-    analytichconvergence(32)
+    analyticconvergencepwprod(3)
     #showtruesoln(20,4.0)
     
     
