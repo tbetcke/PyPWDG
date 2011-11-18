@@ -15,11 +15,11 @@ import pypwdg.output.mploutput as pom
 import pypwdg.test.utils.mesh as tum
 import numpy as np
 import math
-import time
 import random
 import matplotlib.pyplot as mp
 import string
-
+import pypwdg.utils.quadrature as puq
+import pypwdg.adaptivity.planewave as pap
 
 class harmonic1():
     ''' Harmonic function s * ((x+t)^2 - (y+t)^2), with s and t chosen such that the gradient has length 1 at (0,0) and self.scale at (1,1)''' 
@@ -78,8 +78,8 @@ def variableNhConvergence(Ns, nfn, bdycond, basisrule, process, k = 20, scale = 
     entityton ={1:nfn}
     for n in Ns:
         mesh = tum.regularsquaremesh(n, bdytag)
-        alpha = pdeg ^2 * n  / k
-        beta = k / (pdeg * n) 
+        alpha = ((pdeg*1.0)^2 * n)  / k
+        beta = k / (pdeg * 1.0*n) 
         problem=psp.VariableNProblem(entityton, mesh,k, bnddata)
         computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, 15, alpha = alpha, beta = beta)
         solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
@@ -232,15 +232,48 @@ def plotanalytic():
     mp.figure()
     mp.loglog(h, np.transpose([hconvk20scale40poly2rterr0, hconvk20scale40poly2rterr002, hconvk20scale40poly2rterr02]))
 
+class GaussianBubble:
+    def __init__(self, c = 1, R = 0.2, alpha = 0.3, O = [0.5,0.3]):
+        self.R2 = R**2
+        self.c = c
+        self.alpha = alpha
+        self.O = O
+    
+    def __call__(self,x):
+        r2 = np.sum((x - self.O)**2, axis=1)
+        (1- np.exp(-32*r2)/2)*4.0/3
+        
+        return (1 + (r2 <= self.R2) * (self.R2 - r2)*self.alpha / self.R2) / self.c
+
+
+
+
+def pwproduniform(g, qxw, k, n):
+    theta = np.linspace(0, 2*math.pi, n, endpoint=False)
+    return (theta,)+ pap.L2Prod(g, qxw, k).products(theta)
+
+    
+def microlocal():
+    N = 20
+    k = 20    
+    qxw = puq.squarequadrature(N)
+    g = pcb.BasisReduce(pcb.BasisCombine([pcb.FourierHankel([-1,-0.5], [0], k), pcb.FourierHankel([-0.2,0.5], [0], k)]), [1,1])
+    theta, proj, projd, projdd = pwproduniform(g.values, qxw, k, 500)
+    mp.plot(theta, proj[0])
+    
+
 import pypwdg.parallel.main
 
 
 
 if __name__ == '__main__':
     pass    
-    analyticconvergencepwprod(14)
     analytichconvergence(32)
+    analyticconvergencepwprod(12)
     #showtruesoln(20,4.0)
+    
+    #plotanalytic()
+    #microlocal()
     
     
     

@@ -6,13 +6,13 @@ Created on Mar 28, 2011
 import numpy as np
 import pypwdg.core.bases as pcb
 import pypwdg.utils.quadrature as puq
-import test.utils.mesh as tum
+import pypwdg.test.utils.mesh as tum
 import pypwdg.mesh.meshutils as pmmu
 import math
 import matplotlib.pyplot as mp
 import pypwdg.utils.timing as put
 import scipy.linalg as sl
-import pypwdg.raytrace.planewave as prp
+import pypwdg.adaptivity.planewave as pap
 
 def project(g, qxw, k, theta):
     dir = np.array([[math.cos(theta), math.sin(theta)]])
@@ -30,7 +30,7 @@ def project(g, qxw, k, theta):
 
 def pwproduniform(g, qxw, k, n):
     theta = np.linspace(0, 2*math.pi, n, endpoint=False)
-    return (theta,)+ prp.L2Prod(g, qxw, k).products(theta)
+    return (theta,)+ pap.L2Prod(g, qxw, k).products(theta)
 
 def qrp(qxw, dirs, k):
     qx,qw = qxw
@@ -60,14 +60,14 @@ if __name__ == '__main__':
     g = pcb.BasisReduce(pcb.BasisCombine([pcb.FourierHankel([-1,-0.5], [0], k), pcb.FourierHankel([-0.2,0.5], [0], k)]), [1,1])
 #    g = pcb.FourierBessel([0.25,0.25],[20], k)
 
-    t1 = prp.findpw(prp.L2Prod(g, qxw, k), D, maxtheta = 1)
+    t1 = pap.findpw(pap.L2Prod(g.values, qxw, k), D, maxtheta = 1)
     g1 = project(g, qxw, k, t1)
-    t2 = prp.findpw(prp.L2Prod(g1, qxw, k), D, maxtheta = 1)
+    t2 = pap.findpw(pap.L2Prod(g1.values, qxw, k), D, maxtheta = 1)
     g2 = project(g1, qxw, k, t2)
     print t1
     print t2
 
-    theta, proj, projd, projdd = pwproduniform(g, qxw, k, 500)
+    theta, proj, projd, projdd = pwproduniform(g.values, qxw, k, 500)
 #    print errs[0]
     mp.plot(theta, proj[0])
 #    mp.plot(theta, projd[0])

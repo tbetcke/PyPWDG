@@ -41,7 +41,8 @@ N = 20
 
 slow = w.bubble(c,0.1,0.3)
 gradslow = prw.gradient(slow, 1E-6)
-speed = prw.Recip(slow)
+#speed = Recip(slow)
+speed = lambda p: 1.0/slow(p)
 #slow, gradslow = w.hump(c,0.2,0.1,0.3)
 
 #entityton = {6:1}
@@ -74,7 +75,7 @@ for n in [4,8,16]:
     vtods = prw.nodesToPhases(wavefronts, forwardidxs, mesh, bdytags)
     rt = prb.RaytracedBasisRule(vtods)
     prodrt = pcb.ProductBasisRule(rt, poly)
-    basisrule = prodrt
+    basisrule = pw
 #    basisrule = pcbred.SVDBasisReduceRule(puq.trianglequadrature(quadpoints), basisrule)
     entityton = {volentity:speed}
 
