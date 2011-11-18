@@ -54,6 +54,15 @@ class bubble:
     def __call__(self,x):
             r2 = np.sum((x - self.O)**2, axis=1)
             return (1 + (r2 <= self.R2) * (self.R2 - r2)*self.alpha / self.R2) / self.c
+
+class GaussianBubble:
+    def __init__(self, c = 1, O = [0.5,0.3]):
+        self.c = c
+        self.O = O
+    
+    def __call__(self,x):
+        r2 = np.sum((x - self.O)**2, axis=1)                
+        return 1.0 / ((1- np.exp(-32*r2)/2) * self.c)
     
 def hump(c = 1, yc = 0.3, yr = 0.1, alpha = 0.3):
     def slowness(x):

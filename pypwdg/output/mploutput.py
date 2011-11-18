@@ -28,7 +28,7 @@ def contour(p, v, npoints):
 def showmesh(mesh):    
     mp.triplot(mesh.nodes[:,0], mesh.nodes[:,1], mesh.elements, linewidth=1.0, color='k')
 
-def output2dsoln(bounds, solution, npoints, filter = np.real):    
+def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True):    
     bounds=np.array(bounds,dtype='d')
     points = pug.StructuredPoints(bounds.transpose(), npoints)
     spe = solution.getEvaluator(filter)
@@ -38,7 +38,7 @@ def output2dsoln(bounds, solution, npoints, filter = np.real):
     vals /= counts
 #    contour(points.toArray(), vals, npoints)
     image(vals, npoints, bounds)
-    showmesh(solution.problem.mesh)
+    if plotmesh: showmesh(solution.problem.mesh)
     mp.show()
        
 def output2dfn(bounds, fn, npoints):

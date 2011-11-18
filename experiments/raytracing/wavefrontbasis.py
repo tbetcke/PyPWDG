@@ -32,14 +32,14 @@ impbd = pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g)
 bounds=np.array([[0,1],[0,1]],dtype='d')
 npoints=np.array([500,500])
 
-npw = 15
+npw = 20
 quadpoints = 8
 pdeg = 3
 
 c = 1
 N = 20    
 
-slow = w.bubble(c,0.1,0.3)
+slow = w.GaussianBubble(c)
 gradslow = prw.gradient(slow, 1E-6)
 #speed = Recip(slow)
 speed = lambda p: 1.0/slow(p)
@@ -49,7 +49,7 @@ speed = lambda p: 1.0/slow(p)
 
 x0 = np.vstack((np.linspace(0,1,N),np.zeros(N))).T
 p0 = np.vstack((np.zeros(N),np.ones(N))).T
-wavefronts, forwardidxs = prw.wavefront(x0, p0, slow, gradslow, 0.1, 1.4/c, 0.1)
+wavefronts, forwardidxs = prw.wavefront(x0, p0, slow, gradslow, 0.1, 1.6/c, 0.1)
 
 # Original basis:
 pw = pcbv.PlaneWaveVariableN(pcb.uniformdirs(2,npw))
@@ -66,7 +66,7 @@ prodpw = pcb.ProductBasisRule(pw, poly)
 
 
 #mesh = pmm.gmshMesh('../../examples/2D/square.msh',dim=2)
-for n in [4,8,16]:
+for n in [32]:
     bdytag = "BDY"
     bdytags = [bdytag] #[7,8]
     volentity = 1 # 6
@@ -91,6 +91,7 @@ for n in [4,8,16]:
     #pos.comparetrue(bounds, npoints, g, solution)
     #pom.output2dsoln(bounds, solution, npoints)
     pos.standardoutput(computation, solution, quadpoints, bounds, npoints, mploutput = True)
-    pom.showdirections(mesh, prb.getetob(wavefronts, forwardidxs, mesh, bdytags) ,scale=20)
-    #w.plotwavefront(wavefronts, forwardidxs)
+#    pom.showdirections(mesh, prb.getetob(wavefronts, forwardidxs, mesh, bdytags) ,scale=20)
+#    w.plotwavefront(wavefronts, forwardidxs)
+
 pom.output2dfn(bounds, slow, npoints)
