@@ -78,7 +78,7 @@ def variableNhConvergence(Ns, nfn, bdycond, basisrule, process, k = 20, scale = 
     entityton ={1:nfn}
     for n in Ns:
         mesh = tum.regularsquaremesh(n, bdytag)
-        alpha = ((pdeg*1.0)^2 * n)  / k
+        alpha = ((pdeg*1.0)**2 * n)  / k
         beta = k / (pdeg * 1.0*n) 
         problem=psp.VariableNProblem(entityton, mesh,k, bnddata)
         computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, 15, alpha = alpha, beta = beta)
