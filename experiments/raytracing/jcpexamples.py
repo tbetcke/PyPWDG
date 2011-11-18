@@ -110,7 +110,7 @@ class FileOutput():
 def genNs(base, minN, maxN):
     a = math.log(minN) / math.log(base)
     b = math.log(maxN) / math.log(base)
-    return list(set(np.array(base**np.arange(a,b),dtype=int)))
+    return list(sorted(set(np.array(base**np.arange(a,b),dtype=int))))
 
 def analytichconvergence(maxN, k = 20, scale = 4.0):    
     fileroot = "hconv.k%s.scale%s"%(k,scale)
