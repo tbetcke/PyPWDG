@@ -36,3 +36,30 @@ def regularsquaremesh(n = 1, bdytag="BDY"):
     boundary = [(bdytag, tuple(bf)) for bf in bdyfaces]
     geomEntity=[1]*len(elements)
     return pmm.Mesh(points, elements, geomEntity, boundary, 2)
+
+def regularrectmesh(xlims, ylims, nx, ny):
+    ''' Returns a mesh object for the rectangle xlims x ylims consisting of 
+        nx x ny rectangles, each subdivided into 2 triangles.
+        The edges of the grid are labelled 0,1,2,3 clockwise from bottom (assuming the origin is in the lower-left)
+    '''
+    nx1 = nx + 1
+    ny1 = ny + 1
+    mg1 = np.mgrid[0:nx1, 0:ny1]
+    # construct the vertices
+    xp = np.linspace(*xlims, num=nx1)[mg1[0]].ravel() # x coordinates of points
+    yp = np.linspace(*ylims, num=ny1)[mg1[1]].ravel() # y coordinates of points
+    nodes = np.vstack((xp,yp)).T
+    # construct the elements
+    idx = ny1 * mg1[0] + mg1[1] # the indices of the points (arranged on the grid)
+    c = [idx[np.ix_(np.arange(nx)+d[0],np.arange(ny)+d[1])]for d in [[0,0],[1,0],[0,1],[1,1]]] # indices of corners of squares 
+    elts = [list(e) for e in np.dstack([c[0],c[1],c[2],c[1],c[3],c[2]]).reshape(-1,3)] # build the list of triangular elements
+    # construct the boundaries.   
+    cc = np.array([[c[0],c[2]],[c[1],c[3]]]) # hold tight, it's a 4-dimensional array
+    bdys = [(bdyid, face) for bdyid, side in enumerate([cc[0,:,0,:].T,cc[:,0,:,0].T,cc[1,:,-1,:].T,cc[:,1,:,-1].T]) for face in side]
+    geomEntity = [4]*len(elts)
+    return pmm.Mesh(nodes, elts, geomEntity, bdys, 2)
+    
+    
+    
+    
+        
