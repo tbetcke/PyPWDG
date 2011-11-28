@@ -5,7 +5,6 @@ Created on Nov 26, 2011
 '''
 
 import pypwdg.test.utils.mesh as ptum
-import scipy.interpolate as si
 import utils
 import numpy as np
 import pypwdg.core.bases as pcb
@@ -18,32 +17,22 @@ import pypwdg.output.solution as pos
 import matplotlib.pyplot as mp
 import pypwdg.output.mploutput as pom
 
-data, info = utils.readvel()
-dy = info['d1']
-dx = info['d2']
-ny = info['n1']
-nx = info['n2']
-data = data.T
-print nx,ny,dx,dy
-print data.shape
-bounds = [[0,dx*nx], [0,dy*ny]]  
-H = 50          
-h = H * dx
+effectivek = 80
+effectiveh = 0.1
+veldata = utils.RSFVelocityData()
+[[xmin,xmax],[ymin,ymax]] = veldata.bounds
+#effectivek = omega * distance / vel.averagevel
+omega = effectivek * veldata.averagevel / (ymax - ymin)
+averagek = omega / veldata.averagevel
+print 'omega = %s'%omega
 
-k = 1
 npw = 3
 quadpoints = 4
-g = pcb.FourierHankel([nx*dx/2,-ny*dy/10], [0], k)
-impbd = pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g)
+g = pcb.FourierHankel([(xmax + xmin) / 2,ymin - (ymin - ymax)/10], [0], averagek)
+impbd = pcbd.generic_boundary_data([-1j*averagek,1],[-1j*averagek,1],g)
 
-averagev = np.average(data)
-averagek = averagev * k
-#velocity = si.interp2d(np.arange(n1)*d1, np.arange(n2)*d2, data.flatten(), copy=False, bounds_error=False, fill_value=averagev)
-s = si.RectBivariateSpline(np.arange(nx)*dx, np.arange(ny)*dy, data, kx=1,ky=1)
-velocity = lambda p: s.ev(p[:,0],p[:,1])
-pom.output2dfn(bounds, velocity, [nx,ny]) # yes, I know that it's upside-down
-entityton = {4:velocity}
-mesh = ptum.regularrectmesh(bounds[0], bounds[1], nx/H, ny/H)
+entityton = {4:veldata}
+mesh = ptum.regularrectmesh([xmin,xmax],[ymin,ymax], veldata.nx * veldata.dx / effectiveh, veldata.ny * veldata.dy / effectiveh)
 print mesh.nelements
 bnddata = dict(enumerate([impbd]*4)) 
 
