@@ -17,8 +17,10 @@ import pypwdg.output.solution as pos
 import matplotlib.pyplot as mp
 import pypwdg.output.mploutput as pom
 
-effectivek = 40
-effectiveh = 0.01
+import pypwdg.parallel.main
+
+effectivek = 10
+effectiveh = 0.005
 veldata = utils.RSFVelocityData()
 [[xmin,xmax],[ymin,ymax]] = veldata.bounds
 #effectivek = omega * distance / vel.averagevel
@@ -47,7 +49,8 @@ pw = pcbv.PlaneWaveVariableN(pcb.circleDirections(npw))
 basisrule = pw
 computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, quadpoints, alpha = alpha, beta = beta)
 solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
-pos.standardoutput(computation, solution, quadpoints, veldata.bounds, np.array([veldata.nx,veldata.ny]), 'marmousi', mploutput=True)
+#pos.standardoutput(computation, solution, quadpoints, veldata.bounds, np.array([veldata.nx,veldata.ny]), 'marmousi', mploutput=True)
+pom.output2dsoln(veldata.bounds, solution, np.array([veldata.nx,veldata.ny]), plotmesh = False)
 mp.show()
 
 
