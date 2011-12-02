@@ -17,8 +17,8 @@ import pypwdg.output.solution as pos
 import matplotlib.pyplot as mp
 import pypwdg.output.mploutput as pom
 
-effectivek = 80
-effectiveh = 0.1
+effectivek = 40
+effectiveh = 0.01
 veldata = utils.RSFVelocityData()
 [[xmin,xmax],[ymin,ymax]] = veldata.bounds
 #effectivek = omega * distance / vel.averagevel
