@@ -33,7 +33,7 @@ class RSFVelocityData():
             x0 = -1
             xend = self.nx + 1
             y0 = -1
-            yend = self.nx + 1    
+            yend = self.ny + 1    
         else:
             dd = data
             x0 = 0
@@ -41,6 +41,7 @@ class RSFVelocityData():
             y0 = 0
             yend = self.ny
             
+        print x0,xend,y0,yend,dd.shape
         self.s = si.RectBivariateSpline(np.arange(x0,xend)*self.dx, np.arange(y0,yend)*self.dy, dd, kx=1,ky=1)
     
     
