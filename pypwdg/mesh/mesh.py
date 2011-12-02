@@ -214,7 +214,7 @@ class Mesh(object):
         self.entities = set()
         self.faceentities = np.empty(self.nfaces, dtype=object)
         
-        self.vtof = ftov.transpose().tocsr()        
+        self.vtof = ftov.transpose().tocsr()  
         for entityid, bnodes in boundaries:
             vs = set(bnodes)
             for v in vs:
