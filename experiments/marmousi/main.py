@@ -17,7 +17,7 @@ import pypwdg.output.solution as pos
 import matplotlib.pyplot as mp
 import pypwdg.output.mploutput as pom
 
-effectivek = 40
+effectivek = 100
 effectiveh = 0.01
 veldata = utils.RSFVelocityData()
 [[xmin,xmax],[ymin,ymax]] = veldata.bounds
@@ -27,7 +27,7 @@ truek = effectivek / (ymax - ymin)
 trueh = effectiveh / (ymax - ymin)
 print 'omega = %s'%omega
 
-npw = 3
+npw = 13
 quadpoints = 4
 g = pcb.FourierHankel([(xmax + xmin) / 2,ymin - (ymin - ymax)/10], [0], truek)
 impbd = pcbd.generic_boundary_data([-1j*truek,1],[-1j*truek,1],g)
