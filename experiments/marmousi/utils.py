@@ -24,7 +24,7 @@ class RSFVelocityData():
         self.dx = info['d2']
         self.ny = info['n1']
         self.nx = info['n2']
-        self.bounds = [[0,self.dx*self.nx], [0,self.dy*self.ny]]
+        self.bounds = [[0.0,self.dx*self.nx], [0.0,self.dy*self.ny]]
         self.averagevel = np.average(data)
         if exteriorvel:
             if exteriorvel == 'average': exteriorvel = self.averagevel
