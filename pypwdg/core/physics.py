@@ -40,7 +40,7 @@ class HelmholtzSystem(object):
             self.loadassemblies.append(pca.Assembly(self.facevandermondes, bdyvandermondes, facequads.quadweights))
             lc0,lc1 = bdycond.l_coeffs
             fqw0 = lambda f: facequads.quadweights(f) * lc0(facequads.quadpoints(f)) if callable(lc0) else facequads.quadweights(f) * lc0
-            fqw1 = lambda f: facequads.quadweights(f) * lc0(facequads.quadpoints(f)) if callable(lc1) else facequads.quadweights(f) * lc1
+            fqw1 = lambda f: facequads.quadweights(f) * lc1(facequads.quadpoints(f)) if callable(lc1) else facequads.quadweights(f) * lc1
             self.weightedbdyassemblies.append(pca.Assembly(self.facevandermondes, self.facevandermondes, [[fqw0,fqw1],[fqw0,fqw1]]))
         
         ev = pcv.ElementVandermondes(problem.mesh, self.basis, elementquads)
