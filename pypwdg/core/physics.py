@@ -58,24 +58,24 @@ class HelmholtzSystem(object):
             S+=self.volumeStiffness()
         return S,G
 
-    @ppd.parallelmethod()        
+#    @ppd.parallelmethod()        
     def internalStiffness(self):
         ''' The contribution of the internal faces to the stiffness matrix'''
         jk = 1j * self.problem.k
         AJ = pms.AveragesAndJumps(self.problem.mesh)   
         B = self.problem.mesh.boundary # This is the integration by parts term that generally gets folded into the boundary data, but is more appropriate here
+        print map(len,B.nonzero())
         SI = self.internalassembly.assemble([[jk * self.alpha * AJ.JD,   -AJ.AN - B], 
                                             [AJ.AD + B,                -(self.beta / jk) * AJ.JN]])        
         return pms.sumfaces(self.problem.mesh,SI)
     
-    @ppd.parallelmethod(None, ppd.tuplesum)
+#    @ppd.parallelmethod(None, ppd.tuplesum)
     def boundaryStiffnesses(self):
         ''' The contribution of the boundary faces to the stiffness matrix'''
         SBs = []
-        AJ = pms.AveragesAndJumps(self.problem.mesh)    
         for (id, bdya) in zip(self.problem.bnddata.keys(), self.weightedbdyassemblies):
             B = self.problem.mesh.entityfaces[id]
-            
+            print map(len, B.nonzero())
             delta = self.delta
             
             # The contribution of the boundary conditions
@@ -85,7 +85,7 @@ class HelmholtzSystem(object):
             SBs.append(pms.sumfaces(self.problem.mesh,SB))     
         return SBs
     
-    @ppd.parallelmethod(None, ppd.tuplesum)
+#    @ppd.parallelmethod(None, ppd.tuplesum)
     def boundaryLoads(self): 
         ''' The load vector (due to the boundary conditions)'''
         GBs = []
@@ -101,7 +101,7 @@ class HelmholtzSystem(object):
             GBs.append(pms.sumrhs(self.problem.mesh,GB))
         return GBs
     
-    @ppd.parallelmethod()
+#    @ppd.parallelmethod()
     def volumeStiffness(self):
         ''' The contribution of the volume terms to the stiffness matrix (should be zero if using Trefftz basis functions)'''
         E = pms.ElementMatrices(self.problem.mesh)
