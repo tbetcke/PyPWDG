@@ -68,7 +68,7 @@ class HelmholtzSystem(object):
         jk = 1j * self.problem.k
         AJ = pms.AveragesAndJumps(self.problem.mesh)   
         B = self.problem.mesh.boundary # This is the integration by parts term that generally gets folded into the boundary data, but is more appropriate here
-        print map(len,B.nonzero())
+        print B
         SI = self.internalassembly.assemble([[jk * self.alpha * AJ.JD,   -AJ.AN - B], 
                                             [AJ.AD + B,                -(self.beta / jk) * AJ.JN]])        
         return pms.sumfaces(self.problem.mesh,SI)
@@ -77,15 +77,18 @@ class HelmholtzSystem(object):
     def boundaryStiffnesses(self):
         ''' The contribution of the boundary faces to the stiffness matrix'''
         SBs = []
+        AJ = pms.AveragesAndJumps(self.problem.mesh)
         for i, bdya in self.weightedbdyassemblies.items():
+            print i
             B = self.problem.mesh.entityfaces[i]
-            print map(len, B.nonzero())
+            print B
             delta = self.delta
             
             # The contribution of the boundary conditions
             SB = bdya.assemble([[(1-delta) * B, (1-delta)*B],
                                   [-delta * B, -delta *B]])
-
+            SBB = self.internalassembly.assemble([[AJ.Z,-B],[B,AJ.Z]])
+            print (SB + SBB).tocsr()[0:10,0:10]
             SBs.append(pms.sumfaces(self.problem.mesh,SB))     
         return SBs
     
