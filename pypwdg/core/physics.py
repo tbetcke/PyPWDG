@@ -55,7 +55,12 @@ class HelmholtzSystem(object):
     @ppd.parallelmethod(None, ppd.tuplesum)        
     def getSystem(self, dovolumes = False):
         ''' Returns the stiffness matrix and load vector'''
-        S = self.internalStiffness() + sum(self.boundaryStiffnesses())
+        SI = self.internalStiffness() 
+        SB = sum(self.boundaryStiffnesses())
+        S = SI + SB
+        print SI.tocsr()
+        print SB.tocsr()
+        print S.tocsr()
         G = sum(self.boundaryLoads())
         if dovolumes: 
             S+=self.volumeStiffness()
@@ -69,6 +74,7 @@ class HelmholtzSystem(object):
         AJ = pms.AveragesAndJumps(self.problem.mesh)   
         B = self.problem.mesh.boundary # This is the integration by parts term that generally gets folded into the boundary data, but is more appropriate here
 #        print B
+        print type(B)
         SI = self.internalassembly.assemble([[jk * self.alpha * AJ.JD,   -AJ.AN - B], 
                                             [AJ.AD + B,                -(self.beta / jk) * AJ.JN]])    
         SFSI = pms.sumfaces(self.problem.mesh,SI)
@@ -92,7 +98,6 @@ class HelmholtzSystem(object):
         ''' The contribution of the boundary faces to the stiffness matrix'''
         SBs = []
         AJ = pms.AveragesAndJumps(self.problem.mesh)
-        SBBS = 0
         for i, bdya in self.weightedbdyassemblies.items():
             print i
             B = self.problem.mesh.entityfaces[i]
@@ -103,7 +108,6 @@ class HelmholtzSystem(object):
             SB = bdya.assemble([[(1-delta) * B, (1-delta)*B],
                                   [-delta * B, -delta *B]])
             SBs.append(pms.sumfaces(self.problem.mesh,SB))     
-            SBBS = SBBS + pms.sumfaces(self.problem.mesh,self.internalassembly.assemble([[AJ.Z,-B],[B,AJ.Z]]))
 #        print "SBBS", SBBS.tocsr()
         return SBs
     
