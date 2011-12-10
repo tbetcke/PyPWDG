@@ -47,7 +47,12 @@ class HelmholtzSystem(object):
     @ppd.parallelmethod(None, ppd.tuplesum)        
     def getSystem(self, dovolumes = False):
         ''' Returns the stiffness matrix and load vector'''
-        S = self.internalStiffness() + sum(self.boundaryStiffnesses())
+        SI = self.internalStiffness() 
+        SB = sum(self.boundaryStiffnesses())
+        S = SI + SB
+        print SI.tocsr()
+        print SB.tocsr()
+        print S.tocsr()
         G = sum(self.boundaryLoads())
         if dovolumes: 
             S+=self.volumeStiffness()
