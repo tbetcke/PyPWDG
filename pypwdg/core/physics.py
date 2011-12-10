@@ -32,19 +32,11 @@ class HelmholtzSystem(object):
          
         self.bdyvandermondes = []
         self.loadassemblies = []
-        self.weightedbdyassemblies = {}
-        for i, bdycond in problem.bnddata.items():
-            bdyetob = pcbu.UniformElementToBases(bdycond, problem.mesh)
+        for data in problem.bnddata.values():
+            bdyetob = pcbu.UniformElementToBases(data, problem.mesh)
             bdyvandermondes = pcv.LocalVandermondes(problem.mesh, bdyetob, facequads)        
             self.bdyvandermondes.append(bdyvandermondes)
             self.loadassemblies.append(pca.Assembly(self.facevandermondes, bdyvandermondes, facequads.quadweights))
-            lc0,lc1 = bdycond.l_coeffs
-            fqw0 = lambda f: facequads.quadweights(f) * lc0(facequads.quadpoints(f)) if callable(lc0) else facequads.quadweights(f) * lc0
-            fqw1 = lambda f: facequads.quadweights(f) * lc1(facequads.quadpoints(f)) if callable(lc1) else facequads.quadweights(f) * lc1
-#            print lc0,lc1
-#            print fqw0(1)
-#            print fqw1(1)
-            self.weightedbdyassemblies[i] = pca.Assembly(self.facevandermondes, self.facevandermondes, [[fqw0,fqw1],[fqw0,fqw1]])
         
         ev = pcv.ElementVandermondes(problem.mesh, self.basis, elementquads)
         self.volumeassembly = pca.Assembly(ev, ev, elementquads.quadweights)
@@ -56,48 +48,42 @@ class HelmholtzSystem(object):
     def getSystem(self, dovolumes = False):
         ''' Returns the stiffness matrix and load vector'''
         S = self.internalStiffness() + sum(self.boundaryStiffnesses())
+        print S.tocsr()[0:12,0:12]
         G = sum(self.boundaryLoads())
         if dovolumes: 
             S+=self.volumeStiffness()
-        print S.tocsr()[0:10,0:10]
         return S,G
 
-#    @ppd.parallelmethod()        
+    @ppd.parallelmethod()        
     def internalStiffness(self):
         ''' The contribution of the internal faces to the stiffness matrix'''
         jk = 1j * self.problem.k
-        AJ = pms.AveragesAndJumps(self.problem.mesh)   
-        B = self.problem.mesh.boundary # This is the integration by parts term that generally gets folded into the boundary data, but is more appropriate here
-        print B
-        SI = self.internalassembly.assemble([[jk * self.alpha * AJ.JD,   -AJ.AN - B], 
-                                            [AJ.AD + B,                -(self.beta / jk) * AJ.JN]])        
+        AJ = pms.AveragesAndJumps(self.problem.mesh)    
+        SI = self.internalassembly.assemble([[jk * self.alpha * AJ.JD,   -AJ.AN], 
+                                            [AJ.AD,                -(self.beta / jk) * AJ.JN]])        
         return pms.sumfaces(self.problem.mesh,SI)
     
-#    @ppd.parallelmethod(None, ppd.tuplesum)
+    @ppd.parallelmethod(None, ppd.tuplesum)
     def boundaryStiffnesses(self):
         ''' The contribution of the boundary faces to the stiffness matrix'''
         SBs = []
-        AJ = pms.AveragesAndJumps(self.problem.mesh)
-        for i, bdya in self.weightedbdyassemblies.items():
-            print i
-            B = self.problem.mesh.entityfaces[i]
-            print B
+        for (id, bdycondition) in self.problem.bnddata.items():
+            B = self.problem.mesh.entityfaces[id]
+            
+            lv, ld = bdycondition.l_coeffs
             delta = self.delta
             
-            # The contribution of the boundary conditions
-            SB = bdya.assemble([[(1-delta) * B, (1-delta)*B],
-                                  [-delta * B, -delta *B]])
-            SBB = self.internalassembly.assemble([[AJ.Z,-B],[B,AJ.Z]])
-            print (SB + SBB).tocsr()[0:10,0:10]
+            SB = self.internalassembly.assemble([[lv*(1-delta) * B, (-1+(1-delta)*ld)*B],
+                                              [(1-delta*lv) * B, -delta * ld*B]])
             SBs.append(pms.sumfaces(self.problem.mesh,SB))     
         return SBs
     
-#    @ppd.parallelmethod(None, ppd.tuplesum)
+    @ppd.parallelmethod(None, ppd.tuplesum)
     def boundaryLoads(self): 
         ''' The load vector (due to the boundary conditions)'''
         GBs = []
-        for (i, bdycondition), loadassembly in zip(self.problem.bnddata.items(), self.loadassemblies):
-            B = self.problem.mesh.entityfaces[i]
+        for (id, bdycondition), loadassembly in zip(self.problem.bnddata.items(), self.loadassemblies):
+            B = self.problem.mesh.entityfaces[id]
             
             rv, rd = bdycondition.r_coeffs
             delta = self.delta
@@ -108,7 +94,7 @@ class HelmholtzSystem(object):
             GBs.append(pms.sumrhs(self.problem.mesh,GB))
         return GBs
     
-#    @ppd.parallelmethod()
+    @ppd.parallelmethod()
     def volumeStiffness(self):
         ''' The contribution of the volume terms to the stiffness matrix (should be zero if using Trefftz basis functions)'''
         E = pms.ElementMatrices(self.problem.mesh)
