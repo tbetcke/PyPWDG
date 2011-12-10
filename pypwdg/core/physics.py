@@ -32,8 +32,8 @@ class HelmholtzSystem(object):
          
         self.bdyvandermondes = []
         self.loadassemblies = []
-        self.weightedbdyassemblies = []
-        for bdycond in problem.bnddata.values():
+        self.weightedbdyassemblies = {}
+        for i, bdycond in problem.bnddata.items():
             bdyetob = pcbu.UniformElementToBases(bdycond, problem.mesh)
             bdyvandermondes = pcv.LocalVandermondes(problem.mesh, bdyetob, facequads)        
             self.bdyvandermondes.append(bdyvandermondes)
@@ -41,7 +41,10 @@ class HelmholtzSystem(object):
             lc0,lc1 = bdycond.l_coeffs
             fqw0 = lambda f: facequads.quadweights(f) * lc0(facequads.quadpoints(f)) if callable(lc0) else facequads.quadweights(f) * lc0
             fqw1 = lambda f: facequads.quadweights(f) * lc1(facequads.quadpoints(f)) if callable(lc1) else facequads.quadweights(f) * lc1
-            self.weightedbdyassemblies.append(pca.Assembly(self.facevandermondes, self.facevandermondes, [[fqw0,fqw1],[fqw0,fqw1]]))
+#            print lc0,lc1
+#            print fqw0(1)
+#            print fqw1(1)
+            self.weightedbdyassemblies[i] = pca.Assembly(self.facevandermondes, self.facevandermondes, [[fqw0,fqw1],[fqw0,fqw1]])
         
         ev = pcv.ElementVandermondes(problem.mesh, self.basis, elementquads)
         self.volumeassembly = pca.Assembly(ev, ev, elementquads.quadweights)
@@ -56,6 +59,7 @@ class HelmholtzSystem(object):
         G = sum(self.boundaryLoads())
         if dovolumes: 
             S+=self.volumeStiffness()
+        print S.tocsr()[0:10,0:10]
         return S,G
 
 #    @ppd.parallelmethod()        
@@ -73,8 +77,8 @@ class HelmholtzSystem(object):
     def boundaryStiffnesses(self):
         ''' The contribution of the boundary faces to the stiffness matrix'''
         SBs = []
-        for (id, bdya) in zip(self.problem.bnddata.keys(), self.weightedbdyassemblies):
-            B = self.problem.mesh.entityfaces[id]
+        for i, bdya in self.weightedbdyassemblies.items():
+            B = self.problem.mesh.entityfaces[i]
             print map(len, B.nonzero())
             delta = self.delta
             
@@ -89,8 +93,8 @@ class HelmholtzSystem(object):
     def boundaryLoads(self): 
         ''' The load vector (due to the boundary conditions)'''
         GBs = []
-        for (id, bdycondition), loadassembly in zip(self.problem.bnddata.items(), self.loadassemblies):
-            B = self.problem.mesh.entityfaces[id]
+        for (i, bdycondition), loadassembly in zip(self.problem.bnddata.items(), self.loadassemblies):
+            B = self.problem.mesh.entityfaces[i]
             
             rv, rd = bdycondition.r_coeffs
             delta = self.delta
