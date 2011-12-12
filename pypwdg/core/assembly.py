@@ -9,7 +9,6 @@ import numpy
 from pypwdg.core.vandermonde import LocalInnerProducts
 from pypwdg.utils.sparse import createvbsr
 from pypwdg.utils.timing import print_timing
-from reportlab.lib.validators import isCallable
 
 class Assembly(object):
     """ Assemble a global matrix based on local inner products and structure matrices 
@@ -46,7 +45,6 @@ class Assembly(object):
         """
         
         qws = [[qws,qws],[qws,qws]] if callable(qws) else qws
-        
         DD = LocalInnerProducts(lv.getValues, rv.getValues, qws[0][0])
         DN = LocalInnerProducts(lv.getValues, rv.getDerivs, qws[0][1])
         ND = LocalInnerProducts(lv.getDerivs, rv.getValues, qws[1][0])

@@ -10,7 +10,20 @@ import pypwdg.core.assembly as pca
 import pypwdg.mesh.structure as pms
 import pypwdg.parallel.decorate as ppd
 import pypwdg.core.bases.utilities as pcbu
+
+class WeightedIntegration:
+    def __init__(self, quads, a):
+        self.quads = quads
+        self.a = a
+        
+    def __call__(self, i):
+        if callable(self.a):
+            return self.quads.quadweights(i) * self.a(self.quads.quadpoints(i))
+        else:
+            return self.quads.quadweights(i) * self.a
+        
     
+
 @ppd.distribute()    
 class HelmholtzSystem(object):
     ''' Assemble a system to solve a Helmholtz problem using the DG formulation of Gittelson et al.
@@ -30,21 +43,19 @@ class HelmholtzSystem(object):
         self.facevandermondes = pcv.LocalVandermondes(problem.mesh, basis, facequads, usecache=usecache)
         self.internalassembly = pca.Assembly(self.facevandermondes, self.facevandermondes, facequads.quadweights)
          
-        self.bdyvandermondes = []
-        self.loadassemblies = []
+        self.loadassemblies = {}
         self.weightedbdyassemblies = {}
         for i, bdycond in problem.bnddata.items():
             bdyetob = pcbu.UniformElementToBases(bdycond, problem.mesh)
-            bdyvandermondes = pcv.LocalVandermondes(problem.mesh, bdyetob, facequads)        
-            self.bdyvandermondes.append(bdyvandermondes)
-            self.loadassemblies.append(pca.Assembly(self.facevandermondes, bdyvandermondes, facequads.quadweights))
+            bdyvandermondes = pcv.LocalVandermondes(problem.mesh, bdyetob, facequads)  
+            rc0,rc1 = bdycond.r_coeffs
+            rqw0 = WeightedIntegration(facequads, rc0)     
+            rqw1 = WeightedIntegration(facequads, rc1)     
+            self.loadassemblies[i] = pca.Assembly(self.facevandermondes, bdyvandermondes, [[rqw0,rqw1],[rqw0,rqw1]])
             lc0,lc1 = bdycond.l_coeffs
-            fqw0 = lambda f: facequads.quadweights(f) * lc0(facequads.quadpoints(f)) if callable(lc0) else facequads.quadweights(f) * lc0
-            fqw1 = lambda f: facequads.quadweights(f) * lc1(facequads.quadpoints(f)) if callable(lc1) else facequads.quadweights(f) * lc1
-#            print lc0,lc1
-#            print fqw0(1)
-#            print fqw1(1)
-            self.weightedbdyassemblies[i] = pca.Assembly(self.facevandermondes, self.facevandermondes, [[fqw0,fqw1],[fqw0,fqw1]])
+            lqw0 = WeightedIntegration(facequads, lc0)
+            lqw1 = WeightedIntegration(facequads, lc1)
+            self.weightedbdyassemblies[i] = pca.Assembly(self.facevandermondes, self.facevandermondes, [[lqw0,lqw1],[lqw0,lqw1]])
         
         ev = pcv.ElementVandermondes(problem.mesh, self.basis, elementquads)
         self.volumeassembly = pca.Assembly(ev, ev, elementquads.quadweights)
@@ -58,13 +69,9 @@ class HelmholtzSystem(object):
         SI = self.internalStiffness() 
         SB = sum(self.boundaryStiffnesses())
         S = SI + SB
-        print SI.tocsr()
-        print SB.tocsr()
-        print S.tocsr()
         G = sum(self.boundaryLoads())
         if dovolumes: 
             S+=self.volumeStiffness()
-        print S.tocsr()[0:12,0:12]
         return S,G
 
 #    @ppd.parallelmethod()        
@@ -73,23 +80,9 @@ class HelmholtzSystem(object):
         jk = 1j * self.problem.k
         AJ = pms.AveragesAndJumps(self.problem.mesh)   
         B = self.problem.mesh.boundary # This is the integration by parts term that generally gets folded into the boundary data, but is more appropriate here
-#        print B
-        print type(B)
         SI = self.internalassembly.assemble([[jk * self.alpha * AJ.JD,   -AJ.AN - B], 
                                             [AJ.AD + B,                -(self.beta / jk) * AJ.JN]])    
         SFSI = pms.sumfaces(self.problem.mesh,SI)
-        
-#        S1 = self.internalassembly.assemble([[jk * self.alpha * AJ.JD,   -AJ.AN], 
-#                                            [AJ.AD,                -(self.beta / jk) * AJ.JN]])
-#        S2 = self.internalassembly.assemble([[AJ.Z, -B], 
-#                                            [B, AJ.Z]])
-#        SS2 = pms.sumfaces(self.problem.mesh, S2)
-#        print "S2", SS2.tocsr()
-        
-#        SS1 = pms.sumfaces(self.problem.mesh, S1)
-#        
-#        print "Difference"
-#        print SFSI.tocsr() - (SS1.tocsr() + SS2.tocsr())
                 
         return SFSI
     
@@ -97,18 +90,14 @@ class HelmholtzSystem(object):
     def boundaryStiffnesses(self):
         ''' The contribution of the boundary faces to the stiffness matrix'''
         SBs = []
-        AJ = pms.AveragesAndJumps(self.problem.mesh)
         for i, bdya in self.weightedbdyassemblies.items():
-            print i
             B = self.problem.mesh.entityfaces[i]
-#            print B
             delta = self.delta
             
             # The contribution of the boundary conditions
             SB = bdya.assemble([[(1-delta) * B, (1-delta)*B],
                                   [-delta * B, -delta *B]])
             SBs.append(pms.sumfaces(self.problem.mesh,SB))     
-#        print "SBBS", SBBS.tocsr()
         return SBs
     
     
@@ -116,14 +105,13 @@ class HelmholtzSystem(object):
     def boundaryLoads(self): 
         ''' The load vector (due to the boundary conditions)'''
         GBs = []
-        for (i, bdycondition), loadassembly in zip(self.problem.bnddata.items(), self.loadassemblies):
+        for i, loadassembly in self.loadassemblies.items():
             B = self.problem.mesh.entityfaces[i]
             
-            rv, rd = bdycondition.r_coeffs
             delta = self.delta
             # todo - check the cross terms.  Works okay with delta = 1/2.  
-            GB = loadassembly.assemble([[(1-delta) *rv* B, (1-delta) * rd*B], 
-                                        [-delta*rv* B,     -delta * rd*B]])
+            GB = loadassembly.assemble([[(1-delta) * B, (1-delta) *B], 
+                                        [-delta* B,     -delta *B]])
                 
             GBs.append(pms.sumrhs(self.problem.mesh,GB))
         return GBs

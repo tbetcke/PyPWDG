@@ -27,7 +27,7 @@ usepoly = True
 
 effectivek = 30
 effectiveh = 0.05
-veldata = utils.RSFVelocityData()
+veldata = utils.RSFVelocityData(exteriorvel = None)
 [[xmin,xmax],[ymin,ymax]] = veldata.bounds
 #effectivek = omega * distance / vel.averagevel
 omega = effectivek * veldata.averagevel / (ymax - ymin)
