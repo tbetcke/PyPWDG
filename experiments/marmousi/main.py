@@ -23,7 +23,7 @@ import pypwdg.parallel.main
 npw = 15
 quadpoints = 4
 pdeg = 1
-usepoly = True
+usepoly = False
 
 effectivek = 30
 effectiveh = 0.05
@@ -43,12 +43,13 @@ npoints =  np.array([veldata.nx,veldata.ny])
 sourcexpos = (xmax + xmin) / 2
 sourcek = veldata(np.array([[sourcexpos,0]]))[0] * averagek
 g = pcb.FourierHankel([sourcexpos,0], [0], sourcek)
-impbd = pcbd.generic_boundary_data([-1j*averagek,1],[-1j*averagek,1],g)
+sourceimp = pcbd.generic_boundary_data([-1j*averagek,1],[-1j*averagek,1],g)
+zeroimp = pcbd.zero_impedance(averagek)
 
 entityton = {4:veldata}
 mesh = ptum.regularrectmesh([xmin,xmax],[ymin,ymax], int(((xmax - xmin) / (ymax - ymin)) / effectiveh), int(1 / effectiveh))
 print mesh.nelements
-bnddata = dict(enumerate([impbd]*4)) 
+bnddata = {0:sourceimp,1:zeroimp,2:zeroimp,3:zeroimp} 
 #bdndata = {0:impbd, 1:pcbd.zero_impedance}
 
 problem=psp.VariableNProblem(entityton, mesh,averagek, bnddata)

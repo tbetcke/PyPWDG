@@ -9,20 +9,7 @@ import pypwdg.core.vandermonde as pcv
 import pypwdg.core.assembly as pca
 import pypwdg.mesh.structure as pms
 import pypwdg.parallel.decorate as ppd
-import pypwdg.core.bases.utilities as pcbu
-
-class WeightedIntegration:
-    def __init__(self, quads, a):
-        self.quads = quads
-        self.a = a
-        
-    def __call__(self, i):
-        if callable(self.a):
-            return self.quads.quadweights(i) * self.a(self.quads.quadpoints(i))
-        else:
-            return self.quads.quadweights(i) * self.a
-        
-    
+import pypwdg.core.bases.utilities as pcbu    
 
 @ppd.distribute()    
 class HelmholtzSystem(object):
@@ -30,7 +17,7 @@ class HelmholtzSystem(object):
         It's parallelised so will only assemble the relevant bits of the system for the partition managed by
         this process.
     '''
-    def __init__(self, problem, basis, nquadpoints, alpha=0.5,beta=0.5,delta=0.5, usecache=True):
+    def __init__(self, problem, basis, nquadpoints, alpha=0.5,beta=0.5,delta=0.5, usecache=True, entityton = None):
         self.alpha = alpha
         self.beta = beta
         self.delta = delta
@@ -41,21 +28,22 @@ class HelmholtzSystem(object):
 
         self.basis = basis
         self.facevandermondes = pcv.LocalVandermondes(problem.mesh, basis, facequads, usecache=usecache)
+        self.scaledvandermondes = self.facevandermondes if entityton is None else pcv.ScaledVandermondes(entityton, problem.mesh, basis, facequads, usecache=usecache)
         self.internalassembly = pca.Assembly(self.facevandermondes, self.facevandermondes, facequads.quadweights)
          
         self.loadassemblies = {}
         self.weightedbdyassemblies = {}
         for i, bdycond in problem.bnddata.items():
             bdyetob = pcbu.UniformElementToBases(bdycond, problem.mesh)
-            bdyvandermondes = pcv.LocalVandermondes(problem.mesh, bdyetob, facequads)  
+            bdyvandermondes = pcv.LocalVandermondes(problem.mesh, bdyetob, facequads) if entityton is None else pcv.ScaledVandermondes(entityton, problem.mesh, bdyetob, facequads)  
             rc0,rc1 = bdycond.r_coeffs
-            rqw0 = WeightedIntegration(facequads, rc0)     
-            rqw1 = WeightedIntegration(facequads, rc1)     
+            rqw0 = pmmu.ScaledQuadweights(facequads, rc0)     
+            rqw1 = pmmu.ScaledQuadweights(facequads, rc1)     
             self.loadassemblies[i] = pca.Assembly(self.facevandermondes, bdyvandermondes, [[rqw0,rqw1],[rqw0,rqw1]])
             lc0,lc1 = bdycond.l_coeffs
-            lqw0 = WeightedIntegration(facequads, lc0)
-            lqw1 = WeightedIntegration(facequads, lc1)
-            self.weightedbdyassemblies[i] = pca.Assembly(self.facevandermondes, self.facevandermondes, [[lqw0,lqw1],[lqw0,lqw1]])
+            lqw0 = pmmu.ScaledQuadweights(facequads, lc0)
+            lqw1 = pmmu.ScaledQuadweights(facequads, lc1)
+            self.weightedbdyassemblies[i] = pca.Assembly(self.facevandermondes, self.scaledvandermondes, [[lqw0,lqw1],[lqw0,lqw1]])
         
         ev = pcv.ElementVandermondes(problem.mesh, self.basis, elementquads)
         self.volumeassembly = pca.Assembly(ev, ev, elementquads.quadweights)

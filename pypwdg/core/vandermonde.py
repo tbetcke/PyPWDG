@@ -33,18 +33,20 @@ class LocalVandermondes(object):
         self.numbases = elttobasis.getSizes()[mesh.ftoe]
         self.indices = elttobasis.getIndices()[mesh.ftoe]
         
-        
+    def evaluate(self, e, points, normal):
+        vals = self.__elttobasis.getValues(e, points)
+        derivs = self.__elttobasis.getDerivs(e, points, normal)
+        return (vals,derivs)
+                
     def getVandermondes(self, faceid):
-        """ Returns a tuple of (values, derivatives, weights) for functions on the face indexed by faceid """
+        """ Returns a tuple of (values, derivatives) for functions on the face indexed by faceid """
          
         vandermondes = None if self.__cache is None else self.__cache.get(faceid) 
         if vandermondes==None:       
             e = self.__mesh.ftoe[faceid]
             normal = self.__mesh.normals[faceid]
             points = self.__quadpoints(faceid)
-            vals = self.__elttobasis.getValues(e, points)
-            derivs = self.__elttobasis.getDerivs(e, points, normal)
-            vandermondes = (vals,derivs)
+            vandermondes = self.evaluate(e,points, normal)
             if self.__cache is not None: self.__cache[faceid] = vandermondes 
             
         return vandermondes
@@ -56,6 +58,15 @@ class LocalVandermondes(object):
 
     def getCachesize(self):
         return 0 if self.__cache is None else len(self.__cache)
+
+class ScaledVandermondes(LocalVandermondes):
+    def __init__(self, entityton, *args, **kwargs):
+        super(ScaledVandermondes, self).__init__(*args, **kwargs)
+        self.entityton = entityton
+    
+    def evaluate(self,e,points,normal):
+        (vals, derivs) = super(ScaledVandermondes, self).evaluate(e,points,normal)
+        return (vals * self.entityton[e](points).reshape(-1,1), derivs)
 
 class ElementVandermondes(object):
     """ Calculate vandermonde matrices at the element level."""

@@ -9,7 +9,18 @@ Provides objects for handling boundary data
 
 import numpy
 
-class generic_boundary_data(object):
+class AbstractBoundaryData(object):
+    def __init__(self, g):
+        self.g = g
+        self.n = 1
+        
+    def values(self,x):
+        return numpy.zeros((x.shape[0],1)) if self.g is None else self.g.values(x)
+    
+    def derivs(self,x,n):
+        return numpy.zeros((x.shape[0],1)) if self.g is None else self.g.derivs(x,n)
+
+class generic_boundary_data(AbstractBoundaryData):
     """ Provides an interface for generic boundary data
 
         Initialize with
@@ -30,27 +41,29 @@ class generic_boundary_data(object):
     """
     
     
-    def __init__(self,l_coeffs,r_coeffs=None,g = None):        
+    def __init__(self,l_coeffs,r_coeffs=None,g = None):  
+        super(generic_boundary_data,self).__init__(g)      
         if r_coeffs is None: r_coeffs=[0, 0]
         self.l_coeffs=l_coeffs
         self.r_coeffs=r_coeffs
-        self.g = g
-        self.n = 1
-        
-    def values(self,x):
-        return numpy.zeros((x.shape[0],1)) if self.g is None else self.g.values(x)
-    
-    def derivs(self,x,n):
-        return numpy.zeros((x.shape[0],1)) if self.g is None else self.g.derivs(x,n)
             
 #    g=property(lambda self: lambda x: numpy.zeros(x.shape[0]) if self.__g is None else self.__g)
 #    dg=property(lambda self: lambda x,n: numpy.zeros(x.shape[0]) if self.__dg is None else self.__dg)
 #    r_coeffs=property(lambda self: self.__r_coeffs)
 #    l_coeffs=property(lambda self: self.__l_coeffs)
 #    n=property(lambda self: 1)
+
+class VariableBoundaryData(AbstractBoundaryData):
+    def __init__(self, coeffs, nx, g):
+        super(VariableBoundaryData, self).__init__(g)
+        self.coeffs = coeffs
+        self.nx = nx
     
+    def __coeffs(self):
+        return [lambda x: self.nx(x) * self.coeffs[0], self.coeffs[1]]
     
-    
+    r_coeffs = property(lambda self: self.__coeffs())
+    l_coeffs = property(lambda self: self.__coeffs())
 
 class zero_impedance(generic_boundary_data):
     """ Zero impedance boundary conditions du/dn-iku=0    
