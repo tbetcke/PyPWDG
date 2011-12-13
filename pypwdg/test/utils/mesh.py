@@ -52,10 +52,10 @@ def regularrectmesh(xlims, ylims, nx, ny):
     # construct the elements
     idx = ny1 * mg1[0] + mg1[1] # the indices of the points (arranged on the grid)
     c = [idx[np.ix_(np.arange(nx)+d[0],np.arange(ny)+d[1])]for d in [[0,0],[1,0],[0,1],[1,1]]] # indices of corners of squares 
-    elts = [list(e) for e in np.dstack([c[0],c[1],c[2],c[1],c[3],c[2]]).reshape(-1,3)] # build the list of triangular elements
+    elts = [sorted(list(e)) for e in np.dstack([c[0],c[1],c[2],c[1],c[3],c[2]]).reshape(-1,3)] # build the list of triangular elements
     # construct the boundaries.   
     cc = np.array([[c[0],c[2]],[c[1],c[3]]]) # hold tight, it's a 4-dimensional array
-    bdys = [(bdyid, face) for bdyid, side in enumerate([cc[0,:,0,:].T,cc[:,0,:,0].T,cc[1,:,-1,:].T,cc[:,1,:,-1].T]) for face in side]
+    bdys = [(bdyid+1, face) for bdyid, side in enumerate([cc[0,:,0,:].T,cc[:,0,:,0].T,cc[1,:,-1,:].T,cc[:,1,:,-1].T]) for face in side]
     geomEntity = [4]*len(elts)
     return pmm.Mesh(nodes, elts, geomEntity, bdys, 2)
     

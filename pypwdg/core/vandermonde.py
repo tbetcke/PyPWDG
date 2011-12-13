@@ -66,6 +66,7 @@ class ScaledVandermondes(LocalVandermondes):
     
     def evaluate(self,e,points,normal):
         (vals, derivs) = super(ScaledVandermondes, self).evaluate(e,points,normal)
+        print self.entityton[e](points)
         return (vals * self.entityton[e](points).reshape(-1,1), derivs)
 
 class ElementVandermondes(object):
