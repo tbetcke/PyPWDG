@@ -47,7 +47,7 @@ g = pcb.FourierHankel([sourcexpos,0], [0], sourcek)
 sourceimp = pcbd.generic_boundary_data([-1j*averagek,1],[-1j*averagek,1],g)
 zeroimp = pcbd.zero_impedance(averagek)
 
-entityton = {4:veldata}
+entityton = {5:veldata}
 mesh = ptum.regularrectmesh([xmin,xmax],[ymin,ymax], int(((xmax - xmin) / (ymax - ymin)) / effectiveh), int(1 / effectiveh))
 print mesh.nelements
 bnddata = {1:sourceimp,2:zeroimp,3:zeroimp,4:zeroimp} 

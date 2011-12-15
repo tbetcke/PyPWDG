@@ -40,7 +40,7 @@ def regularsquaremesh(n = 1, bdytag="BDY"):
 def regularrectmesh(xlims, ylims, nx, ny):
     ''' Returns a mesh object for the rectangle xlims x ylims consisting of 
         nx x ny rectangles, each subdivided into 2 triangles.
-        The edges of the grid are labelled 0,1,2,3 clockwise from bottom (assuming the origin is in the lower-left)
+        The edges of the grid are labelled 1,2,3,4 anti-clockwise from the left-hand edge (assuming the origin is in the lower-left)
     '''
     nx1 = nx + 1
     ny1 = ny + 1
@@ -56,7 +56,7 @@ def regularrectmesh(xlims, ylims, nx, ny):
     # construct the boundaries.   
     cc = np.array([[c[0],c[2]],[c[1],c[3]]]) # hold tight, it's a 4-dimensional array
     bdys = [(bdyid+1, face) for bdyid, side in enumerate([cc[0,:,0,:].T,cc[:,0,:,0].T,cc[1,:,-1,:].T,cc[:,1,:,-1].T]) for face in side]
-    geomEntity = [4]*len(elts)
+    geomEntity = [5]*len(elts)
     return pmm.Mesh(nodes, elts, geomEntity, bdys, 2)
     
     
