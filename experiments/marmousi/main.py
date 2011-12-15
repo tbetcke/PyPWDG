@@ -50,7 +50,7 @@ zeroimp = pcbd.zero_impedance(averagek)
 entityton = {5:veldata}
 mesh = ptum.regularrectmesh([xmin,xmax],[ymin,ymax], int(((xmax - xmin) / (ymax - ymin)) / effectiveh), int(1 / effectiveh))
 print mesh.nelements
-bnddata = {1:sourceimp,2:zeroimp,3:zeroimp,4:zeroimp} 
+bnddata = {1:zeroimp,2:sourceimp,3:zeroimp,4:zeroimp} 
 #bdndata = {0:impbd, 1:pcbd.zero_impedance}
 
 problem=psp.VariableNProblem(entityton, mesh,averagek, bnddata)
