@@ -21,13 +21,13 @@ import pypwdg.core.bases.reference as pcbr
 import pypwdg.parallel.main
 
 npw = 15
-quadpoints = 4
+quadpoints = 12
 pdeg = 1
-usepoly = True
+usepoly = False
 
-effectivek = 30
-effectiveh = 0.05
-veldata = utils.RSFVelocityData()
+effectivek = 100
+effectiveh = 0.02
+veldata = utils.RSFVelocityData(exteriorvel = None)
 [[xmin,xmax],[ymin,ymax]] = veldata.bounds
 #effectivek = omega * distance / vel.averagevel
 omega = effectivek * veldata.averagevel / (ymax - ymin)
@@ -43,12 +43,14 @@ npoints =  np.array([veldata.nx,veldata.ny])
 sourcexpos = (xmax + xmin) / 2
 sourcek = veldata(np.array([[sourcexpos,0]]))[0] * averagek
 g = pcb.FourierHankel([sourcexpos,0], [0], sourcek)
-impbd = pcbd.generic_boundary_data([-1j*averagek,1],[-1j*averagek,1],g)
+
+sourceimp = pcbd.generic_boundary_data([-1j*averagek,1],[-1j*averagek,1],g)
+zeroimp = pcbd.zero_impedance(averagek)
 
 entityton = {4:veldata}
 mesh = ptum.regularrectmesh([xmin,xmax],[ymin,ymax], int(((xmax - xmin) / (ymax - ymin)) / effectiveh), int(1 / effectiveh))
 print mesh.nelements
-bnddata = dict(enumerate([impbd]*4)) 
+bnddata = {1:sourceimp,2:zeroimp,3:zeroimp,4:zeroimp} 
 #bdndata = {0:impbd, 1:pcbd.zero_impedance}
 
 problem=psp.VariableNProblem(entityton, mesh,averagek, bnddata)
