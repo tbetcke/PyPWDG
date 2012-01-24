@@ -64,7 +64,7 @@ class TestBases(unittest.TestCase):
         rules = [pcbu.planeWaveBases(2, k),
                  pcbu.FourierBesselBasisRule(range(-4,5)),
                  pcbu.FourierHankelBasisRule([[-1,-1]], range(-4,5)),
-                 pcbu.ProductBasisRule(pcbu.planeWaveBases(2, k, 3),pcbr.ReferenceBasisRule(pcbr.Dubiner(0)))]
+                 pcbu.ProductBasisRule(pcbu.planeWaveBases(2, k, 3),pcbr.ReferenceBasisRule(pcbr.Dubiner(2)))]
         basisDerivatives(rules, meshes, structuredpoints, k)
 
 def basisDerivatives(basisrules, meshes, structuredpoints, k):

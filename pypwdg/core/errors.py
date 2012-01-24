@@ -43,18 +43,20 @@ def volumeerrors(problem, quadpoints, solution):
 
 @distribute()
 class EvalElementError(object):
-    def __init__(self, mesh, quadpoints, basis, bnddata):
+    def __init__(self, mesh, quadpoints, basis, bnddata, entityton = None):
         self.mesh = mesh 
         fquad, _ = puq.quadrules(mesh.dim, quadpoints)
         facequads = pmmu.MeshQuadratures(mesh, fquad)
         
         self.vs = pcv.LocalVandermondes(mesh, basis, facequads)
+        self.scaledvandermondes = self.vs if entityton is None else pcv.ScaledVandermondes(entityton, mesh, basis, facequads)
+        
         self.weights = facequads.quadweights
         self.bnddata = bnddata
         self.bndvs = []
         for data in bnddata.values():
             bdyetob = pcbu.UniformElementToBases(data, mesh)
-            bdyvandermondes = pcv.LocalVandermondes(mesh, bdyetob, facequads)        
+            bdyvandermondes = pcv.LocalVandermondes(mesh, bdyetob, facequads) if entityton is None else pcv.ScaledVandermondes(entityton, mesh, bdyetob, facequads)     
             self.bndvs.append(bdyvandermondes)
             
     @parallelmethod(reduceop = tuplesum)
@@ -64,6 +66,7 @@ class EvalElementError(object):
         nf = len(self.vs.indices) # number of faces        
         xf = lambda f: x[self.vs.indices[f]:self.vs.indices[f]+self.vs.numbases[f]] # coefficients for each (2-sided) face                        
         vx = lambda f: np.dot(self.vs.getValues(f),xf(f)) # dirichlet values of solution at the quadrature points on each (2-sided) face        
+        svx = lambda f: np.dot(self.scaledvandermondes.getValues(f),xf(f)) # dirichlet values of solution at the quadrature points on each (2-sided) face        
         evx = lambda f: vx(f) - vx(facemap[f]) # error on each face        
         DD = pcv.LocalInnerProducts(evx, evx, self.weights) # L2 inner product of solns for pairs of 2-sided faces (only makes sense when faces are from same pair)
         ipD = pus.createvbsr(self.mesh.internal, DD.product, np.ones(nf), np.ones(nf))
@@ -81,7 +84,7 @@ class EvalElementError(object):
             lc=bdycondition.l_coeffs
             rc=bdycondition.r_coeffs
             # boundary error
-            be = lambda f: lc[0] * vx(f) + lc[1] * nx(f) - (rc[0] * bndv.getValues(f) + rc[1] * bndv.getDerivs(f)).squeeze()
+            be = lambda f: lc[0] * svx(f) + lc[1] * nx(f) - (rc[0] * bndv.getValues(f) + rc[1] * bndv.getDerivs(f)).squeeze()
             # l2norm of boundary error on faces
             BB = pcv.LocalInnerProducts(be,be,self.weights)
             ipB = pus.createvbsr(self.mesh.entityfaces[id], BB.product, np.ones(nf), np.ones(nf))

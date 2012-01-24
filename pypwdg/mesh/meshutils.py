@@ -59,6 +59,18 @@ class MeshElementQuadratures(object):
         area = abs(nl.det(self.__mesh.directions[self.__mesh.etof[eltid][0]][1:]))# / math.factorial(self.__mesh.dim))
         return self.__qw * area
 
+class ScaledQuadweights:
+    def __init__(self, quads, a):
+        self.quads = quads
+        self.a = a
+        
+    def __call__(self, i):
+        if callable(self.a):
+            return self.quads.quadweights(i) * self.a(self.quads.quadpoints(i))
+        else:
+            return self.quads.quadweights(i) * self.a
+        
+
 def elementcentres(mesh):
     # add the first direction to the average of the others (the offsets)
     x = np.concatenate([[1], np.ones(mesh.dim)*1.0/(mesh.dim+1)])

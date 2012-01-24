@@ -18,11 +18,12 @@ import pypwdg.utils.quadrature as puq
 import pypwdg.raytrace.wavefront as prw
 import numpy as np
 
-k = 80
+k = 50
 direction=np.array([[0.0,1.0]])
 g = pcb.PlaneWaves(direction, k)
 #g = pcb.FourierHankel([-2,-2], [0], k)
 impbd = pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g)
+zerobd = pcbd.zero_impedance(k)
 
 #bnddata={7:impbd, 
 #         8:impbd}
@@ -32,9 +33,9 @@ impbd = pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g)
 bounds=np.array([[0,1],[0,1]],dtype='d')
 npoints=np.array([500,500])
 
-npw = 20
+npw = 15
 quadpoints = 8
-pdeg = 3
+pdeg = 2
 
 c = 1
 N = 20    
@@ -66,21 +67,21 @@ prodpw = pcb.ProductBasisRule(pw, poly)
 
 
 #mesh = pmm.gmshMesh('../../examples/2D/square.msh',dim=2)
-for n in [32]:
+for n in [16]:
     bdytag = "BDY"
-    bdytags = [bdytag] #[7,8]
-    volentity = 1 # 6
-    mesh = ptum.regularsquaremesh(n, bdytag)
+    volentity = 5 # 6
+    mesh = ptum.regularrectmesh(bounds[0], bounds[1], n, n)
     print mesh.nelements
-    vtods = prw.nodesToPhases(wavefronts, forwardidxs, mesh, bdytags)
+    vtods = prw.nodesToPhases(wavefronts, forwardidxs, mesh, [2])
     rt = prb.RaytracedBasisRule(vtods)
     prodrt = pcb.ProductBasisRule(rt, poly)
-    basisrule = pw
+    basisrule = prodrt
 #    basisrule = pcbred.SVDBasisReduceRule(puq.trianglequadrature(quadpoints), basisrule)
-    entityton = {volentity:speed}
+    entityton = {volentity:slow}
 
-    bnddata = {bdytag: impbd}
+    bnddata = {1:zerobd,2:impbd,3:zerobd,4:zerobd}
     problem = psp.VariableNProblem(entityton, mesh, k, bnddata)
+#    problem = psp.Problem(mesh, k, bnddata)
     
     alpha = pdeg ^2 * n  / k
     beta = k / (pdeg * n) 
@@ -94,4 +95,4 @@ for n in [32]:
 #    pom.showdirections(mesh, prb.getetob(wavefronts, forwardidxs, mesh, bdytags) ,scale=20)
 #    w.plotwavefront(wavefronts, forwardidxs)
 
-pom.output2dfn(bounds, slow, npoints)
+#pom.output2dfn(bounds, slow, npoints)

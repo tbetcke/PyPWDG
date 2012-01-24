@@ -41,13 +41,14 @@ class Assembly(object):
         """ 
             lv: Left Vandermonde object
             rv: Right Vandermonde object
-            qws: Callable giving quadrature weights for each face
+            qws: Callable or 2x2 matrix of Callabesgiving quadrature weights for each face
         """
         
-        DD = LocalInnerProducts(lv.getValues, rv.getValues, qws)
-        DN = LocalInnerProducts(lv.getValues, rv.getDerivs, qws)
-        ND = LocalInnerProducts(lv.getDerivs, rv.getValues, qws)
-        NN = LocalInnerProducts(lv.getDerivs, rv.getDerivs, qws)
+        qws = [[qws,qws],[qws,qws]] if callable(qws) else qws
+        DD = LocalInnerProducts(lv.getValues, rv.getValues, qws[0][0])
+        DN = LocalInnerProducts(lv.getValues, rv.getDerivs, qws[0][1])
+        ND = LocalInnerProducts(lv.getDerivs, rv.getValues, qws[1][0])
+        NN = LocalInnerProducts(lv.getDerivs, rv.getDerivs, qws[1][1])
         
         self.ips = numpy.array([[DD,DN],[ND,NN]])
         self.numleft = lv.numbases

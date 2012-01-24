@@ -27,12 +27,14 @@ class DirectSolver(object):
     
     def pardisoSolve(self, M, b):
         from pymklpardiso.linsolve import solve
+        print "pardisosolve"
         (x, error) = solve(M,b.squeeze(),msglvl=0)
         if not error == 0: raise Exception("Pardiso Error")
         return x
     
     def umfpackSolve(self, M, b):
         from scipy.sparse.linalg.dsolve.linsolve import spsolve as solve
+        print "umfpacksolve"
         return solve(M,b)
         
     def solve(self, system, sysargs, syskwargs):

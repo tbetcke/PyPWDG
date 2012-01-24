@@ -37,7 +37,7 @@ def standardoutput(computation, solution, quadpoints, bounds, npoints, fileroot 
         except ImportError as e:   
             print "Some or all output probably failed: ",e
     if mploutput:
-        pom.output2dsoln(bounds, solution, npoints)
+        pom.output2dsoln(bounds, solution, npoints,plotmesh=False)
         
 
 def comparetrue(bounds, npoints, g, solution):
