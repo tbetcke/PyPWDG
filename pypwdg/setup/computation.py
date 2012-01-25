@@ -41,6 +41,8 @@ class DirectSolver(object):
         S,G = system.getSystem(*sysargs, **syskwargs)
         M = S.tocsr()
         print "Solve linear system of equations ",M.shape
+        if np.prod(M.shape) < 500000:
+            print "Norm %s"%np.linalg.norm(M.todense())
         b = np.array(G.todense()).squeeze()
         x = self.solvemethod(M,b).squeeze()
         print "Relative residual: ", np.linalg.norm(M * x -b) / np.linalg.norm(x)

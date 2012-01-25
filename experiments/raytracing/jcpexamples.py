@@ -10,14 +10,13 @@ import pypwdg.core.boundary_data as pcbd
 import pypwdg.setup.problem as psp
 import pypwdg.setup.computation as psc
 import pypwdg.core.physics as pcp
-import pypwdg.output.solution as pos
+import pypwdg.output.file as pof
 import pypwdg.output.mploutput as pom
 import pypwdg.test.utils.mesh as tum
 import numpy as np
 import math
 import random
 import matplotlib.pyplot as mp
-import string
 import pypwdg.utils.quadrature as puq
 import pypwdg.adaptivity.planewave as pap
 
@@ -84,27 +83,6 @@ def variableNhConvergence(Ns, nfn, bdycond, basisrule, process, k = 20, scale = 
         computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, 15, alpha = alpha, beta = beta)
         solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
         process(n, solution)
-        
-class FileOutput():
-    
-    def __init__(self, name, ns, g, bounds, npoints):
-        self.ftxt = open(name + ".txt", 'a')
-        self.ftxt.write(name.translate(None, string.punctuation + string.whitespace)+' = (')
-        self.ftxt.write(str(ns)+", [")
-        self.bounds = bounds
-        self.npoints = npoints
-        self.g = g
-        self.docomma = False
-    
-    def process(self, n, solution):
-        err = pos.comparetrue(self.bounds, self.npoints, self.g, solution)
-        print n, err
-        if self.docomma: self.ftxt.write(', ')
-        self.docomma = True
-        self.ftxt.write(str(err))
-        
-    def __del__(self):
-        self.ftxt.write('])\n')
     
 
 def genNs(base, minN, maxN):
@@ -126,21 +104,21 @@ def analytichconvergence(maxN, k = 20, scale = 4.0):
     Ns = genNs(math.pow(2,1.0/3),1,maxN+1)
     
     pw = pcbv.PlaneWaveVariableN(pcb.circleDirections(npw))
-    fo = FileOutput(fileroot + 'uniformpw%s'%npw, str(Ns), g, bounds, npoints)
+    fo = pof.ErrorFileOutput(fileroot + 'uniformpw%s'%npw, str(Ns), g, bounds, npoints)
     variableNhConvergence(Ns, nfn, bdycond, pw, fo.process, k, scale)
     
     poly = pcbr.ReferenceBasisRule(pcbr.Dubiner(pdeg))
-    fo = FileOutput(fileroot + 'poly%s'%pdeg, str(Ns), g, bounds, npoints)
+    fo = pof.ErrorFileOutput(fileroot + 'poly%s'%pdeg, str(Ns), g, bounds, npoints)
     variableNhConvergence(Ns, nfn, bdycond, poly, fo.process, k, scale, pdeg)
 
     for err in [0, 0.02, 0.2]:
         rt = PlaneWaveFromDirectionsRule(S, err)
-        fo = FileOutput(fileroot + 'rt-err%s'%err, str(Ns), g, bounds, npoints)
+        fo = pof.ErrorFileOutput(fileroot + 'rt-err%s'%err, str(Ns), g, bounds, npoints)
         variableNhConvergence(Ns, nfn, bdycond, rt, fo.process, k, scale)
         for p in [1,2,3,4]:
             poly = pcbr.ReferenceBasisRule(pcbr.Dubiner(p))
             polyrt = pcb.ProductBasisRule(poly, rt)
-            fo = FileOutput(fileroot + 'poly%srt-err%s'%(p,err), str(Ns), g, bounds, npoints)
+            fo = pof.ErrorFileOutput(fileroot + 'poly%srt-err%s'%(p,err), str(Ns), g, bounds, npoints)
             variableNhConvergence(Ns, nfn, bdycond, polyrt, fo.process, k, scale, p)
 
 def analyticconvergencepwprod(maxN, k = 20, scale = 4.0):
