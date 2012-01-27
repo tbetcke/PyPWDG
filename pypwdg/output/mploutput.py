@@ -8,12 +8,12 @@ import pypwdg.utils.geometry as pug
 import numpy as np
 import matplotlib.pyplot as mp
 
-def image(v, npoints, bounds):    
+def image(v, npoints, bounds, alpha = 1.0, cmap=None):    
     z = v.reshape(npoints)
     
     mp.figure()
     print bounds.ravel()
-    c = mp.imshow(z.T, extent=bounds.ravel(), origin='lower', alpha = 0.7)
+    c = mp.imshow(z.T, extent=bounds.ravel(), origin='lower', alpha = alpha, cmap=cmap)
     mp.colorbar(c)
 
 
@@ -29,6 +29,21 @@ def contour(p, v, npoints):
 def showmesh(mesh):    
     mp.triplot(mesh.nodes[:,0], mesh.nodes[:,1], mesh.elements, linewidth=1.0, color='k')
 
+def output2derror(bounds, solution, fn, npoints, plotmesh = True):
+    bounds=np.array(bounds,dtype='d')
+    points = pug.StructuredPoints(bounds.transpose(), npoints)
+    spe = solution.getEvaluator(filter=lambda x:x)
+    
+    vals, counts = spe.evaluate(points)
+    counts[counts==0] = 1
+    vals /= counts
+    fv = fn(points.toArray()).squeeze()
+    
+    image(np.log10(np.abs(vals - fv)), npoints, bounds)
+    if plotmesh: showmesh(solution.problem.mesh)
+    mp.show()
+    
+
 def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True):    
     bounds=np.array(bounds,dtype='d')
     points = pug.StructuredPoints(bounds.transpose(), npoints)
@@ -42,12 +57,12 @@ def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True):
     if plotmesh: showmesh(solution.problem.mesh)
     mp.show()
        
-def output2dfn(bounds, fn, npoints):
+def output2dfn(bounds, fn, npoints, **kwargs):
     bounds=np.array(bounds,dtype='d')
     points = pug.StructuredPoints(bounds.transpose(), npoints).toArray()
     v = np.real(fn(points))
 #    contour(points, v, npoints)
-    image(v, npoints, bounds)
+    image(v, npoints, bounds, **kwargs)
     mp.show()
     
 def showdirections(mesh, etob, **kwargs):

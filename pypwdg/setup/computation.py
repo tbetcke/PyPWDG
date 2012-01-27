@@ -11,8 +11,8 @@ import numpy as np
         
 class DirectSolver(object):
     ''' Abstracts the choice of direct solver'''
-    def __init__(self, solver="best"):
-        
+    def __init__(self, solver="best", callback = None):
+        self.callback = callback
         solvers = {'best':self.bestSolve, 'pardiso':self.pardisoSolve, 'umfpack': self.umfpackSolve}
         try:
             self.solvemethod = solvers[solver]
@@ -41,8 +41,8 @@ class DirectSolver(object):
         S,G = system.getSystem(*sysargs, **syskwargs)
         M = S.tocsr()
         print "Solve linear system of equations ",M.shape
-        if np.prod(M.shape) < 500000:
-            print "Norm %s"%np.linalg.norm(M.todense())
+        if self.callback:
+            self.callback(M)
         b = np.array(G.todense()).squeeze()
         x = self.solvemethod(M,b).squeeze()
         print "Relative residual: ", np.linalg.norm(M * x -b) / np.linalg.norm(x)
