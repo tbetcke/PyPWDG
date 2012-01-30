@@ -68,13 +68,13 @@ def loglogplot2(l, title, markers):
 
 if __name__ == '__main__':
     loglogplot(pw20, 'Plane waves, k=20', npws)
-    loglogplot(ap20, "Augmented plane wave, k=20", pdegs)
+    loglogplot(ap20, "Modulated plane wave, k=20", pdegs)
 
     loglogplot(pw40, 'Plane waves, k=40', npws40)
-    loglogplot(ap40, "Augmented plane wave, k=40", pdegs)
+    loglogplot(ap40, "Modulated plane wave, k=40", pdegs)
     
-    loglogplot2(map(pwdofs, pw20, npws) + map(apdofs, ap20, pdegs), "k = 20", ['bo:']*4 + ['b^-']*6)
-    loglogplot2(map(pwdofs, pw40, npws40) + map(apdofs, ap40, pdegs), "k = 40", ['bo:']*6 + ['b^-']*6)
+    loglogplot2(map(pwdofs, pw20, npws) + map(apdofs, ap20, pdegs), "k = 20", ['ko:']*4 + ['k^--']*6)
+    loglogplot2(map(pwdofs, pw40, npws40) + map(apdofs, ap40, pdegs), "k = 40", ['ko:']*6 + ['k^--']*6)
     
     
 

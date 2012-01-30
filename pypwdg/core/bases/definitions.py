@@ -119,13 +119,37 @@ class FourierHankelBessel(TrefftzBasis):
 
 class EmptyBasis(Basis):
     
-    def __init__(self,n):
-        """Create an empty placeholder basis that returns size n"""
+    def values(self, x):
+        return np.empty((x.shape[0], 0))
+    
+    def derivs(self,x,n=None):
+        if n is None:
+            return np.empty((x.shape[0], 0, x.shape[1]))
+        else:
+            return self.values(x)
         
-        self.__n=n
-        
-    n=property(lambda self: self.__n)
+    def laplacian(self, x):
+        return self.values(x)
+    
+    n=property(lambda self: 0)    
  
+class ConstantBasis(Basis):
+    
+    def values(self, x):
+        return np.zeros((x.shape[0], 1))
+    
+    def derivs(self,x,n=None):
+        if n is None:
+            return np.zeros_like(x)[:,np.newaxis,:]
+        else:
+            return self.values(x)
+        
+    def laplacian(self, x):
+        return self.values(x)
+    
+    n=property(lambda self: 1)    
+        
+    
 
 class FourierBessel(FourierHankelBessel):
     
@@ -180,7 +204,7 @@ class BasisReduce(Basis):
 class BasisCombine(object):
     """ Combine several basis objects"""
     def __init__(self, bases):
-        self.bases = bases
+        self.bases = [EmptyBasis()]+bases
         self.n = sum([b.n for b in bases])
         
     def values(self, points):

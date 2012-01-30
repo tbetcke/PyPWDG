@@ -104,7 +104,11 @@ class UnionBasisRule(object):
         
     def populate(self, einfo):
         import pypwdg.core.bases.definitions as pcbb
-        return [pcbb.BasisCombine([b for rule in self.rules for b in rule.populate(einfo)])]
+        bs = []
+        for rule in self.rules:
+            for b in rule.populate(einfo):
+                bs.append(b)
+        return [pcbb.BasisCombine(bs)]
     
 class GeomIdBasisRule(object):
     '''Takes a dictionary {Id:BasisRule} to define different basis rules for different geometric identities'''

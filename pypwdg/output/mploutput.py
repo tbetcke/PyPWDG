@@ -64,6 +64,22 @@ def output2dfn(bounds, fn, npoints, **kwargs):
 #    contour(points, v, npoints)
     image(v, npoints, bounds, **kwargs)
     mp.show()
+
+def showdirections2(mesh, etods, **kwargs):
+    ''' Todo: combine this with showdirections'''
+    elementinfo = pcbu.ElementInfo(mesh, 0)
+    centres = []
+    directions = []
+    for e in range(mesh.nelements):
+        c = elementinfo.origin(e)
+        for d in etods[e]:
+            print d                    
+            centres.append(c)
+            directions.append(d)
+    centres = np.array(centres)
+    directions = np.array(directions)
+    print centres.shape, directions.shape
+    mp.quiver(centres[:,0], centres[:,1], directions[:,0], directions[:,1], **kwargs)    
     
 def showdirections(mesh, etob, **kwargs):
     elementinfo = pcbu.ElementInfo(mesh, 0)
@@ -80,4 +96,5 @@ def showdirections(mesh, etob, **kwargs):
                     directions.append(d)
     centres = np.array(centres)
     directions = np.array(directions)
+    print centres.shape, directions.shape
     mp.quiver(centres[:,0], centres[:,1], directions[:,0], directions[:,1], **kwargs)

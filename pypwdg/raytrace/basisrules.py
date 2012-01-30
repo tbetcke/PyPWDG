@@ -44,7 +44,19 @@ class RaytracedBasisRule(object):
         return [pcbb.PlaneWaves(dirs, einfo.k)]        
     
 
-
+class OldRaytracedBasisRule(object):
+    def __init__(self, etods):
+        self.etods = etods;
+        self.constant = pcb.ConstantBasis()
+        
+    def populate(self, einfo):
+        dirs = self.etods[einfo.elementid]
+        if len(dirs):
+            return [pcbb.PlaneWaves(dirs, einfo.k)]
+        else:
+            return []
+        
+        
 #
 #class AugmentedBasisRule(object):
 #    ''' Returns an augmented plane wave basis'''

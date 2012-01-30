@@ -18,7 +18,7 @@ import pypwdg.utils.quadrature as puq
 import pypwdg.raytrace.wavefront as prw
 import numpy as np
 
-k = 50
+k = 20
 direction=np.array([[0.0,1.0]])
 g = pcb.PlaneWaves(direction, k)
 #g = pcb.FourierHankel([-2,-2], [0], k)
