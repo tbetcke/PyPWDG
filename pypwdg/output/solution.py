@@ -22,7 +22,7 @@ def writeSolutionVTK(solution, bounds, npoints, realdata=True, fname='solution.v
     vtk_structure.create_vtk_structured_points(bounds,npoints)
     vtk_structure.write_to_file(fname)
     
-def standardoutput(computation, solution, quadpoints, bounds, npoints, fileroot = None, mploutput = False):
+def standardoutput(computation, solution, quadpoints, bounds, npoints, fileroot = None, mploutput = False, **kwargs):
     ''' Dumps the solution to a file and also writes the errors out on a mesh'''
     mesh = computation.problem.mesh
     errors = pce.combinedError(computation.problem, solution, quadpoints)[0]
@@ -37,7 +37,7 @@ def standardoutput(computation, solution, quadpoints, bounds, npoints, fileroot 
         except ImportError as e:   
             print "Some or all output probably failed: ",e
     if mploutput:
-        pom.output2dsoln(bounds, solution, npoints,plotmesh=False)
+        pom.output2dsoln(bounds, solution, npoints,plotmesh=False, **kwargs)
         
 
 def comparetrue(bounds, npoints, g, solution):

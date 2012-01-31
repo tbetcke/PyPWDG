@@ -122,7 +122,7 @@ def raytracesoln(problem, etods, pdeg = 2, npw = 15, radius = 0.5):
     solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
     bounds=array([[-2,2],[-2,2]],dtype='d')
     npoints=array([200,200])
-    pos.standardoutput(computation, solution, 20, bounds, npoints, mploutput = True)
+    pos.standardoutput(computation, solution, 20, bounds, npoints, mploutput = True, cmap=pom.mp.cm.get_cmap('binary'))
     
 
 def polysoln(problem, pdeg):
