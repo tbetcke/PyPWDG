@@ -42,20 +42,31 @@ class RaytracedBasisRule(object):
     def populate(self, einfo):
         dirs = normaliseandcompact(sum([self.vtods[v] for v in einfo.vertices],[]))        
         return [pcbb.PlaneWaves(dirs, einfo.k)]        
-    
+
 
 class OldRaytracedBasisRule(object):
     def __init__(self, etods):
         self.etods = etods;
-        self.constant = pcb.ConstantBasis()
         
     def populate(self, einfo):
         dirs = self.etods[einfo.elementid]
         if len(dirs):
             return [pcbb.PlaneWaves(dirs, einfo.k)]
         else:
-            return []
+            return [] #[self.constant]
         
+class RaytracedShadowRule(object):
+    def __init__(self, etods, shadowrule):
+        self.etods = etods
+        self.shadowrule = shadowrule
+        
+    def populate(self, einfo):
+        dirs = self.etods[einfo.elementid]
+        if len(dirs):
+            return []
+        else:
+            return self.shadowrule.populate(einfo) 
+
         
 #
 #class AugmentedBasisRule(object):

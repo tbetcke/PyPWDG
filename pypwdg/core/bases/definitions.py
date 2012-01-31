@@ -136,11 +136,11 @@ class EmptyBasis(Basis):
 class ConstantBasis(Basis):
     
     def values(self, x):
-        return np.zeros((x.shape[0], 1))
+        return np.ones((x.shape[0], 1))
     
     def derivs(self,x,n=None):
         if n is None:
-            return np.zeros_like(x)[:,np.newaxis,:]
+            return np.ones_like(x)[:,np.newaxis,:]
         else:
             return self.values(x)
         

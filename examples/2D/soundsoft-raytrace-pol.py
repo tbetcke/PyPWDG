@@ -19,8 +19,8 @@ import pypwdg.utils.quadrature as puq
 from numpy import array,sqrt
 import numpy as np
 
-k = 40
-direction=array([[1.0,1.0]])/sqrt(2)
+k = 30
+direction=array([[1,1]])/sqrt(2)
 g = pcb.PlaneWaves(direction, k)
 
 bnddata={11:pcbd.zero_dirichlet(),
@@ -34,7 +34,7 @@ mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 
 
 quadpoints = 30
-p=4
+p=3
 t=p**2
 g=.6
 
@@ -71,7 +71,7 @@ basisrule = pcbred.SVDBasisReduceRule(puq.trianglequadrature(quadpoints), bh, th
 
 computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, quadpoints,alpha=alpha,beta=beta,delta=delta)
 solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
-pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'soundsoft_pol')
+pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'soundsoft_pol', mploutput = True)
 print solution.getError('Dirichlet')
 print solution.getError('Neumann')
 print solution.getError('Boundary')

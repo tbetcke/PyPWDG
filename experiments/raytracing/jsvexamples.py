@@ -61,7 +61,7 @@ def solvesquare(N, pdeg, g, basisrule, solve, k=20, dovolumes = True):
 #        pom.output2dsoln()
 #        process(n, solution)
         
-def sourcesquareconvergence(Ns, Ps, NPWs, k = 20):
+def sourcesquareconvergence(Ns, Ps, NPWs, k = 20, polyonly = False):
     condfile = open("hankelcondition%s.txt"%k, 'a')
     fileroot="hankelsquare_k%s"%(k);
     bounds=np.array([[0,1],[0,1]],dtype='d')
@@ -82,17 +82,31 @@ def sourcesquareconvergence(Ns, Ps, NPWs, k = 20):
             sol = solvesquare(N, 1, g, pw, solver.solve, k, dovolumes=False)
             fo.process(N, sol)
 
-    condfile.write("Polynomials + plane wave\n")    
-    for pdeg in Ps:
-        print "polynomial degree ",pdeg
-        poly = pcbr.ReferenceBasisRule(pcbr.Dubiner(pdeg))                    
-        polyrt = pcb.ProductBasisRule(poly, rt)
-        fo = pof.ErrorFileOutput(fileroot + 'poly%srt'%(pdeg), str(Ns), g, bounds, npoints)
-        for N in Ns:
-            solver = psc.DirectSolver(callback = lambda M: condfile.write("%s, %s, %s\n"%(pdeg, N, cond(M))))
-            sol = solvesquare(N, pdeg, g, polyrt, solver.solve, k)
-            fo.process(N, sol)   
-    condfile.close()     
+    if not polyonly:
+        condfile.write("Polynomials + plane wave\n")    
+        for pdeg in Ps:
+            print "polynomial degree ",pdeg
+            poly = pcbr.ReferenceBasisRule(pcbr.Dubiner(pdeg))                    
+            polyrt = pcb.ProductBasisRule(poly, rt)
+            fo = pof.ErrorFileOutput(fileroot + 'poly%srt'%(pdeg), str(Ns), g, bounds, npoints)
+            for N in Ns:
+                solver = psc.DirectSolver(callback = lambda M: condfile.write("%s, %s, %s\n"%(pdeg, N, cond(M))))
+                sol = solvesquare(N, pdeg, g, polyrt, solver.solve, k)
+                fo.process(N, sol)   
+                
+    if polyonly:
+        condfile.write("Polynomials only\n")    
+        for pdeg in Ps:
+            print "polynomial degree ",pdeg
+            poly = pcbr.ReferenceBasisRule(pcbr.Dubiner(pdeg))                    
+            fo = pof.ErrorFileOutput(fileroot + 'poly%srt'%(pdeg), str(Ns), g, bounds, npoints)
+            for N in Ns:
+                solver = psc.DirectSolver(callback = lambda M: condfile.write("%s, %s, %s\n"%(pdeg, N, cond(M))))
+                sol = solvesquare(N, pdeg, g, poly, solver.solve, k)
+                fo.process(N, sol)   
+        condfile.close()     
+    
+
 
 def examplepic(n, k=20):
     origin = np.array([-0.2,-0.2])
