@@ -78,7 +78,7 @@ def traceproblem(k, direction=array([[1,1]])/sqrt(2)):
     etods = prc.tracemesh(problem, {10:lambda x:direction})
     return problem, etods
 
-def raytracesoln(problem, etods, pdeg = 2, npw = 15, radius = 0.5):
+def raytracesoln(problem, etods, pdeg = 2, npw = 15, radius = 0.5, truef = None):
     quadpoints = 15
     k = problem.k
     rtpw = prb.OldRaytracedBasisRule(etods)
@@ -87,7 +87,7 @@ def raytracesoln(problem, etods, pdeg = 2, npw = 15, radius = 0.5):
     shadow = RaytracedShadowRule(etods, fb)
     
     
-    crt = SourceBasisRule()
+    crt = CrudeSourceBasisRule()
         
     
     poly = pcbr.ReferenceBasisRule(pcbr.Dubiner(pdeg))
@@ -96,13 +96,13 @@ def raytracesoln(problem, etods, pdeg = 2, npw = 15, radius = 0.5):
 #    polynonpw = pcb.ProductBasisRule(poly, unonpw)
 #    basisrule = pcbu.UnionBasisRule([polynonpw,rtpw])
     
-#    unionall = pcbu.UnionBasisRule([shadow, rtpw, crt])
-#    polyall = pcb.ProductBasisRule(poly, unionall)
-#    basisrule = polyall
-    
-    rt = pcbu.UnionBasisRule([rtpw, shadow])
-    polyrt = pcb.ProductBasisRule(poly, rt)
-    basisrule = polyrt
+    unionall = pcbu.UnionBasisRule([shadow, rtpw, crt])
+    polyall = pcb.ProductBasisRule(poly, unionall)
+    basisrule = polyall
+#    
+#    rt = pcbu.UnionBasisRule([rtpw, shadow])
+#    polyrt = pcb.ProductBasisRule(poly, rt)
+#    basisrule = polyrt
     
     
 #    pw = pcb.planeWaveBases(2, k, nplanewaves=npw)
@@ -121,11 +121,16 @@ def raytracesoln(problem, etods, pdeg = 2, npw = 15, radius = 0.5):
     
     solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
     bounds=array([[-2,2],[-2,2]],dtype='d')
-    npoints=array([200,200])
+    npoints=array([400,400])
     pos.standardoutput(computation, solution, 20, bounds, npoints, mploutput = True, cmap=pom.mp.cm.get_cmap('binary'))
     
+    if truef:
+        pos.comparetrue(bounds, npoints, truef, solution)
+        pom.output2derror(bounds, solution, truef, npoints, plotmesh = False, logerr = False, cmap=pom.mp.cm.get_cmap('binary'))
+    return solution
+    
 
-def polysoln(problem, pdeg):
+def polysoln(problem, pdeg, truef = None):
     k = problem.k
     poly = pcbr.ReferenceBasisRule(pcbr.Dubiner(pdeg))                    
     h = 4.0/40
@@ -136,11 +141,15 @@ def polysoln(problem, pdeg):
     
     solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
     bounds=array([[-2,2],[-2,2]],dtype='d')
-    npoints=array([200,200])
-    pos.standardoutput(computation, solution, 20, bounds, npoints, mploutput = True)
+    npoints=array([400,400])
+    pos.standardoutput(computation, solution, 20, bounds, npoints, mploutput = True, cmap=pom.mp.cm.get_cmap('binary'))
+    if truef:
+        pos.comparetrue(bounds, npoints, truef, solution)
+        pom.output2derror(bounds, solution, truef, [400,400], plotmesh = False, logerr = False, cmap=pom.mp.cm.get_cmap('binary'))
+    return solution
 
 
-def planewavesoln(problem, npw):
+def planewavesoln(problem, npw, truef = None):
     k = problem.k
     pw = pcb.planeWaveBases(2, k, nplanewaves=npw)
     h = 4.0/40
@@ -150,9 +159,13 @@ def planewavesoln(problem, npw):
     
     solution = computation.solution(psc.DirectSolver().solve, dovolumes=False)
     bounds=array([[-2,2],[-2,2]],dtype='d')
-    npoints=array([200,200])
-    pos.standardoutput(computation, solution, 20, bounds, npoints, mploutput = True)
-
+    npoints=array([400,400])
+    pos.standardoutput(computation, solution, 20, bounds, npoints, mploutput = True, cmap=pom.mp.cm.get_cmap('binary'))
+    if truef:
+        pos.comparetrue(bounds, npoints, truef, solution)
+        pom.output2derror(bounds, solution, truef, [400,400], plotmesh = False, logerr = True, cmap=pom.mp.cm.get_cmap('binary'))
+        
+    return solution
 
     
 def showdirs():
@@ -160,7 +173,8 @@ def showdirs():
     #direction=array([[1.0,1.0]])/sqrt(2)
     direction=array([[1,1]])/sqrt(2)
 #    direction = array([[1,0]])
-    mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
+    with(puf.pushd("../../examples/2D")):
+        mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
     problem = psp.Problem(mesh, k, None)
     etods = prc.tracemesh(problem, {10:lambda x:direction})
     

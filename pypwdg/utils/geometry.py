@@ -95,6 +95,9 @@ class StructuredPoints(object):
             
         return idxs.ravel(), points.reshape((-1,self.dim))
     
+    def getXY(self):
+        return (np.linspace(l, u, n) for l,u,n in zip(self.lower, self.upper, self.npoints))
+    
     def toArray(self):
         """Return points as numpy array """
         

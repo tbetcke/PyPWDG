@@ -50,7 +50,7 @@ def comparetrue(bounds, npoints, g, solution):
     sp = pug.StructuredPoints(bounds.transpose(), npoints)
     idx, points = sp.getPoints(bounds.transpose())
     gvals = np.zeros(sp.length, dtype=complex)
-    gvals[idx] = g.values(points)
+    gvals[idx] = g(points)
     l2g = np.sqrt(np.vdot(gvals, gvals) / sp.length)
     perr = solution.evaluate(sp) - gvals
     relerr = np.abs(np.sqrt(np.vdot(perr,perr) / sp.length) / l2g)

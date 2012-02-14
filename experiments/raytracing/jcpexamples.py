@@ -19,6 +19,7 @@ import random
 import matplotlib.pyplot as mp
 import pypwdg.utils.quadrature as puq
 import pypwdg.adaptivity.planewave as pap
+import pypwdg.core.bases.utilities as pcbu
 
 class harmonic1():
     ''' Harmonic function s * ((x+t)^2 - (y+t)^2), with s and t chosen such that the gradient has length 1 at (0,0) and self.scale at (1,1)''' 
@@ -142,12 +143,24 @@ def analyticconvergencepwprod(maxN, k = 20, scale = 4.0):
         fo = FileOutput(fileroot + 'pw%spoly%s'%(npw,p), str(Ns), g, bounds, npoints)
         variableNhConvergence(Ns, nfn, bdycond, polypw, fo.process, k, scale, p)
 
-def showtruesoln(k, scale):
+def showtruesoln(k, scale, n = 0):
     S = harmonic1(scale)
     g = HarmonicDerived(k, S)   
     bounds=np.array([[0,1],[0,1]],dtype='d')
     npoints=np.array([k * scale * 10,k * scale * 10], dtype=int)
-    pom.output2dfn(bounds, g.values, npoints)
+    pom.output2dfn(bounds, g.values, npoints, cmap=pom.mp.cm.get_cmap('binary'))
+    if n:
+        mesh = tum.regularsquaremesh(n, None)
+        etods = {}
+        einfos = pcbu.ElementInfo(mesh, k) 
+            
+        for e in range(mesh.nelements):
+            direction = S.gradient(einfos.origin(e))
+            direction /= math.sqrt(np.sum(direction**2))   
+            etods[e] = [direction]
+        pom.showmesh(mesh, color='gray')        
+        pom.showdirections2(mesh, etods, color='gray')
+
 
 hconvk20scale40poly1rterr002 = ([1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 25, 32, 40, 50], [0.990134706309, 1.05262217864, 0.937071087439, 0.680171598443, 0.53491843574, 0.460905905757, 0.334503099871, 0.243298428851, 0.186742566223, 0.11660495019, 0.0774025297182, 0.0491654196094, 0.0289144505415, 0.0176468728289, 0.0109022093342])
 hconvk20scale40poly1rterr02 = ([1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 25, 32, 40, 50], [1.00324352398, 1.0463753955, 1.60581930782, 1.07948574187, 0.924566715094, 0.956003025167, 0.797831033272, 0.738534492268, 0.585847929576, 0.371044638417, 0.281812590397, 0.184514467549, 0.12905919196, 0.0952987061716, 0.0548803015932])
@@ -171,14 +184,18 @@ hconvk20scale40rterr02 = ([1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 25, 32, 40, 50],
 hconvk20scale40rterr0 = ([1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 25, 32, 40, 50], [0.999987763459, 0.999998688602, 0.998695021508, 0.988736948283, 0.947937400146, 0.849097798813, 0.54776854266, 0.335158003765, 0.229946465055, 0.140551524422, 0.100425337716, 0.0725510836858, 0.0508355763001, 0.0369725138659, 0.0269970597301])
 hconvk20scale40uniformpw15 = ([1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 25, 32, 40, 50], [1.01681168153, 1.10705077232, 1.33438531356, 1.46476710613, 1.19990671841, 0.998644027297, 0.428673767125, 0.373849778453, 0.215334194475, 0.102780031159, 0.0885663069979, 0.0406074600747, 0.0170051405272, 0.00828574487183, 0.00407856098455])
 
+markerstyles = ['ko', 'ks', 'k^', 'k*', 'kD', 'k+', 'kv']
+
 def loglogplot(l, title = None, names = None):
-    a = np.array(l).transpose((1,2,0))
+#    a = np.array(l).transpose((1,2,0))
     mp.figure()
-    lines = mp.loglog(1.0 / a[0], a[1])
+    if names is None: names = range(len(l)) 
+    for i, ((N, errs), name) in enumerate(zip(l, names)):
+        mp.loglog(1.0 / np.array(N), errs, markerstyles[i % len(markerstyles)]+'-', label=str(name), basex=2, hold=True)
     if title: mp.suptitle(title)
-    if len(lines) > 1:
-        if names is None: names = range(len(lines)) 
-        mp.figlegend(lines, names, 'right')
+    mp.legend(loc = 'best')
+    mp.xlabel('h')
+    mp.ylabel('relative error')
     
 def plotanalytic():
     loglogplot([hconvk20scale40uniformpw15], 'Uniform plane waves (15)', None)
@@ -188,6 +205,7 @@ def plotanalytic():
     loglogplot([hconvk20scale40rterr002, hconvk20scale40poly1rterr002, hconvk20scale40poly2rterr002, hconvk20scale40poly3rterr002, hconvk20scale40poly4rterr002], 'Ray-traced directions with 1% error, augmented with polynomials of degree p', ['p=0','p=1','p=2','p=3','p=4'])
     loglogplot([hconvk20scale40poly2rterr0, hconvk20scale40poly2rterr002, hconvk20scale40poly2rterr02],'Ray-traced directions with errors, augmented with polynomials of degree 2', ['0%', '1%', '10%'])
     loglogplot([hconvk20scale40pw15poly1, hconvk20scale40pw15poly2, hconvk20scale40pw15poly3, hconvk20scale40pw15poly4], 'Polynomial convergence', ['p=1','p=2','p=3','p=4'])
+    
 
 class GaussianBubble:
     def __init__(self, c = 1, O = [0.5,0.3]):

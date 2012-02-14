@@ -8,13 +8,13 @@ import pypwdg.utils.geometry as pug
 import numpy as np
 import matplotlib.pyplot as mp
 
-def image(v, npoints, bounds, alpha = 1.0, cmap=None):    
+def image(v, npoints, bounds, alpha = 1.0, format = None, ticks = None, **kwargs):    
     z = v.reshape(npoints)
     
     mp.figure()
     print bounds.ravel()
-    c = mp.imshow(z.T, extent=bounds.ravel(), origin='lower', alpha = alpha, cmap=cmap)
-    mp.colorbar(c)
+    c = mp.imshow(z.T, extent=bounds.ravel(), origin='lower', alpha = alpha, **kwargs)
+    mp.colorbar(c, format=format, ticks = ticks)
 
 
 def contour(p, v, npoints):    
@@ -26,10 +26,10 @@ def contour(p, v, npoints):
     c = mp.contourf(x,y,z)
     mp.colorbar(c)
 
-def showmesh(mesh):    
-    mp.triplot(mesh.nodes[:,0], mesh.nodes[:,1], mesh.elements, linewidth=1.0, color='k')
+def showmesh(mesh, color='k'):    
+    mp.triplot(mesh.nodes[:,0], mesh.nodes[:,1], mesh.elements, linewidth=1.0, color=color)
 
-def output2derror(bounds, solution, fn, npoints, plotmesh = True):
+def output2derror(bounds, solution, fn, npoints, plotmesh = True, logerr = True, relerr = False, **kwargs):
     bounds=np.array(bounds,dtype='d')
     points = pug.StructuredPoints(bounds.transpose(), npoints)
     spe = solution.getEvaluator(filter=lambda x:x)
@@ -39,12 +39,21 @@ def output2derror(bounds, solution, fn, npoints, plotmesh = True):
     vals /= counts
     fv = fn(points.toArray()).squeeze()
     
-    image(np.log10(np.abs(vals - fv)), npoints, bounds)
+    err = np.abs(vals - fv)
+    if relerr:
+        err = err / np.abs(fv)
+    format = None
+    ticks = None
+    if logerr:
+        format = "10E%s"
+        ticks = [-3,-2,-1,0]
+        
+    image(np.log10(err) if logerr else err, npoints, bounds, format = format, ticks = ticks, **kwargs)
     if plotmesh: showmesh(solution.problem.mesh)
     mp.show()
     
 
-def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True **kwargs):    
+def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True, **kwargs):    
     bounds=np.array(bounds,dtype='d')
     points = pug.StructuredPoints(bounds.transpose(), npoints)
     spe = solution.getEvaluator(filter)
