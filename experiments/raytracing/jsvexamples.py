@@ -76,7 +76,7 @@ def sourcesquareconvergence(Ns, Ps, NPWs, k = 20, polyonly = False):
     for npw in NPWs:
         print "Number of plane waves ",npw
         pw = pcb.planeWaveBases(2, k, npw)
-        fo = pof.ErrorFileOutput(fileroot + 'npw%s'%(npw), str(Ns), g, bounds, npoints)
+        fo = pof.ErrorFileOutput(fileroot + 'npw%s'%(npw), str(Ns), g.values, bounds, npoints)
         for N in Ns:
             solver = psc.DirectSolver(callback = lambda M: condfile.writelines("%s, %s, %s\n"%(npw, N, cond(M))))
             sol = solvesquare(N, 1, g, pw, solver.solve, k, dovolumes=False)
@@ -88,7 +88,7 @@ def sourcesquareconvergence(Ns, Ps, NPWs, k = 20, polyonly = False):
             print "polynomial degree ",pdeg
             poly = pcbr.ReferenceBasisRule(pcbr.Dubiner(pdeg))                    
             polyrt = pcb.ProductBasisRule(poly, rt)
-            fo = pof.ErrorFileOutput(fileroot + 'poly%srt'%(pdeg), str(Ns), g, bounds, npoints)
+            fo = pof.ErrorFileOutput(fileroot + 'poly%srt'%(pdeg), str(Ns), g.values, bounds, npoints)
             for N in Ns:
                 solver = psc.DirectSolver(callback = lambda M: condfile.write("%s, %s, %s\n"%(pdeg, N, cond(M))))
                 sol = solvesquare(N, pdeg, g, polyrt, solver.solve, k)
@@ -99,7 +99,7 @@ def sourcesquareconvergence(Ns, Ps, NPWs, k = 20, polyonly = False):
         for pdeg in Ps:
             print "polynomial degree ",pdeg
             poly = pcbr.ReferenceBasisRule(pcbr.Dubiner(pdeg))                    
-            fo = pof.ErrorFileOutput(fileroot + 'poly%srt'%(pdeg), str(Ns), g, bounds, npoints)
+            fo = pof.ErrorFileOutput(fileroot + 'poly%srt'%(pdeg), str(Ns), g.values, bounds, npoints)
             for N in Ns:
                 solver = psc.DirectSolver(callback = lambda M: condfile.write("%s, %s, %s\n"%(pdeg, N, cond(M))))
                 sol = solvesquare(N, pdeg, g, poly, solver.solve, k)

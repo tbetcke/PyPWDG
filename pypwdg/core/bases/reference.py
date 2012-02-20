@@ -38,11 +38,12 @@ def laplacian(values, derivs, volume, boundary):
 
 class Reference(pcbd.Basis):
     
-    def __init__(self, map, reference, volume, boundary):
+    def __init__(self, map, reference, volume = None, boundary = None):
         self.mapi = map.inverse
         self.reference = reference
         self.n = reference.n
-        self.L = laplacian(self.values, self.derivs, volume(reference.volume), boundary(reference.face))
+        if volume and boundary:
+            self.L = laplacian(self.values, self.derivs, volume(reference.volume), boundary(reference.face))
                 
     def values(self, x):
         return self.reference.values(self.mapi.apply(x))
