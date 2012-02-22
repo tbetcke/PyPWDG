@@ -5,22 +5,24 @@ Created on Feb 20, 2012
 '''
 import pypwdg.parallel.decorate as ppd
 import numpy as np
+import scipy.sparse.linalg as ssl
 
-@ppd.distribute
+#@ppd.distribute
 class SystemMultiply(object):
     
     def __init__(self, system, sysargs, syskwargs):
         S,G = system.getSystem(*sysargs, **syskwargs)
         self.M = S.tocsr()
         self.b = G.tocsr()
+        self.dtype = self.M.dtype
 
-    @ppd.parallelmethod()
+#    @ppd.parallelmethod()
     def getRHS(self):
         return self.b.todense()
         
-    @ppd.parallelmethod()
+#    @ppd.parallelmethod()
     def multiply(self, vector):
-        return self.M * vector
+        return self.M * vector    
     
 class IndirectSolver(object):
 
@@ -28,6 +30,11 @@ class IndirectSolver(object):
         pass
 
     def solve(self, system, sysargs, syskwargs):
-        matvec = SystemMultiply(system, *sysargs, **syskwargs)
+        sm = SystemMultiply(system, sysargs, syskwargs)
+        b = sm.getRHS()        
+        n = len(b)
+        lo = ssl.LinearOperator((n,n), sm.multiply, dtype=sm.dtype)
+        return ssl.gmres(lo, b)
+        
         
         

@@ -44,7 +44,7 @@ def output2derror(bounds, solution, fn, npoints, plotmesh = True):
     mp.show()
     
 
-def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True **kwargs):    
+def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True, **kwargs):    
     bounds=np.array(bounds,dtype='d')
     points = pug.StructuredPoints(bounds.transpose(), npoints)
     spe = solution.getEvaluator(filter)
