@@ -27,8 +27,8 @@ with puf.pushd('../../examples/2D'):
     
 problem = psp.Problem(mesh, k, bnddata)
 computation = psc.Computation(problem, pcb.planeWaveBases(2,k,13), pcp.HelmholtzSystem, 5)
-soldirect = computation.solution(psc.DirectSolver().solve)
-print soldirect.x[0:20]
 solindirect = computation.solution(psi.IndirectSolver().solve)
 print solindirect.x[0:20]
+soldirect = computation.solution(psc.DirectSolver().solve)
+print soldirect.x[0:20]
 #pos.standardoutput(computation, soldirect, 20, bounds, npoints, 'soundsoft')

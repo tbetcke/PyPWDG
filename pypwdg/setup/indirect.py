@@ -21,8 +21,15 @@ class SystemMultiply(object):
         return self.b.todense()
         
 #    @ppd.parallelmethod()
-    def multiply(self, vector):
-        return self.M * vector    
+    def multiply(self, x):
+        print "multiply"
+        print x
+        print x.shape
+        y = self.M * x
+        print y
+        print y.shape
+        return y 
+       
     
 class IndirectSolver(object):
 
