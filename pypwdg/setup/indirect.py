@@ -22,12 +22,12 @@ class SystemMultiply(object):
         
 #    @ppd.parallelmethod()
     def multiply(self, x):
-        print "multiply"
-        print x
-        print x.shape
+#        print "multiply"
+#        print x
+#        print x.shape
         y = self.M * x
-        print y
-        print y.shape
+#        print y
+#        print y.shape
         return y 
        
     
