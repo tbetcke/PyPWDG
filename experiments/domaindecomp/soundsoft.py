@@ -10,7 +10,7 @@ import pypwdg.utils.file as puf
 
 import pypwdg.parallel.main
 
-
+import numpy as np
 from numpy import array,sqrt
 
 k = 10
@@ -27,8 +27,12 @@ with puf.pushd('../../examples/2D'):
     
 problem = psp.Problem(mesh, k, bnddata)
 computation = psc.Computation(problem, pcb.planeWaveBases(2,k,13), pcp.HelmholtzSystem, 5)
-solindirect = computation.solution(psi.IndirectSolver().solve)
-print solindirect.x[0:20]
+#solindirect = computation.solution(psi.IndirectSolver().solve)
+#print solindirect.x[0:20]
 soldirect = computation.solution(psc.DirectSolver().solve)
 print soldirect.x[0:20]
+
+sm = psi.SystemMultiply(computation.system, [5], {})
+b = sm.multiply(soldirect.x).squeeze()
+print np.max(np.abs(b-sm.getRHS().squeeze()))
 #pos.standardoutput(computation, soldirect, 20, bounds, npoints, 'soundsoft')
