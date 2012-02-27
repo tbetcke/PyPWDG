@@ -130,6 +130,14 @@ class vbsr_matrix(object):
     def todense(self):
         return self.tocsr().todense()
     
+    def subrows(self, structurerows):
+        ''' Return the rows in the csr matrix associated with structurerows'''
+        rowidxs = []
+        for s, i in zip(self.bsizei[structurerows], self.bindi[structurerows]):
+            rowidxs.append(np.arange(i, i+s))
+        return np.concatenate(rowidxs)
+        
+    
     def _mul(self, lindices, lindptr, ldata, lshape, lsizes, rindices, rindptr, rdata, rshape, rsizes, otherscalar, prod):
         """ `multiply' a block matrix by a sparse matrix 
         

@@ -28,8 +28,10 @@ with puf.pushd('../../examples/2D'):
 problem = psp.Problem(mesh, k, bnddata)
 computation = psc.Computation(problem, pcb.planeWaveBases(2,k,13), pcp.HelmholtzSystem, 5)
 
+solindirect = computation.solution(psi.IndirectSolver(np.complex, mesh).solve)
 soldirect = computation.solution(psc.DirectSolver().solve)
-print soldirect.x[0:20]
+
+print np.max(np.abs(solindirect.x - solindirect.x))
 
 sm = psi.SystemMultiply(computation.system, [5], {})
 b = sm.multiply(soldirect.x).squeeze()

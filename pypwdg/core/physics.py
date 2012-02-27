@@ -10,6 +10,7 @@ import pypwdg.core.assembly as pca
 import pypwdg.mesh.structure as pms
 import pypwdg.parallel.decorate as ppd
 import pypwdg.core.bases.utilities as pcbu    
+import numpy as np
 
 @ppd.distribute()    
 class HelmholtzSystem(object):
