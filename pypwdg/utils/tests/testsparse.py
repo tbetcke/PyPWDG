@@ -26,6 +26,10 @@ class testSparse(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def testSubrows(self):
+        np.testing.assert_array_equal(self.VS1.subrows([0]), [0,1])
+        np.testing.assert_array_equal(self.VS1.subrows([1]), [2,3,4])
+        np.testing.assert_array_equal(self.VS1.subrows([0,1]), np.arange(5))
     
     def testToCSR(self):
         csr = self.VS1.tocsr()
