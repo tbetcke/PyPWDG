@@ -6,71 +6,103 @@ Created on Feb 20, 2012
 import pypwdg.parallel.decorate as ppd
 import numpy as np
 import scipy.sparse.linalg as ssl
-import pypwdg.mesh.structure as pms
 
+class ItCounter(object):
+    def __init__(self, stride = 20):
+        self.n = 0
+        self.stride = 20
+    
+    def __call__(self, x):
+        self.n +=1
+        if self.n % self.stride == 0:
+            print self.n
 
 @ppd.distribute()
-class SystemMultiply(object):
+class DefaultOperator(object):
+
     
-    def __init__(self, system, sysargs, syskwargs, mesh=None):
-        S,G = system.getSystem(*sysargs, **syskwargs)
-        
-        self.M = S.tocsr()
+    @ppd.parallelmethod()    
+    def setup(self, system, sysargs, syskwargs):   
+        self.S,G = system.getSystem(*sysargs, **syskwargs) 
+        self.M = self.S.tocsr()
         self.b = G.tocsr()
         self.dtype = self.M.dtype
         
-        self.PLU = None
-        if mesh is not None:
-            self.localidxs = S.subrows(mesh.partition)
-            print self.localidxs 
-            P = self.M[self.localidxs][:,self.localidxs]
-            self.PLU = ssl.dsolve.splu(P)
 
     @ppd.parallelmethod()
-    def getRHS(self):
+    def rhs(self):
         return self.b.todense()
-
-    @ppd.parallelmethod()
-    def precond(self, x):
-
-        if self.PLU is not None:
-#            print "precond"
-            PIx = np.zeros_like(x)
-            PIx[self.localidxs] = self.PLU.solve(x[self.localidxs])
-            return PIx
-        else:  
-            return x
          
     @ppd.parallelmethod()
     def multiply(self, x):
-#        print "multiply"
-#        print x
-#        print x.shape
         y = self.M * x
-#       print y
-#        print y.shape
         return y 
-       
+
+@ppd.distribute()
+class BlockPrecondOperator(DefaultOperator):       
+    def __init__(self, mesh):
+        self.mesh = mesh
+    
+    @ppd.parallelmethod()
+    def setup(self, *args):
+        super(BlockPrecondOperator, self).setup(*args)
+        self.localidxs = S.subrows(self.mesh.partition)
+        print self.localidxs 
+        P = self.M[self.localidxs][:,self.localidxs]
+        self.PLU = ssl.dsolve.splu(P)        
+        
+    @ppd.parallelmethod()
+    def precond(self, x):
+        PIx = np.zeros_like(x)
+        PIx[self.localidxs] = self.PLU.solve(x[self.localidxs])
+        return PIx
+        
+@ppd.distribute()
+class DomainDecompWorker(object):
+    def __init__(self, mesh):
+        self.mesh = mesh
+        
+    @ppd.parallelmethod()
+    def setup(self, system, sysargs, syskwargs):   
+        S,G = system.getSystem(*sysargs, **syskwargs) 
+        M = S.tocsr()
+        b = G.tocsr()
+        localidxs = S.subrows(self.mesh.partition)
+        cutidxs = S.subrows(self.mesh.innerbdyelts)
+        
+        return [(self.mesh.partitionidx, cutidxs)]
+        
+        
+class DomainDecompOperator(object):
+    def __init__(self, mesh):
+        self.workers = DomainDecompWorker(mesh)
+    
+    def setup(self, system, sysargs, syskwargs):
+        self.workers.setup(system, sysargs, syskwargs)
+        
+        
+    
+
+
     
 class IndirectSolver(object):
 
-    def __init__(self, dtype, mesh = None):
-        self.mesh = mesh
+    def __init__(self, dtype, operator):
+        self.op = operator
         self.dtype = dtype
 
     def solve(self, system, sysargs, syskwargs):
-        sm = SystemMultiply(system, sysargs, syskwargs, self.mesh)
-        b = sm.getRHS()        
+        self.op.setup(system,sysargs,syskwargs)
+        b = self.op.rhs()        
         n = len(b)
-        lo = ssl.LinearOperator((n,n), sm.multiply, dtype=self.dtype)
-        pc = ssl.LinearOperator((n,n), sm.precond, dtype=self.dtype)
-        self.n = 0
-        def counter(x):
-            if self.n % 20 == 0: print self.n
-            self.n = self.n+1
-            
-        x, status = ssl.gmres(lo, b, callback = counter, M=pc, restart=200)
+        lo = ssl.LinearOperator((n,n), self.op.multiply, dtype=self.dtype)
+        pc = ssl.LinearOperator((n,n), self.op.precond, dtype=self.dtype) if hasattr(self.op, 'precond') else None
+        
+        x, status = ssl.gmres(lo, b, callback = ItCounter(), M=pc, restart=200)
         print status
+
+        if hasattr(self.op, 'postprocess'):
+            x = self.op.postprocess(x)
         return x
         
         

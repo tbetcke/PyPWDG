@@ -13,6 +13,11 @@ import sys
 import inspect
 import types
 import operator
+
+def opadd(x, y):
+    if x is None: return y
+    if y is None: return x
+    return x + y
   
 class methodwrapper(object):
     """ A pickable version of an instance method"""
@@ -40,7 +45,7 @@ def wrapfn(fn):
     if type(fn) is types.FunctionType: return functionwrapper(fn)
     return fn             
 
-def parallel(scatterargs, reduceop = operator.add):     
+def parallel(scatterargs, reduceop = opadd):     
     """ A decorator that will parallelise a function (in some circumstances)
     
         The underlying function is run on all available worker processes.  The results are reduced back to
@@ -134,7 +139,7 @@ def distribute(scatterargs=None):
 
 parallelmethods = {}
 
-def parallelmethod(scatterargs = None, reduceop = operator.add):
+def parallelmethod(scatterargs = None, reduceop = opadd):
     """ Decorator that marks an instance method for parallelisation"""
     def registermethod(fn): 
         if mpiloaded and comm.rank == 0:

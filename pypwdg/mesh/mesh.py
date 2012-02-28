@@ -304,12 +304,15 @@ class Mesh(object):
     partition = property(lambda self:self.meshpart.es)
     facepartition = property(lambda self: self.meshpart.fp)
     neighbourelts = property(lambda self:self.meshpart.neighbourelts)
+    innerbdyelts = property(lambda self:self.meshpart.innerbdyelts)
+    partitionidx = property(lambda self:self.meshpart.partidx)
 
-@ppd.distribute(lambda n: lambda mesh: [((mesh, partition),{}) for partition in mesh.partitions(n)]) 
+@ppd.distribute(lambda n: lambda mesh: [((mesh, partition, i),{}) for i, partition in enumerate(mesh.partitions(n))]) 
 class MeshPart(object):
     """ The Partition-specific data for a mesh"""
-    def __init__(self, mesh, eltpartition=None):
+    def __init__(self, mesh, eltpartition=None, partidx = 0):
         if eltpartition == None: eltpartition = mesh.partitions(1)[0]
+        self.partidx = partidx
         self.mesh = mesh
         self.es = eltpartition
         self.fs = mesh.etof[eltpartition].ravel()
@@ -317,9 +320,12 @@ class MeshPart(object):
         fpindex[self.fs] = 1
         self.fp = ss.spdiags(fpindex, [0], mesh.nfaces, mesh.nfaces)
         
-        ne = (mesh.elttofaces * (mesh._connectivity + ss.eye(mesh.nfaces, mesh.nfaces)) * fpindex)
-        ne[eltpartition] = 0
-        self.neighbourelts = ne.nonzero()[0]
+        cutfaces = (mesh._internal - mesh._connectivity) * fpindex
+        cutelts = mesh.elttofaces * cutfaces
+        self.neighbourelts = (cutelts == -1).nonzero()[0]
+        self.innerbdyelts = (cutelts == 1).nonzero()[0]
+        
+        
         self.entityfaces = dict([(entity, self.fp * ss.spdiags((mesh.faceentities == entity) * 1, [0], mesh.nfaces, mesh.nfaces)) for entity in mesh.entities])
     
     
