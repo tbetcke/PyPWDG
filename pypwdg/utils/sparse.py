@@ -135,7 +135,7 @@ class vbsr_matrix(object):
         rowidxs = []
         for s, i in zip(self.bsizei[structurerows], self.bindi[structurerows]):
             rowidxs.append(np.arange(i, i+s))
-        return np.concatenate(rowidxs)
+        return np.concatenate(rowidxs) if len(rowidxs) else np.array([])
         
     
     def _mul(self, lindices, lindptr, ldata, lshape, lsizes, rindices, rindptr, rdata, rshape, rsizes, otherscalar, prod):
