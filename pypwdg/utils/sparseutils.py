@@ -12,6 +12,7 @@ def getintptr(indices, n):
     intptrjumps[indices+1] = 1
     return numpy.cumsum(intptrjumps)
 
-def sparseindex(rows, cols, n):
+def sparseindex(rows, cols, m, n=None):
     """ Return a csr matrix with a one at all the points given in rows and cols """
-    return sparse.csr_matrix((numpy.ones(len(rows)), cols, getintptr(rows, n)),shape=(n,n))
+    if n is None: n = m
+    return sparse.csr_matrix((numpy.ones(len(rows)), cols, getintptr(rows, n)),shape=(m,n))

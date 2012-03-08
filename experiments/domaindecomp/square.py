@@ -29,17 +29,20 @@ mesh = tum.regularsquaremesh(n, bdytag)
 problem = psp.Problem(mesh, k, bnddata)
 computation = psc.Computation(problem, pcb.planeWaveBases(2,k,5), pcp.HelmholtzSystem, 13)
 
-#solbrutal = computation.solution(psi.BrutalSolver(np.complex, psi.DomainDecompOperator(mesh)).solve)
-soldd = computation.solution(psi.IndirectSolver(np.complex, psi.DomainDecompOperator(mesh)).solve)
-solindirect = computation.solution(psi.IndirectSolver(np.complex, psi.BlockPrecondOperator(mesh)).solve)
+solbrutal = computation.solution(psi.BrutalSolver(np.complex, psi.DomainDecompOperator(mesh)).solve)
+#print "DD solve"
+#soldd = computation.solution(psi.IndirectSolver(np.complex, psi.DomainDecompOperator(mesh)).solve)
+#print "Block precond solve"
+#solindirect = computation.solution(psi.IndirectSolver(np.complex, psi.BlockPrecondOperator(mesh)).solve)
+print "Direct solve"
 soldirect = computation.solution(psc.DirectSolver().solve)
 
 #print soldirect.x
 #print solbrutal.x
 #print np.abs(soldirect.x - solbrutal.x)
-#print np.max(np.abs(soldirect.x - solbrutal.x))
-print np.max(np.abs(soldirect.x - solindirect.x))
-print np.max(np.abs(soldirect.x - soldd.x))
+print np.max(np.abs(soldirect.x - solbrutal.x))
+#print np.max(np.abs(soldirect.x - solindirect.x))
+#print np.max(np.abs(soldirect.x - soldd.x))
 
 #solindirect = computation.solution(psi.IndirectSolver().solve)
 #print solindirect.x[0:20]

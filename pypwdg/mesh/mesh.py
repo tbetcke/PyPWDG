@@ -124,9 +124,19 @@ def gmshMesh(fname, dim, *args, **kwargs):
     # These are the physical entities in the mesh.
     boundaries = map(lambda f: (f['physEntity'], tuple(sorted(f['nodes']))), filter(lambda e : e['type']==gmsh_face_key, gmsh_dict['elements'].values()))
     return Mesh(nodes, elements, elemIdentity, boundaries, dim, *args, **kwargs)
+
+class EtofInfo(object):
+    def __init__(self, dim, nelts, nfaces):
+        self.dim = dim
+        self.nelements = nelts
+        self.nfaces = nfaces
+        self.ftoe = np.repeat(np.arange(nelts), dim+1)
+        self.etof = np.arange(nfaces).reshape((-1,dim+1))
+        self.elttofaces = ss.csr_matrix((np.ones(self.nfaces), np.concatenate(self.etof), np.cumsum([0] + map(len, self.etof))))
+
         
 @ppd.immutable
-class Mesh(object):
+class Mesh(EtofInfo):
     """Mesh - The structure of a simplicial mesh
        
        Usage:
@@ -181,11 +191,8 @@ class Mesh(object):
         self.elements = elements
         self.nodes = np.array(nodes)
         self.boundaries = boundaries
-        self.dim = dim
         self.elemIdentity=elemIdentity
-        
         self.nnodes=len(nodes)
-        self.nelements=len(elements)
         
         nev = dim+1
         
@@ -194,10 +201,8 @@ class Mesh(object):
         self.faces = faces
         # The "opposite" vertex for each face    
         self.nonfacevertex = numpy.array([e[i] for e in elements for i in range(0,nev)])    
-        self.ftoe = np.repeat(np.arange(self.nelements), nev)
         
-        self.nfaces=len(faces)
-        self.etof = np.arange(self.nfaces).reshape((-1,nev))
+        EtofInfo.__init__(self, dim, len(elements), len(faces))
                 
         ftov = ss.csr_matrix((numpy.ones(self.nfaces * dim), faces.ravel(), np.arange(0, self.nfaces+1)*dim), dtype=int)
         ftov2=(ftov*ftov.transpose()).tocsr() # Multiply to get connectivity.
@@ -208,9 +213,8 @@ class Mesh(object):
         self._internal = self._connectivity **2
         self._boundary = ss.eye(self.nfaces, self.nfaces) - self._internal
         self._boundary.eliminate_zeros()
-        self.elttofaces = ss.csr_matrix((numpy.ones(self.nfaces), numpy.concatenate(self.etof), numpy.cumsum([0] + map(len, self.etof))))
         
-        
+# Used for ray tracing:        
         self.entities = set()
         self.faceentities = np.empty(self.nfaces, dtype=object)
         
@@ -320,8 +324,8 @@ class MeshPart(object):
         fpindex[self.fs] = 1
         self.fp = ss.spdiags(fpindex, [0], mesh.nfaces, mesh.nfaces)
         
-        cutfaces = (mesh._internal - mesh._connectivity) * fpindex
-        cutelts = mesh.elttofaces * cutfaces
+        self.cutfaces = (mesh._internal - mesh._connectivity) * fpindex
+        cutelts = mesh.elttofaces * self.cutfaces
         self.neighbourelts = (cutelts == -1).nonzero()[0]
         self.innerbdyelts = (cutelts == 1).nonzero()[0]
         

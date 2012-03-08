@@ -95,7 +95,7 @@ class DomainDecompWorker(object):
         self.Cintext = M[self.extidxs][:, self.internalidxs]
         time.sleep(ppm.comm.rank * 0.1)
         
-        self.localfromallext = np.zeros_like(self.extidxs, dtype=int)
+        self.localfromallext = np.zeros_like(self.extidxs)
         li = 0
         for gi, idx in enumerate(allextidxs):
             if idx == self.extidxs[li]:
@@ -103,10 +103,9 @@ class DomainDecompWorker(object):
                 li+=1
             if li==len(self.extidxs): break
         
-        self.DI.solve(np.zeros(Dint.shape[0]))
+#        self.DI.solve(np.zeros(Dint.shape[0]))
 #        print type(np.zeros(Dint.shape[0]))
 #        print type(b[self.internalidxs].todense().A)
-        
         self.DIbint = self.DI.solve(b[self.internalidxs].todense().A.squeeze())
         rhs = b[self.extidxs].todense().A.squeeze() - self.Cintext * self.DIbint
         return [rhs]
