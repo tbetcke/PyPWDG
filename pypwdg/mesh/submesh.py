@@ -14,7 +14,6 @@ class SubMesh(pmm.EtofInfo):
     
     def __init__(self, mesh, internalbdytag):
         self.mesh = mesh
-        localelts = mesh.partition        
         localfaces = pus.sparseindex(np.arange(mesh.fs), mesh.fs, len(mesh.fs), mesh.nfaces)
         facemat = lambda m: localfaces * m * localfaces.transpose()
 

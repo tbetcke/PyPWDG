@@ -12,6 +12,21 @@ import pypwdg.parallel.decorate as ppd
 import pypwdg.core.bases.utilities as pcbu    
 import numpy as np
 
+class HelmholtzBoundary(object):
+    def __init__(self, mesh, bdycond, facequads, entityton):
+        bdyetob = pcbu.UniformElementToBases(bdycond, mesh)
+        bdyvandermondes = pcv.LocalVandermondes(mesh, bdyetob, facequads) if entityton is None else pcv.ScaledVandermondes(entityton, mesh, bdyetob, facequads)  
+        rc0,rc1 = bdycond.r_coeffs
+        rqw0 = pmmu.ScaledQuadweights(facequads, rc0)     
+        rqw1 = pmmu.ScaledQuadweights(facequads, rc1)     
+        self.loadassemblies = pca.Assembly(self.facevandermondes, bdyvandermondes, [[rqw0,rqw1],[rqw0,rqw1]])
+        lc0,lc1 = bdycond.l_coeffs
+        lqw0 = pmmu.ScaledQuadweights(facequads, lc0)
+        lqw1 = pmmu.ScaledQuadweights(facequads, lc1)
+        self.weightedbdyassemblies = pca.Assembly(self.facevandermondes, self.scaledvandermondes, [[lqw0,lqw1],[lqw0,lqw1]])
+    
+            
+
 @ppd.distribute()    
 class HelmholtzSystem(object):
     ''' Assemble a system to solve a Helmholtz problem using the DG formulation of Gittelson et al.

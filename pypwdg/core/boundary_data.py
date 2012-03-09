@@ -8,19 +8,24 @@ Provides objects for handling boundary data
 '''
 
 import numpy
+import collections as c
 
-class AbstractBoundaryData(object):
+class BoundaryCondition(object):
+    def __init__(self, lcoeffs, rcoeffs = None, data = None):
+        self.data = ZeroBoundaryData() if data is None else data
+        self.coeffs = BoundaryCoefficients(lcoeffs, rcoeffs)
+
+class ZeroBoundaryData(object):
     def __init__(self, g):
         self.g = g
-        self.n = 1
         
     def values(self,x):
-        return numpy.zeros((x.shape[0],1)) if self.g is None else self.g.values(x)
+        return numpy.zeros((x.shape[0],1)) 
     
     def derivs(self,x,n):
-        return numpy.zeros((x.shape[0],1)) if self.g is None else self.g.derivs(x,n)
+        return numpy.zeros((x.shape[0],1)) 
 
-class generic_boundary_data(AbstractBoundaryData):
+class BoundaryCoefficients(object):
     """ Provides an interface for generic boundary data
 
         Initialize with
@@ -42,7 +47,6 @@ class generic_boundary_data(AbstractBoundaryData):
     
     
     def __init__(self,l_coeffs,r_coeffs=None,g = None):  
-        super(generic_boundary_data,self).__init__(g)      
         if r_coeffs is None: r_coeffs=[0, 0]
         self.l_coeffs=l_coeffs
         self.r_coeffs=r_coeffs
@@ -53,65 +57,37 @@ class generic_boundary_data(AbstractBoundaryData):
 #    l_coeffs=property(lambda self: self.__l_coeffs)
 #    n=property(lambda self: 1)
 
-class VariableBoundaryData(AbstractBoundaryData):
-    def __init__(self, coeffs, nx, g):
-        super(VariableBoundaryData, self).__init__(g)
-        self.coeffs = coeffs
-        self.nx = nx
-    
-    def __coeffs(self):
-        return [lambda x: self.nx(x) * self.coeffs[0], self.coeffs[1]]
-    
-    r_coeffs = property(lambda self: self.__coeffs())
-    l_coeffs = property(lambda self: self.__coeffs())
 
-class zero_impedance(generic_boundary_data):
+def zero_impedance(k):
     """ Zero impedance boundary conditions du/dn-iku=0    
     
         bnd_data=zero_impedance(k), where k is the wavenumber
         
     """
-    
-    def __init__(self,k):
-        super(zero_impedance,self).__init__([-1j*k, 1])
+    return BoundaryCondition([-1j*k, 1])
         
-class zero_dirichlet(generic_boundary_data):
+def zero_dirichlet():
     """ Zero Dirichlet boundary conditions u=0 
 
         bnd_data=zero_dirichlet()
         
     """
     
-    def __init__(self):
-        super(zero_dirichlet,self).__init__([1, 0])
+    return BoundaryCondition([1, 0])
         
-class zero_neumann(generic_boundary_data):
+def zero_neumann():
     """ Zero Neumann boundary conditions u=0 
 
         bnd_data=zero_dirichlet()
         
     """
-    
-    def __init__(self):
-        super(zero_neumann,self).__init__([0,1])
+    return BoundaryCondition([0,1])
         
-class dirichlet(generic_boundary_data):
-    """ Dirichlet boundary conditions u=g
-
-        bnd_data=dirichlet(g)
+def dirichlet(g):
+    return BoundaryCondition([1,0],[1,0],g)
         
-    """
-    def __init__(self,g):
-        super(dirichlet,self).__init__([1,0],[1,0],g)
-        
-class neumann(generic_boundary_data):
-    """ Neumann boundary conditions u_n=g
-
-        bnd_data=neumann(g)
-        
-    """
-    def __init__(self,g):
-        super(neumann,self).__init__([0,1],[0,1],g)
+def neumann(g):
+    return BoundaryCondition([0,1],[0,1],g)
         
         
     

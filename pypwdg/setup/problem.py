@@ -14,7 +14,7 @@ class Problem(object):
     def __init__(self, mesh, k, bnddata):
         self.mesh = mesh
         self.k = k
-        self.bnddata = bnddata
+        self.bnddata = dict([(entity, pcbu.UniformElementToBases(bdycond, mesh) for entity,   bnddata])
         self.elementinfo = pcbu.ElementInfo(mesh, k) 
     
     def populateBasis(self, etob, basisrule):
@@ -38,3 +38,4 @@ def constructBasis(problem, basisrule):
     localPopulateBasis(etob, basisrule, problem)
     manager.sync()   
     return pcbu.ElementToBases(etob, problem.mesh)
+

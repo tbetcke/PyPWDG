@@ -48,6 +48,9 @@ class DirectSolver(object):
         print "Relative residual: ", np.linalg.norm(M * x -b) / np.linalg.norm(x)
         return x        
 
+class DomainComputation(object):
+    def __init__(self, problem, basisrule):
+
 class Computation(object):
     ''' A class to manage the construction of a linear system for a Galerkin approximation to a problem and the computation of its solution
     
