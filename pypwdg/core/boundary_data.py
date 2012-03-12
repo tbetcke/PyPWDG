@@ -56,7 +56,8 @@ class BoundaryCoefficients(object):
 #    r_coeffs=property(lambda self: self.__r_coeffs)
 #    l_coeffs=property(lambda self: self.__l_coeffs)
 #    n=property(lambda self: 1)
-
+def generic_boundary_data(lc, rc, g):
+    return BoundaryCondition(lc, rc, g)
 
 def zero_impedance(k):
     """ Zero impedance boundary conditions du/dn-iku=0    

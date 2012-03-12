@@ -43,7 +43,7 @@ def volumeerrors(problem, quadpoints, solution):
 
 @distribute()
 class EvalElementError(object):
-    def __init__(self, mesh, quadpoints, basis, bnddata, entityton = None):
+    def __init__(self, mesh, quadpoints, basis, bdyinfo, entityton = None):
         self.mesh = mesh 
         fquad, _ = puq.quadrules(mesh.dim, quadpoints)
         facequads = pmmu.MeshQuadratures(mesh, fquad)
@@ -52,12 +52,10 @@ class EvalElementError(object):
         self.scaledvandermondes = self.vs if entityton is None else pcv.ScaledVandermondes(entityton, mesh, basis, facequads)
         
         self.weights = facequads.quadweights
-        self.bnddata = bnddata
-        self.bndvs = []
-        for data in bnddata.values():
-            bdyetob = pcbu.UniformElementToBases(data, mesh)
+        self.bnddata = {}
+        for entity, (coeffs,bdyetob) in bdyinfo.items():
             bdyvandermondes = pcv.LocalVandermondes(mesh, bdyetob, facequads) if entityton is None else pcv.ScaledVandermondes(entityton, mesh, bdyetob, facequads)     
-            self.bndvs.append(bdyvandermondes)
+            self.bnddata[entity] = (coeffs, bdyvandermondes)
             
     @parallelmethod(reduceop = tuplesum)
     def evaluate(self, x):
@@ -80,21 +78,21 @@ class EvalElementError(object):
         
         elem_error_bnd=np.zeros(self.mesh.nelements, dtype=complex)
         
-        for (id, bdycondition), bndv in zip(self.bnddata.items(), self.bndvs):
-            lc=bdycondition.l_coeffs
-            rc=bdycondition.r_coeffs
+        for entity, (coeffs, bndv) in self.bnddata.items():
+            lc=coeffs.l_coeffs
+            rc=coeffs.r_coeffs
             # boundary error
             be = lambda f: lc[0] * svx(f) + lc[1] * nx(f) - (rc[0] * bndv.getValues(f) + rc[1] * bndv.getDerivs(f)).squeeze()
             # l2norm of boundary error on faces
             BB = pcv.LocalInnerProducts(be,be,self.weights)
-            ipB = pus.createvbsr(self.mesh.entityfaces[id], BB.product, np.ones(nf), np.ones(nf))
+            ipB = pus.createvbsr(self.mesh.entityfaces[entity], BB.product, np.ones(nf), np.ones(nf))
             elem_error_bnd += pms.sumrhs(self.mesh, ipB.tocsr()).todense().A.squeeze()
         
         return elem_error_dirichlet.real, elem_error_neumann.real, elem_error_bnd.real
     
 def combinedError(problem, solution, quadpoints):
     
-    (error_dirichlet2, error_neumann2, error_boundary2) = EvalElementError(problem.mesh, quadpoints, solution.basis, problem.bnddata).evaluate(solution.x)
+    (error_dirichlet2, error_neumann2, error_boundary2) = EvalElementError(problem.mesh, quadpoints, solution.basis, problem.bdyinfo).evaluate(solution.x)
     error_combined2 = error_dirichlet2 + error_boundary2 + error_neumann2/(problem.k ** 2)
     return map(np.sqrt, (error_combined2,error_dirichlet2, error_neumann2, error_boundary2))     
     

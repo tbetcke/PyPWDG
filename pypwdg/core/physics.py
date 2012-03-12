@@ -49,17 +49,16 @@ class HelmholtzSystem(object):
          
         self.loadassemblies = {}
         self.weightedbdyassemblies = {}
-        for i, bdycond in problem.bnddata.items():
-            bdyetob = pcbu.UniformElementToBases(bdycond, problem.mesh)
+        for entity, (bdycoeffs, bdyetob) in problem.bdyinfo.items():
             bdyvandermondes = pcv.LocalVandermondes(problem.mesh, bdyetob, facequads) if entityton is None else pcv.ScaledVandermondes(entityton, problem.mesh, bdyetob, facequads)  
-            rc0,rc1 = bdycond.r_coeffs
+            rc0,rc1 = bdycoeffs.r_coeffs
             rqw0 = pmmu.ScaledQuadweights(facequads, rc0)     
             rqw1 = pmmu.ScaledQuadweights(facequads, rc1)     
-            self.loadassemblies[i] = pca.Assembly(self.facevandermondes, bdyvandermondes, [[rqw0,rqw1],[rqw0,rqw1]])
-            lc0,lc1 = bdycond.l_coeffs
+            self.loadassemblies[entity] = pca.Assembly(self.facevandermondes, bdyvandermondes, [[rqw0,rqw1],[rqw0,rqw1]])
+            lc0,lc1 = bdycoeffs.l_coeffs
             lqw0 = pmmu.ScaledQuadweights(facequads, lc0)
             lqw1 = pmmu.ScaledQuadweights(facequads, lc1)
-            self.weightedbdyassemblies[i] = pca.Assembly(self.facevandermondes, self.scaledvandermondes, [[lqw0,lqw1],[lqw0,lqw1]])
+            self.weightedbdyassemblies[entity] = pca.Assembly(self.facevandermondes, self.scaledvandermondes, [[lqw0,lqw1],[lqw0,lqw1]])
         
         ev = pcv.ElementVandermondes(problem.mesh, self.basis, elementquads)
         self.volumeassembly = pca.Assembly(ev, ev, elementquads.quadweights)
@@ -73,7 +72,7 @@ class HelmholtzSystem(object):
         SI = self.internalStiffness() 
         SB = sum(self.boundaryStiffnesses())
         S = SI + SB
-        G = sum(self.boundaryLoads())
+        G = sum([self.boundaryLoad(entity) for entity in self.loadassemblies.keys()])
         if dovolumes: 
             S+=self.volumeStiffness()
         return S,G
@@ -106,19 +105,17 @@ class HelmholtzSystem(object):
     
     
 #    @ppd.parallelmethod(None, ppd.tuplesum)
-    def boundaryLoads(self): 
+    def boundaryLoad(self, entity): 
         ''' The load vector (due to the boundary conditions)'''
-        GBs = []
-        for i, loadassembly in self.loadassemblies.items():
-            B = self.problem.mesh.entityfaces[i]
+        loadassembly = self.loadassemblies[entity]
+        B = self.problem.mesh.entityfaces[entity]
             
-            delta = self.delta
-            # todo - check the cross terms.  Works okay with delta = 1/2.  
-            GB = loadassembly.assemble([[(1-delta) * B, (1-delta) *B], 
-                                        [-delta* B,     -delta *B]])
+        delta = self.delta
+        # todo - check the cross terms.  Works okay with delta = 1/2.  
+        GB = loadassembly.assemble([[(1-delta) * B, (1-delta) *B], 
+                                    [-delta* B,     -delta *B]])
                 
-            GBs.append(pms.sumrhs(self.problem.mesh,GB))
-        return GBs
+        return pms.sumrhs(self.problem.mesh,GB)
     
 #    @ppd.parallelmethod()
     def volumeStiffness(self):

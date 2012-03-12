@@ -11,10 +11,10 @@ import pypwdg.parallel.distributeddict as ppdd
 
 class Problem(object):
     ''' This class defines a (Helmholtz) problem to be solved'''
-    def __init__(self, mesh, k, bnddata):
+    def __init__(self, mesh, k, bndconds):
         self.mesh = mesh
         self.k = k
-        self.bnddata = dict([(entity, pcbu.UniformElementToBases(bdycond, mesh) for entity,   bnddata])
+        self.bdyinfo = {entity: (bdycond.coeffs, pcbu.UniformElementToBases(bdycond.data, mesh)) for entity, bdycond in  bndconds.items()}
         self.elementinfo = pcbu.ElementInfo(mesh, k) 
     
     def populateBasis(self, etob, basisrule):

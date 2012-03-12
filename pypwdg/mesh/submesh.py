@@ -9,17 +9,18 @@ import numpy as np
 import scipy.sparse as ss
 import pypwdg.mesh.mesh as pmm
 
-@ppd.distribute
+@ppd.distribute()
 class SubMesh(pmm.EtofInfo):
     
     def __init__(self, mesh, internalbdytag):
         self.mesh = mesh
-        localfaces = pus.sparseindex(np.arange(mesh.fs), mesh.fs, len(mesh.fs), mesh.nfaces)
-        facemat = lambda m: localfaces * m * localfaces.transpose()
 
-        pmm.EtofInfo.__init__(mesh.dim, len(mesh.partition), len(mesh.fs))
+        pmm.EtofInfo.__init__(self, mesh.dim, len(mesh.partition), len(mesh.fs))
+
+        localfaces = pus.sparseindex(np.arange(self.nfaces), mesh.fs, self.nfaces, mesh.nfaces)
+        facemat = lambda m: localfaces * m * localfaces.transpose()
         
-        innerbdyfaces = facemat(mesh.partition.cutfaces)
+        innerbdyfaces = facemat(pus.sparseindex(mesh.cutfaces, mesh.cutfaces, self.nfaces, self.nfaces))
         
         self.internal = facemat(mesh.internal) - innerbdyfaces
         self.boundary = facemat(mesh.boundary) + innerbdyfaces
@@ -27,14 +28,18 @@ class SubMesh(pmm.EtofInfo):
 
         self.etof = mesh.etof[mesh.partition]
         
-        self.entityfaces = dict([(e, self.facemat(m)) for (e,m) in mesh.entityfaces.items()]+[(internalbdytag, innerbdyfaces)])
+        self.entityfaces = dict([(e, facemat(m)) for (e,m) in mesh.entityfaces.items()]+[(internalbdytag, innerbdyfaces)])
         
         self.partition = np.arange(self.nelements)
-        self.facepartition = np.arange(self.nfaces)
+        self.facepartition = ss.eye(self.nfaces, self.nfaces, dtype=int)
         
         self.directions = mesh.directions[mesh.fs]
         self.normals = mesh.normals[mesh.fs]
         self.dets = mesh.dets[mesh.fs]
+        
+        self.neighbourelts = np.array([])
+        self.elements = np.array(mesh.elements)[mesh.partition]
+        self.nodes = mesh.nodes
         
 
         

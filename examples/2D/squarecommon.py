@@ -11,6 +11,8 @@ import pypwdg.output.solution as pos
 import pypwdg.core.bases.reduced as pcbred
 import pypwdg.utils.quadrature as puq
 
+import pypwdg.mesh.submesh as pmsm
+
 import pypwdg.parallel.main
 
 
@@ -32,6 +34,8 @@ bounds=np.array([[0,1],[0,1]],dtype='d')
 npoints=np.array([500,500])
 
 mesh = pmm.gmshMesh('square.msh',dim=2)
+print "hello"
+#mesh = pmsm.SubMesh(mesh, "INTERNAL")
 print mesh.nelements
 
 npw = 12

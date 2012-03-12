@@ -50,6 +50,7 @@ class DirectSolver(object):
 
 class DomainComputation(object):
     def __init__(self, problem, basisrule):
+        pass
 
 class Computation(object):
     ''' A class to manage the construction of a linear system for a Galerkin approximation to a problem and the computation of its solution
@@ -97,7 +98,7 @@ class Solution(object):
             return vals / count
      
     def computeErrors(self,quadpoints=10):
-        d,n,bnd=pces.EvalElementError(self.mesh,quadpoints,self.basis,self.problem.bnddata).evaluate(self.x)
+        d,n,bnd=pces.EvalElementError(self.mesh,quadpoints,self.basis,self.problem.bdyinfo).evaluate(self.x)
         self.errors={'ElemDirichlet': np.sqrt(d),
                     'ElemNeumann'  : 1.0/self.problem.k*np.sqrt(n),
                     'ElemBoundary' : np.sqrt(bnd),

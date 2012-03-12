@@ -310,6 +310,7 @@ class Mesh(EtofInfo):
     neighbourelts = property(lambda self:self.meshpart.neighbourelts)
     innerbdyelts = property(lambda self:self.meshpart.innerbdyelts)
     partitionidx = property(lambda self:self.meshpart.partidx)
+    cutfaces = property(lambda self:self.meshpart.cutfaces)
 
 @ppd.distribute(lambda n: lambda mesh: [((mesh, partition, i),{}) for i, partition in enumerate(mesh.partitions(n))]) 
 class MeshPart(object):
