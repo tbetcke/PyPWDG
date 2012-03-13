@@ -34,9 +34,16 @@ bounds=np.array([[0,1],[0,1]],dtype='d')
 npoints=np.array([500,500])
 
 mesh = pmm.gmshMesh('square.msh',dim=2)
-print "hello"
-#mesh = pmsm.SubMesh(mesh, "INTERNAL")
-print mesh.nelements
+mesh = pmsm.SubMesh(mesh, "INTERNAL")
+average = (mesh.connectivity + mesh.internal)/2
+jump = mesh.internal - mesh.connectivity
+AD = average
+AN = jump / 2
+JD = jump
+JN = average * 2
+I = mesh.facepartition
+
+print mesh.connectivity.nnz, mesh.internal.nnz, AD.nnz, AN.nnz, JD.nnz, JN.nnz, I.nnz
 
 npw = 12
 quadpoints = 10
@@ -50,7 +57,7 @@ pw = pcbv.PlaneWaveVariableN(pcb.uniformdirs(2,npw))
 
 basisrule=pcb.ProductBasisRule(pw,pcbr.ReferenceBasisRule(pcbr.Dubiner(0)))
 #basisrule = pw
-basisrule = pcbred.SVDBasisReduceRule(puq.trianglequadrature(quadpoints), basisrule)
+#basisrule = pcbred.SVDBasisReduceRule(puq.trianglequadrature(quadpoints), basisrule)
 
 problem = psp.Problem(mesh, k, bnddata)
 computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, quadpoints)

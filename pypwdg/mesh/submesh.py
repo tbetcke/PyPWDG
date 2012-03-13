@@ -20,8 +20,8 @@ class SubMesh(pmm.EtofInfo):
         localfaces = pus.sparseindex(np.arange(self.nfaces), mesh.fs, self.nfaces, mesh.nfaces)
         facemat = lambda m: localfaces * m * localfaces.transpose()
         
-        innerbdyfaces = facemat(pus.sparseindex(mesh.cutfaces, mesh.cutfaces, self.nfaces, self.nfaces))
-        
+        innerbdyfaces = ss.spdiags(mesh.cutfaces[mesh.fs], [0], self.nfaces, self.nfaces)
+                
         self.internal = facemat(mesh.internal) - innerbdyfaces
         self.boundary = facemat(mesh.boundary) + innerbdyfaces
         self.connectivity = facemat(mesh.connectivity)
