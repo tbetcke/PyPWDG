@@ -15,17 +15,22 @@ class Problem(object):
         self.mesh = mesh
         self.k = k
         self.bdyinfo = {entity: (bdycond.coeffs, pcbu.UniformElementToBases(bdycond.data, mesh)) for entity, bdycond in  bndconds.items()}
-        self.elementinfo = pcbu.ElementInfo(mesh, k) 
     
     def populateBasis(self, etob, basisrule):
         ''' Helper function to initialise the element to basis map in each partition'''  
+        ei = self.elementinfo
         for e in self.mesh.partition:
-            etob[e] = basisrule.populate(self.elementinfo.info(e))
+            etob[e] = basisrule.populate(ei.info(e))
+    
+    elementinfo = property(lambda self:pcbu.ElementInfo(self.mesh, self.k))
+
 
 class VariableNProblem(Problem):
     def __init__(self, entityton, mesh, k, bnddata):
         Problem.__init__(self, mesh, k, bnddata)
-        self.elementinfo = pcbv.EntityNElementInfo(mesh,k,entityton)
+        self.entityton = entityton
+        
+    elementinfo = property(lambda self: pcbv.EntityNElementInfo(self.mesh,self.k,self.entityton))
     
 @ppd.parallel(None, None)
 def localPopulateBasis(etob, basisrule, problem):

@@ -46,7 +46,7 @@ class BoundaryCoefficients(object):
     """
     
     
-    def __init__(self,l_coeffs,r_coeffs=None,g = None):  
+    def __init__(self,l_coeffs,r_coeffs=None):  
         if r_coeffs is None: r_coeffs=[0, 0]
         self.l_coeffs=l_coeffs
         self.r_coeffs=r_coeffs
