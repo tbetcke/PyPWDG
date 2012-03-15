@@ -40,6 +40,8 @@ class SubMesh(pmm.EtofInfo):
         self.neighbourelts = np.array([])
         self.elements = np.array(mesh.elements)[mesh.partition]
         self.nodes = mesh.nodes
-        
 
-        
+def skeletonmesh(mesh):
+    return pmm.Mesh(mesh.nodes, mesh.faces[mesh.cutfaces], None, {}, mesh.dim - 1)
+    
+            

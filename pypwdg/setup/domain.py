@@ -7,7 +7,8 @@ import pypwdg.mesh.submesh as pmsm
 import pypwdg.parallel.decorate as ppd
 import pypwdg.setup.computation as psc
 import pypwdg.core.boundary_data as pcbd
-import copy
+import copy    
+            
 
 class DDWorker(object):
     def __init__(self, system, bcoeffs, sysargs, syskwargs):

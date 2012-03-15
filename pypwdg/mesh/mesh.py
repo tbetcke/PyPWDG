@@ -145,7 +145,6 @@ class Mesh(EtofInfo):
            elements: a sequence of sorted (dim+1)-tuples, giving the vertices for each element in the mesh
            boundaries: a sequence of tuples, each of the form (id, nodes), identifying the physical objects in the mesh produced by the mesh generator
            dim: the dimension of the mesh (2 or 3, although other numbers probably work too)
-           computeAll: should every partition compute properties for all faces, or just the relevant ones?
            
        Conceptually, a Mesh has three different types of property:
        1) Global properties are the same in each process - they are serialised normally.  
@@ -185,7 +184,7 @@ class Mesh(EtofInfo):
     The elements and faces of a mesh are given a canonical ordering by self.__faces and self.__elements   
     """
     
-    def __init__(self,nodes, elements, elemIdentity, boundaries,dim, computeall = False):
+    def __init__(self,nodes, elements, elemIdentity, boundaries, dim):
         """ Initialize Mesh """
     
         self.elements = elements
