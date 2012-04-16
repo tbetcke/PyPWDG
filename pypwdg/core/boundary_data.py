@@ -16,9 +16,9 @@ class BoundaryCondition(object):
         self.coeffs = BoundaryCoefficients(lcoeffs, rcoeffs)
 
 class ZeroBoundaryData(object):
-    def __init__(self, g):
-        self.g = g
-        
+    def __init__(self):
+        self.n = 1
+            
     def values(self,x):
         return numpy.zeros((x.shape[0],1)) 
     

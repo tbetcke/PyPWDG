@@ -44,4 +44,5 @@ class SubMesh(pmm.EtofInfo):
 def skeletonmesh(mesh):
     return pmm.Mesh(mesh.nodes, mesh.faces[mesh.cutfaces], None, {}, mesh.dim - 1)
     
+
             
