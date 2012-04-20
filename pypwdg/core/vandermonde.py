@@ -7,6 +7,31 @@ Created on Jul 14, 2010
 import numpy
 from pypwdg.parallel.decorate import distribute, parallelmethod, immutable
 
+class FaceToBasis(object):
+    def __init__(self, mesh, elttobasis):
+        self.mesh = mesh
+        self.elttobasis = elttobasis
+        self.numbases = elttobasis.getSizes()[mesh.ftoe]
+        self.indices = elttobasis.getIndices()[mesh.ftoe]
+    
+    def evaluate(self, faceid, points):
+        e = self.mesh.ftoe[faceid] 
+        normal = self.mesh.normals[faceid]
+        vals = self.elttobasis.getValues(e, points)
+        derivs = self.elttobasis.getDerivs(e, points, normal)
+        return (vals,derivs)
+
+class FaceToScaledBasis(FaceToBasis):
+    def __init__(self, entityton, *args, **kwargs):
+        super(FaceToScaledBasis, self).__init__(*args, **kwargs)
+        self.entityton = entityton
+
+    def evaluate(self,faceid, points):
+        e = self.mesh.ftoe[faceid] 
+        (vals, derivs) = super(FaceToScaledBasis, self).evaluate(faceid, points)
+        return (vals * self.entityton[e](points).reshape(-1,1), derivs)
+
+
 @distribute()
 class LocalVandermondes(object):
     """ Calculate Vandermonde matrices for each face in a mesh.
@@ -18,7 +43,7 @@ class LocalVandermondes(object):
             numbases: list of the number of basis functions on each face
     """
     
-    def __init__(self, mesh, elttobasis, quadrule, usecache=True):
+    def __init__(self, facetobasis, quadrule, usecache=True):
         """ Initialise the Vandermondes (nothing serious is calculated yet)
         
         mesh: the mesh.
@@ -26,30 +51,20 @@ class LocalVandermondes(object):
         quadrule: Object containing a quadrature rule
         usecache: cache vandermondes (disable to save memory)
         """
-        self.__mesh = mesh
-        self.__elttobasis = elttobasis
+        self.facetobasis = facetobasis
         self.__quadpoints = quadrule.quadpoints
         self.__cache = {} if usecache else None 
-        self.numbases = elttobasis.getSizes()[mesh.ftoe]
-        self.indices = elttobasis.getIndices()[mesh.ftoe]
-        
-    def evaluate(self, e, points, normal):
-        vals = self.__elttobasis.getValues(e, points)
-        derivs = self.__elttobasis.getDerivs(e, points, normal)
-        return (vals,derivs)
-                
+                        
     def getVandermondes(self, faceid):
         """ Returns a tuple of (values, derivatives) for functions on the face indexed by faceid """
          
         vandermondes = None if self.__cache is None else self.__cache.get(faceid) 
         if vandermondes==None:       
-            e = self.__mesh.ftoe[faceid]
-            normal = self.__mesh.normals[faceid]
             points = self.__quadpoints(faceid)
-            vandermondes = self.evaluate(e,points, normal)
-            if self.__cache is not None: self.__cache[faceid] = vandermondes 
-            
+            vandermondes = self.evaluate(faceid,points)
+            if self.__cache is not None: self.__cache[faceid] = vandermondes         
         return vandermondes
+    
     def getValues(self, faceid):
         return self.getVandermondes(faceid)[0]
     
@@ -58,16 +73,6 @@ class LocalVandermondes(object):
 
     def getCachesize(self):
         return 0 if self.__cache is None else len(self.__cache)
-
-class ScaledVandermondes(LocalVandermondes):
-    def __init__(self, entityton, *args, **kwargs):
-        super(ScaledVandermondes, self).__init__(*args, **kwargs)
-        self.entityton = entityton
-    
-    def evaluate(self,e,points,normal):
-        (vals, derivs) = super(ScaledVandermondes, self).evaluate(e,points,normal)
-        print self.entityton[e](points)
-        return (vals * self.entityton[e](points).reshape(-1,1), derivs)
 
 class ElementVandermondes(object):
     """ Calculate vandermonde matrices at the element level."""

@@ -67,8 +67,8 @@ class HelmholtzSystem(object):
         self.facequads = facequads
         
         self.basis = basis
-        self.facevandermondes = pcv.LocalVandermondes(problem.mesh, basis, facequads, usecache=usecache)
-        self.scaledvandermondes = self.facevandermondes if entityton is None else pcv.ScaledVandermondes(entityton, problem.mesh, basis, facequads, usecache=usecache)
+        self.facevandermondes = pcv.LocalVandermondes(pcv.FaceToBasis(problem.mesh, basis), facequads, usecache=usecache)
+        self.scaledvandermondes = self.facevandermondes if entityton is None else pcv.LocalVandermondes(pcv.FaceToScaledBasis(entityton, problem.mesh, basis), facequads, usecache=usecache)
         self.internalassembly = pca.Assembly(self.facevandermondes, self.facevandermondes, facequads.quadweights)
          
         self.loadassemblies = {}

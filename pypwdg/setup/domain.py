@@ -9,17 +9,22 @@ import pypwdg.setup.computation as psc
 import pypwdg.core.boundary_data as pcbd
 import copy    
             
+''' Domain decomposition iterative procedure:
+    - Create sub problems.  
+    - Subproblems get boundary data from a mortar variable
+'''
+
 
 class DDWorker(object):
-    def __init__(self, system, bcoeffs, sysargs, syskwargs):
+    def __init__(self, system, etomortarbasis, sysargs, syskwargs):
         self.system = system
         self.S,self.G = system.getSystem(*sysargs, **syskwargs)
-        self.bcoeffs = bcoeffs 
+        self.B = system.getBoundary('INTERNAL', etomortarbasis)
         
     def fn(self):
         
         bdyinfo = (self.bcoeffs, bdyetob)
-        Sinternal = system.getBoundary('INTERNAL', )
+        Sinternal = system.getBoundary('INTERNAL', bdyinfo)
     
 class DDSolver(object):
     def solve(self, system, bcoeffs, sysargs, syskwargs):
@@ -31,6 +36,7 @@ class DDComputation(psc.Computation):
         submesh = pmsm.SubMesh(problem.mesh, 'INTERNAL')
         localproblem = copy.copy(problem)
         localproblem.mesh = submesh
+        localproblem.bdyinfo["INTERNAL"] = pcbd.zero_impedance(problem.k):
         psc.Computation.__init__(self, localproblem, basisrule, systemklass, *args, **kwargs)
          
         
