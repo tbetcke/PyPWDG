@@ -6,6 +6,12 @@ Created on Apr 12, 2011
 import pypwdg.core.evaluation as pce
 import pypwdg.core.errors as pces
 import pypwdg.setup.problem as psp
+import pypwdg.utils.quadrature as puq
+import pypwdg.mesh.meshutils as pmmu
+import pypwdg.core.vandermonde as pcv
+import pypwdg.core.bases.utilities as pcbu   
+import pypwdg.core.assembly as pca
+
 import numpy as np
 
         
@@ -57,11 +63,43 @@ class Computation(object):
                     must have a getSystem method.
         args, kwargs: Additional parameters to pass to the system object
     '''
-    def __init__(self, problem, basisrule, systemklass, *args, **kwargs):
+    def __init__(self, problem, basisrule, nquadpoints, systemklass, usecache = False, **kwargs):
         self.problem = problem
         self.basis = psp.constructBasis(problem, basisrule)        
-        self.system = systemklass(problem, self.basis, *args, **kwargs)
-                
+        fquad, equad = puq.quadrules(problem.mesh.dim, nquadpoints)
+        self.facequads = pmmu.MeshQuadratures(problem.mesh, fquad)
+        self.elementquads = pmmu.MeshElementQuadratures(problem.mesh, equad)
+        self.facevandermondes = self.faceVandermondes(pcbu.FaceToBasis(problem.mesh, self.basis), usecache=usecache)
+        self.elementvandermondes = pcv.ElementVandermondes(problem.mesh, self.basis, self.elementquads)
+        self.system = systemklass(self, **kwargs)
+
+    def faceVandermondes(self, ftob, usecache = False):
+        return pcv.LocalVandermondes(ftob, self.facequads, usecache=usecache)
+
+    def faceAssembly(self, trialv = None, scale=None):
+        if scale is not None:
+            if isinstance(scale, list): 
+                qws = map(lambda s1:map(lambda s2: pmmu.ScaledQuadweights(self.facequads, s2),s1),scale)
+            else:
+                qws = pmmu.ScaledQuadweights(self.facequads, scale)
+        else:
+            qws = self.facequads.quadweights
+            
+        testv = self.facevandermondes
+        if trialv is None: trialv = testv
+        return pca.Assembly(testv, trialv if trialv is None else trialv, qws)
+    
+    def volumeAssembly(self, weighted = False):
+        if weighted:
+            def qws(e): 
+                return self.elementquads.quadweights(e).squeeze()* (self.problem.elementinfo.kp(e)(self.elementquads.quadpoints(e))**2)
+        else:
+            qws = self.elementquads.quadweights
+        
+        ev = self.elementvandermondes
+        return pca.Assembly(ev, ev, qws)
+
+                    
     def solution(self, solve, *args, **kwargs):
         ''' Solve the system 
         
@@ -75,15 +113,13 @@ def noop(x): return x
 
 class Solution(object):
     """ The solution to a Problem """
-    def __init__(self, problem, basis, x):  
-        self.mesh = problem.mesh
-        self.basis = basis
+    def __init__(self, computation, x):  
+        self.computation = computation
         self.x = x
-        self.problem=problem
         self.errors=None
         
     def getEvaluator(self, filter = noop):
-        return pce.StructuredPointsEvaluator(self.mesh, self.basis, filter, self.x)
+        return pce.StructuredPointsEvaluator(self.computation.problem.mesh, self.computation.basis, filter, self.x)
                  
     def evaluate(self, structuredpoints, returnPoints=False, filter = noop):
         vals, count = self.getEvaluator(filter).evaluate(structuredpoints)

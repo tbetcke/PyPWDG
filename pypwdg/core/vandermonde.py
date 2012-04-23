@@ -7,30 +7,6 @@ Created on Jul 14, 2010
 import numpy
 from pypwdg.parallel.decorate import distribute, parallelmethod, immutable
 
-class FaceToBasis(object):
-    def __init__(self, mesh, elttobasis):
-        self.mesh = mesh
-        self.elttobasis = elttobasis
-        self.numbases = elttobasis.getSizes()[mesh.ftoe]
-        self.indices = elttobasis.getIndices()[mesh.ftoe]
-    
-    def evaluate(self, faceid, points):
-        e = self.mesh.ftoe[faceid] 
-        normal = self.mesh.normals[faceid]
-        vals = self.elttobasis.getValues(e, points)
-        derivs = self.elttobasis.getDerivs(e, points, normal)
-        return (vals,derivs)
-
-class FaceToScaledBasis(FaceToBasis):
-    def __init__(self, entityton, *args, **kwargs):
-        super(FaceToScaledBasis, self).__init__(*args, **kwargs)
-        self.entityton = entityton
-
-    def evaluate(self,faceid, points):
-        e = self.mesh.ftoe[faceid] 
-        (vals, derivs) = super(FaceToScaledBasis, self).evaluate(faceid, points)
-        return (vals * self.entityton[e](points).reshape(-1,1), derivs)
-
 
 @distribute()
 class LocalVandermondes(object):
@@ -52,6 +28,8 @@ class LocalVandermondes(object):
         usecache: cache vandermondes (disable to save memory)
         """
         self.facetobasis = facetobasis
+        self.numbases = facetobasis.numbases
+        self.indices = facetobasis.indices
         self.__quadpoints = quadrule.quadpoints
         self.__cache = {} if usecache else None 
                         
@@ -61,7 +39,7 @@ class LocalVandermondes(object):
         vandermondes = None if self.__cache is None else self.__cache.get(faceid) 
         if vandermondes==None:       
             points = self.__quadpoints(faceid)
-            vandermondes = self.evaluate(faceid,points)
+            vandermondes = self.facetobasis.evaluate(faceid,points)
             if self.__cache is not None: self.__cache[faceid] = vandermondes         
         return vandermondes
     

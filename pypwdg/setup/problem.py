@@ -14,7 +14,7 @@ class Problem(object):
     def __init__(self, mesh, k, bndconds):
         self.mesh = mesh
         self.k = k
-        self.bdyinfo = {entity: (bdycond.coeffs, pcbu.UniformElementToBases(bdycond.data, mesh)) for entity, bdycond in  bndconds.items()}
+        self.bdyinfo = {entity: (bdycond.coeffs, pcbu.UniformFaceToBases(bdycond.data, mesh)) for entity, bdycond in  bndconds.items()}
     
     def populateBasis(self, etob, basisrule):
         ''' Helper function to initialise the element to basis map in each partition'''  
@@ -29,6 +29,7 @@ class VariableNProblem(Problem):
     def __init__(self, entityton, mesh, k, bnddata):
         Problem.__init__(self, mesh, k, bnddata)
         self.entityton = entityton
+        print "Warning: variable n not incorporated into boundary info " #todo: fix this.  
         
     elementinfo = property(lambda self: pcbv.EntityNElementInfo(self.mesh,self.k,self.entityton))
     

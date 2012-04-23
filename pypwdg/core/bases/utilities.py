@@ -264,4 +264,42 @@ class UniformElementToBases(object):
         
     def getIndices(self):
         return self.indices 
+    
+
+class UniformFaceToBases(object):
+    def __init__(self, b, mesh, entityton = None):
+        self.mesh = mesh
+        self.b = b
+        self.numbases = np.ones(mesh.nfaces, dtype=int) * b.n
+        self.indices = np.arange(mesh.nelements) * b.n
+        
+    def evaluate(self, faceid, points):
+        normal = self.mesh.normals[faceid]
+        vals = self.b.values(points)
+        derivs = self.b.derivs(points, normal)
+        return (vals, derivs)
+
+class FaceToBasis(object):
+    def __init__(self, mesh, elttobasis):
+        self.mesh = mesh
+        self.elttobasis = elttobasis
+        self.numbases = elttobasis.getSizes()[mesh.ftoe]
+        self.indices = elttobasis.getIndices()[mesh.ftoe]
+    
+    def evaluate(self, faceid, points):
+        e = self.mesh.ftoe[faceid] 
+        normal = self.mesh.normals[faceid]
+        vals = self.elttobasis.getValues(e, points)
+        derivs = self.elttobasis.getDerivs(e, points, normal)
+        return (vals,derivs)
+
+class FaceToScaledBasis(FaceToBasis):
+    def __init__(self, entityton, *args, **kwargs):
+        super(FaceToScaledBasis, self).__init__(*args, **kwargs)
+        self.entityton = entityton
+
+    def evaluate(self,faceid, points):
+        e = self.mesh.ftoe[faceid] 
+        (vals, derivs) = super(FaceToScaledBasis, self).evaluate(faceid, points)
+        return (vals * self.entityton[e](points).reshape(-1,1), derivs)    
      
