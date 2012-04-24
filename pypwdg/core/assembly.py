@@ -10,6 +10,8 @@ from pypwdg.core.vandermonde import LocalInnerProducts
 from pypwdg.utils.sparse import createvbsr
 from pypwdg.utils.timing import print_timing
 
+from pypwdg.parallel.mpiload import comm
+
 class Assembly(object):
     """ Assemble a global matrix based on local inner products and structure matrices 
     

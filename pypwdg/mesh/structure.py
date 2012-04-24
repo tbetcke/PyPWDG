@@ -6,6 +6,8 @@ Created on Aug 6, 2010
 import numpy as np
 import scipy.sparse as ss
 
+import pypwdg.parallel.mpiload as ppm
+
 class AveragesAndJumps(object):
     def __init__(self, mesh):
         # Face matrices:

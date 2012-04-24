@@ -326,8 +326,8 @@ class MeshPart(object):
         
         self.cutfaces = (mesh._internal - mesh._connectivity) * fpindex
         cutelts = mesh.elttofaces * self.cutfaces
-        self.neighbourelts = (cutelts == -1).nonzero()[0]
-        self.innerbdyelts = (cutelts == 1).nonzero()[0]
+        self.neighbourelts = (cutelts <= -1).nonzero()[0]
+        self.innerbdyelts = (cutelts >= 1).nonzero()[0]
         
         
         self.entityfaces = dict([(entity, self.fp * ss.spdiags((mesh.faceentities == entity) * 1, [0], mesh.nfaces, mesh.nfaces)) for entity in mesh.entities])

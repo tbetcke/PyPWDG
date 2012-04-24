@@ -72,6 +72,7 @@ class HelmholtzSystem(object):
         jk = 1j * self.problem.k
         AJ = pms.AveragesAndJumps(self.problem.mesh)   
         B = self.problem.mesh.boundary # This is the integration by parts term that generally gets folded into the boundary data, but is more appropriate here
+        
         SI = self.internalassembly.assemble([[jk * self.alpha * AJ.JD,   -AJ.AN - B], 
                                             [AJ.AD + B,                -(self.beta / jk) * AJ.JN]])    
         SFSI = pms.sumfaces(self.problem.mesh,SI)

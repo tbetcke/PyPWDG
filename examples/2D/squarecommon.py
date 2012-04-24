@@ -34,16 +34,16 @@ bounds=np.array([[0,1],[0,1]],dtype='d')
 npoints=np.array([500,500])
 
 mesh = pmm.gmshMesh('square.msh',dim=2)
-mesh = pmsm.SubMesh(mesh, "INTERNAL")
-average = (mesh.connectivity + mesh.internal)/2
-jump = mesh.internal - mesh.connectivity
-AD = average
-AN = jump / 2
-JD = jump
-JN = average * 2
-I = mesh.facepartition
-
-print mesh.connectivity.nnz, mesh.internal.nnz, AD.nnz, AN.nnz, JD.nnz, JN.nnz, I.nnz
+#mesh = pmsm.SubMesh(mesh, "INTERNAL")
+#average = (mesh.connectivity + mesh.internal)/2
+#jump = mesh.internal - mesh.connectivity
+#AD = average
+#AN = jump / 2
+#JD = jump
+#JN = average * 2
+#I = mesh.facepartition
+#
+#print mesh.connectivity.nnz, mesh.internal.nnz, AD.nnz, AN.nnz, JD.nnz, JN.nnz, I.nnz
 
 npw = 12
 quadpoints = 10
@@ -55,13 +55,13 @@ pw = pcbv.PlaneWaveVariableN(pcb.uniformdirs(2,npw))
 # Product basis:
 #basisrule = pcb.ProductBasisRule(pcb.planeWaveBases(2,k,npw), pcbr.ReferenceBasisRule(pcbr.Dubiner(1)))
 
-basisrule=pcb.ProductBasisRule(pw,pcbr.ReferenceBasisRule(pcbr.Dubiner(0)))
-#basisrule = pw
+#basisrule=pcb.ProductBasisRule(pw,pcbr.ReferenceBasisRule(pcbr.Dubiner(0)))
+basisrule = pw
 #basisrule = pcbred.SVDBasisReduceRule(puq.trianglequadrature(quadpoints), basisrule)
 
 problem = psp.Problem(mesh, k, bnddata)
-computation = psc.Computation(problem, basisrule, pcp.HelmholtzSystem, quadpoints)
+computation = psc.Computation(problem, basisrule, quadpoints, pcp.HelmholtzSystem)
 solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
 
 pos.comparetrue(bounds, npoints, g, solution)
-pos.standardoutput(computation, solution, quadpoints, bounds, npoints, 'square')
+pos.standardoutput(solution, quadpoints, bounds, npoints, 'square')

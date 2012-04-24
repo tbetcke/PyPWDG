@@ -22,13 +22,13 @@ def writeSolutionVTK(solution, bounds, npoints, realdata=True, fname='solution.v
     vtk_structure.create_vtk_structured_points(bounds,npoints)
     vtk_structure.write_to_file(fname)
     
-def standardoutput(computation, solution, quadpoints, bounds, npoints, fileroot = None, mploutput = False, **kwargs):
+def standardoutput(solution, quadpoints, bounds, npoints, fileroot = None, mploutput = False, **kwargs):
     ''' Dumps the solution to a file and also writes the errors out on a mesh'''
-    mesh = computation.problem.mesh
-    errors = pce.combinedError(computation, solution, quadpoints)[0]
+    mesh = solution.computation.problem.mesh
+    errors = pce.combinedError(solution)[0]
     print "Combined Error: ",np.sqrt(sum(errors**2))
-    volerrors = pce.volumeerrors(computation.problem, quadpoints, solution)
-    print "Volume Error / k^2: ", np.sqrt(sum(volerrors **2)) / (computation.problem.k **2)
+    volerrors = pce.volumeerrors(solution, quadpoints)
+    print "Volume Error / k^2: ", np.sqrt(sum(volerrors **2)) / (solution.computation.problem.k **2)
     if fileroot is not None:
         try:
             writeSolutionVTK(solution, bounds, npoints, fname = fileroot +'.vti')        

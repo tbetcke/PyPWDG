@@ -107,7 +107,7 @@ class Computation(object):
             args, kwargs: additional parameters to pass to the getSystem method
         '''
         x = solve(self.system, args, kwargs)
-        return Solution(self.problem, self.basis, x)        
+        return Solution(self, x)        
 
 def noop(x): return x
 
@@ -130,7 +130,7 @@ class Solution(object):
             return vals / count
      
     def computeErrors(self,quadpoints=10):
-        d,n,bnd=pces.EvalElementError(self.mesh,quadpoints,self.basis,self.problem.bdyinfo).evaluate(self.x)
+        d,n,bnd=pces.EvalElementError(self.computation).evaluate(self.x)
         self.errors={'ElemDirichlet': np.sqrt(d),
                     'ElemNeumann'  : 1.0/self.problem.k*np.sqrt(n),
                     'ElemBoundary' : np.sqrt(bnd),

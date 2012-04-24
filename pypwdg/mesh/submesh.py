@@ -13,6 +13,7 @@ import pypwdg.mesh.mesh as pmm
 class SubMesh(pmm.EtofInfo):
     
     def __init__(self, mesh, internalbdytag):
+        print "Submesh"
         self.mesh = mesh
 
         pmm.EtofInfo.__init__(self, mesh.dim, len(mesh.partition), len(mesh.fs))

@@ -27,7 +27,7 @@ Created on Jan 19, 2011
 @author: joel
 '''
 import pypwdg.parallel.decorate as ppd
-from pypwdg.parallel.mpiload import mpiloaded
+from pypwdg.parallel.mpiload import mpiloaded, comm
 
 class elementddictinfo(object):
     """ Provides the info for a distributed dictionary with mesh elements as keys.

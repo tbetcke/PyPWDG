@@ -7,6 +7,8 @@ from pypwdg.utils.timing import print_timing, Timer
 import numpy as np
 import scipy.sparse as ss
 
+from pypwdg.parallel.mpiload import comm
+
 def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
     """ Creates a variable block sparse matrix
     
@@ -22,6 +24,7 @@ def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
     csr.sum_duplicates()
     csr.eliminate_zeros()
     csr.sort_indices()
+    
     zipip = zip(csr.indptr[:-1], csr.indptr[1:])
     coords = [(i,j) for i,p in enumerate(zipip) for j in csr.indices[p[0]:p[1]] ]
     data = [csr.data[n] * blocks(i,j) for n, (i,j) in enumerate(coords)]
@@ -31,8 +34,9 @@ def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
     for (i,j), block in zip(coords, data):
         
         (r,c) = block.shape
+#        print r,c
         if not bsizerows[i] in [r, None]: raise ValueError("Incompatible block sizes. row:%s, r:%s, bsizerows[i]:%s" %(i,r,bsizerows[i]))  
-        if not bsizecols[j] in [c, None]: raise ValueError("Incompatible block sizes. col:%s, c:%s, bsizecols[i]:%s" %(j,c,bsizecols[i]))
+        if not bsizecols[j] in [c, None]: raise ValueError("Incompatible block sizes. col:%s, c:%s, bsizecols[i]:%s %s" %(j,c,bsizecols[i], comm.rank))
         bsizerows[i] = r
         bsizecols[j] = c 
     

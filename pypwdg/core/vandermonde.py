@@ -5,7 +5,8 @@ Created on Jul 14, 2010
 '''
 
 import numpy
-from pypwdg.parallel.decorate import distribute, parallelmethod, immutable
+from pypwdg.parallel.decorate import distribute, parallelmethod, immutable, comm
+
 
 
 @distribute()
@@ -30,7 +31,7 @@ class LocalVandermondes(object):
         self.facetobasis = facetobasis
         self.numbases = facetobasis.numbases
         self.indices = facetobasis.indices
-        self.__quadpoints = quadrule.quadpoints
+        self.quadrule = quadrule
         self.__cache = {} if usecache else None 
                         
     def getVandermondes(self, faceid):
@@ -38,8 +39,9 @@ class LocalVandermondes(object):
          
         vandermondes = None if self.__cache is None else self.__cache.get(faceid) 
         if vandermondes==None:       
-            points = self.__quadpoints(faceid)
+            points = self.quadrule.quadpoints(faceid)
             vandermondes = self.facetobasis.evaluate(faceid,points)
+#            print vandermondes[0].shape, vandermondes[1].shape
             if self.__cache is not None: self.__cache[faceid] = vandermondes         
         return vandermondes
     
@@ -57,18 +59,18 @@ class ElementVandermondes(object):
     def __init__(self, mesh, elttobasis, quadrule):
         self.__mesh = mesh
         self.__elttobasis = elttobasis
-        self.__points = quadrule.quadpoints
+        self.quadrule = quadrule
         self.numbases = elttobasis.getSizes()
         self.indices = elttobasis.getIndices()
         
     def getValues(self, eltid):
-        return self.__elttobasis.getValues(eltid, self.__points(eltid))
+        return self.__elttobasis.getValues(eltid, self.quadrule.quadpoints(eltid))
     
     def getDerivs(self, eltid):
-        return self.__elttobasis.getDerivs(eltid, self.__points(eltid), None)
+        return self.__elttobasis.getDerivs(eltid, self.quadrule.quadpoints(eltid), None)
     
     def getLaplacians(self, eltid):
-        return self.__elttobasis.getLaplacian(eltid, self.__points(eltid))
+        return self.__elttobasis.getLaplacian(eltid, self.quadrule.quadpoints(eltid))
         
         
 class LocalInnerProducts(object):

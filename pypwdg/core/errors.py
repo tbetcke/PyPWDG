@@ -37,25 +37,18 @@ class EvalElementResiduals(object):
             elem_error[e] = np.vdot(pres, pres * w.ravel())
         return elem_error
     
-def volumeerrors(problem, quadpoints, solution):
-    return np.sqrt(EvalElementResiduals(problem, quadpoints, solution.basis).evaluate(solution.x))
+def volumeerrors(solution, quadpoints):
+    return np.sqrt(EvalElementResiduals(solution.computation.problem, quadpoints, solution.computation.basis).evaluate(solution.x))
 
 
 @distribute()
 class EvalElementError(object):
-    def __init__(self, mesh, quadpoints, basis, bdyinfo, entityton = None):
-        self.mesh = mesh 
-        fquad, _ = puq.quadrules(mesh.dim, quadpoints)
-        facequads = pmmu.MeshQuadratures(mesh, fquad)
-        
-        self.vs = pcv.LocalVandermondes(mesh, basis, facequads)
-        self.scaledvandermondes = self.vs if entityton is None else pcv.ScaledVandermondes(entityton, mesh, basis, facequads)
-        
-        self.weights = facequads.quadweights
-        self.bnddata = {}
-        for entity, (coeffs,bdyetob) in bdyinfo.items():
-            bdyvandermondes = pcv.LocalVandermondes(mesh, bdyetob, facequads) if entityton is None else pcv.ScaledVandermondes(entityton, mesh, bdyetob, facequads)     
-            self.bnddata[entity] = (coeffs, bdyvandermondes)
+    def __init__(self, computation):
+        self.mesh = computation.problem.mesh 
+        self.vs = computation.facevandermondes
+        self.scaledvandermondes = self.vs # if entityton is None else pcv.ScaledVandermondes(entityton, mesh, basis, facequads)
+        self.computation = computation
+        self.weights = computation.facequads.quadweights
             
     @parallelmethod(reduceop = tuplesum)
     def evaluate(self, x):
@@ -78,9 +71,10 @@ class EvalElementError(object):
         
         elem_error_bnd=np.zeros(self.mesh.nelements, dtype=complex)
         
-        for entity, (coeffs, bndv) in self.bnddata.items():
+        for entity, (coeffs, bdyftob) in self.computation.problem.bdyinfo.items():
             lc=coeffs.l_coeffs
             rc=coeffs.r_coeffs
+            bndv = self.computation.faceVandermondes(bdyftob)
             # boundary error
             be = lambda f: lc[0] * svx(f) + lc[1] * nx(f) - (rc[0] * bndv.getValues(f) + rc[1] * bndv.getDerivs(f)).squeeze()
             # l2norm of boundary error on faces
@@ -90,10 +84,10 @@ class EvalElementError(object):
         
         return elem_error_dirichlet.real, elem_error_neumann.real, elem_error_bnd.real
     
-def combinedError(problem, solution, quadpoints):
+def combinedError(solution):
     
-    (error_dirichlet2, error_neumann2, error_boundary2) = EvalElementError(problem.mesh, quadpoints, solution.basis, problem.bdyinfo).evaluate(solution.x)
-    error_combined2 = error_dirichlet2 + error_boundary2 + error_neumann2/(problem.k ** 2)
+    (error_dirichlet2, error_neumann2, error_boundary2) = EvalElementError(solution.computation).evaluate(solution.x)
+    error_combined2 = error_dirichlet2 + error_boundary2 + error_neumann2/(solution.computation.problem.k ** 2)
     return map(np.sqrt, (error_combined2,error_dirichlet2, error_neumann2, error_boundary2))     
     
 
