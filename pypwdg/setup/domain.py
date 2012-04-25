@@ -16,7 +16,7 @@ import copy
 
 
 class DDWorker(object):
-    def __init__(self, system, etomortarbasis, sysargs, syskwargs):
+    def __init__(self, system, mortarftb, sysargs, syskwargs):
         self.system = system
         self.S,self.G = system.getSystem(*sysargs, **syskwargs)
         self.B = system.getBoundary('INTERNAL', etomortarbasis)
@@ -31,13 +31,18 @@ class DDSolver(object):
         
     
 
-class DDComputation(psc.Computation):
-    def __init__(self, problem, basisrule, systemklass, *args, **kwargs):
+class DDComputation:
+    def __init__(self, problem, basisrule, nquadpoints, systemklass, boundaryklass, usecache = False, **kwargs):
         submesh = pmsm.SubMesh(problem.mesh, 'INTERNAL')
         localproblem = copy.copy(problem)
         localproblem.mesh = submesh
+        computationinfo = ComputationInfo(localproblem, basisrule, nquadpoints, usecache)
+        self.system = systemklass(computationinfo, **kwargs)
+
         localproblem.bdyinfo["INTERNAL"] = pcbd.zero_impedance(problem.k):
-        psc.Computation.__init__(self, localproblem, basisrule, systemklass, *args, **kwargs)
+        
+        
+        self.internalboundary = boundaryklass(computationinfo, 'INTERNAL', )
          
         
         

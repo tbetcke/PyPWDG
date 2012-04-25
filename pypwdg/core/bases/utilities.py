@@ -190,51 +190,51 @@ class ElementInfo(object):
     def vertices(self, e):
         return self.mesh.elements[e]
             
-    
-@ppd.parallel(None, None)
-def localConstructBasis(mesh, etob, basisrule, elementinfo):
-    ''' Helper function to initialise the element to basis map in each partition'''  
-    for e in mesh.partition:
-        etob[e] = basisrule.populate(None if elementinfo is None else elementinfo.info(e))
+#    
+#@ppd.parallel(None, None)
+#def localConstructBasis(mesh, etob, basisrule, elementinfo):
+#    ''' Helper function to initialise the element to basis map in each partition'''  
+#    for e in mesh.partition:
+#        etob[e] = basisrule.populate(None if elementinfo is None else elementinfo.info(e))
+#
+#def constructBasis(mesh, basisrule, elementinfo = None):
+#    ''' Build an element to basis (distributed) map based on a basisrule'''
+#    manager = ppdd.ddictmanager(ppdd.elementddictinfo(mesh), True)
+#    etob = manager.getDict()
+#    localConstructBasis(mesh, etob, basisrule, elementinfo)
+#    manager.sync()   
+#    return CellToBases(etob, range(mesh.nelements))
 
-def constructBasis(mesh, basisrule, elementinfo = None):
-    ''' Build an element to basis (distributed) map based on a basisrule'''
-    manager = ppdd.ddictmanager(ppdd.elementddictinfo(mesh), True)
-    etob = manager.getDict()
-    localConstructBasis(mesh, etob, basisrule, elementinfo)
-    manager.sync()   
-    return ElementToBases(etob, mesh)
-
-class ElementToBases(object):
-    ''' Information about, and evaluation of, bases on each element'''
+class CellToBases(object):
+    ''' Information about, and evaluation of, bases on a cell (i.e. an element or a face)'''
     
-    def __init__(self, etob, mesh):
-        self.etob = etob
-        self.sizes = np.array([sum([b.n for b in etob.get(e,[])]) for e in range(mesh.nelements)])     
+    def __init__(self, ctob, cids):
+        self.ctob = ctob
+        self.sizes = np.array([sum([b.n for b in ctob.get(e,[])]) for e in cids])     
         self.indices = np.cumsum(np.concatenate(([0], self.sizes))) 
     
-    def getValues(self, eid, points):
-        """ Return the values of the basis for element eid at points"""
-        bases = self.etob.get(eid)
+    def getValues(self, cid, points):
+        """ Return the values of the basis for element cid at points"""
+        bases = self.ctob.get(cid)
         if bases==None:
             return np.zeros((len(points),0))
         else:
             return np.hstack([b.values(points) for b in bases])
     
-    def getDerivs(self, eid, points, normal = None):
-        """ Return the directional derivatives of the basis for element eid at points
+    def getDerivs(self, cid, points, normal = None):
+        """ Return the directional derivatives of the basis for element cid at points
         
            if normal == None, returns the gradient on the standard cartesian grid
         """
-        bases = self.etob.get(eid)
+        bases = self.ctob.get(cid)
         if bases==None:
             return np.zeros((len(points),0)) if normal is not None else np.zeros((len(points), 0, points.shape[1]))
         else:
             return np.hstack([b.derivs(points, normal) for b in bases])
 
-    def getLaplacian(self, eid, points):
-        """ Return the laplacian of the basis for element eid at points"""
-        bases = self.etob.get(eid)
+    def getLaplacian(self, cid, points):
+        """ Return the laplacian of the basis for element cid at points"""
+        bases = self.ctob.get(cid)
         if bases==None:
             return np.zeros((len(points),0))
         else:

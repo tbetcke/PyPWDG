@@ -7,14 +7,14 @@ import pypwdg.mesh.structure as pms
 import pypwdg.parallel.decorate as ppd
 
 class HelmholtzBoundary(object):
-    def __init__(self, computation, entity, bdyinfo, delta):
+    def __init__(self, computationinfo, entity, bdyinfo, delta=0.5):
         bdycoeffs, bdyftob = bdyinfo
-        bdyvandermondes = computation.faceVandermondes(bdyftob)  
+        bdyvandermondes = computationinfo.faceVandermondes(bdyftob)  
         rc0,rc1 = bdycoeffs.r_coeffs
-        self.loadassembly = computation.faceAssembly(bdyvandermondes, [[rc0,rc1],[rc0,rc1]])
+        self.loadassembly = computationinfo.faceAssembly(bdyvandermondes, [[rc0,rc1],[rc0,rc1]])
         lc0,lc1 = bdycoeffs.l_coeffs
-        self.bdyassembly = computation.faceAssembly(scale=[[lc0,lc1],[lc0,lc1]])
-        self.mesh = computation.problem.mesh
+        self.bdyassembly = computationinfo.faceAssembly(scale=[[lc0,lc1],[lc0,lc1]])
+        self.mesh = computationinfo.problem.mesh
         self.B = self.mesh.entityfaces[entity]
         self.delta = delta
         
@@ -45,15 +45,15 @@ class HelmholtzSystem(object):
         It's parallelised so will only assemble the relevant bits of the system for the partition managed by
         this process.
     '''
-    def __init__(self, computation, alpha=0.5,beta=0.5,delta=0.5):
+    def __init__(self, computationinfo, alpha=0.5,beta=0.5,delta=0.5):
         self.alpha = alpha
         self.beta = beta
         self.delta = delta
-        self.internalassembly = computation.faceAssembly()
-        self.volumeassembly = computation.volumeAssembly()
-        self.weightedassembly = computation.volumeAssembly(True)
-        self.problem = computation.problem 
-        self.boundaries = [HelmholtzBoundary(computation, entity, bdyinfo, delta) for (entity, bdyinfo) in self.problem.bdyinfo.items()]
+        self.internalassembly = computationinfo.faceAssembly()
+        self.volumeassembly = computationinfo.volumeAssembly()
+        self.weightedassembly = computationinfo.volumeAssembly(True)
+        self.problem = computationinfo.problem 
+        self.boundaries = [HelmholtzBoundary(computationinfo, entity, bdyinfo, delta) for (entity, bdyinfo) in self.problem.bdyinfo.items()]
 
     @ppd.parallelmethod(None, ppd.tuplesum)        
     def getSystem(self, dovolumes = False):

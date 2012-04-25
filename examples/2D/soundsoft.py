@@ -7,6 +7,8 @@ import pypwdg.core.physics as pcp
 import pypwdg.output.solution as pos
 import pypwdg.raytrace.control as prc
 import pypwdg.parallel.main
+import pypwdg.output.mploutput as pom
+
 
 from numpy import array,sqrt
 
@@ -26,3 +28,4 @@ problem = psp.Problem(mesh, k, bnddata)
 computation = psc.Computation(problem, pcb.planeWaveBases(2,k,13), nq, pcp.HelmholtzSystem)
 solution = computation.solution(psc.DirectSolver().solve)
 pos.standardoutput(solution, 20, bounds, npoints, 'soundsoft')
+pom.output2dsoln(bounds, solution, npoints)

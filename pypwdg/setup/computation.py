@@ -54,16 +54,14 @@ class DirectSolver(object):
         print "Relative residual: ", np.linalg.norm(M * x -b) / np.linalg.norm(x)
         return x        
 
-class Computation(object):
+class ComputationInfo(object):
     ''' A class to manage the construction of a linear system for a Galerkin approximation to a problem and the computation of its solution
     
         problem: A problem object (must have a populateBasis method)
         basisrule: The rule to construct the basis
-        systemklass: The class of the object that will construct the stiffness matrix and load vector (see p.c.p.HelmholtzSystem);
-                    must have a getSystem method.
         args, kwargs: Additional parameters to pass to the system object
     '''
-    def __init__(self, problem, basisrule, nquadpoints, systemklass, usecache = False, **kwargs):
+    def __init__(self, problem, basisrule, nquadpoints, usecache = False):
         self.problem = problem
         self.basis = psp.constructBasis(problem, basisrule)        
         fquad, equad = puq.quadrules(problem.mesh.dim, nquadpoints)
@@ -71,7 +69,6 @@ class Computation(object):
         self.elementquads = pmmu.MeshElementQuadratures(problem.mesh, equad)
         self.facevandermondes = self.faceVandermondes(pcbu.FaceToBasis(problem.mesh, self.basis), usecache=usecache)
         self.elementvandermondes = pcv.ElementVandermondes(problem.mesh, self.basis, self.elementquads)
-        self.system = systemklass(self, **kwargs)
 
     def faceVandermondes(self, ftob, usecache = False):
         return pcv.LocalVandermondes(ftob, self.facequads, usecache=usecache)
@@ -99,6 +96,16 @@ class Computation(object):
         ev = self.elementvandermondes
         return pca.Assembly(ev, ev, qws)
 
+
+class Computation(object):
+    ''' A class to manage the construction of a linear system for a Galerkin approximation to a problem and the computation of its solution
+        
+        systemklass: The class of the object that will construct the stiffness matrix and load vector (see p.c.p.HelmholtzSystem);
+                    must have a getSystem method.
+    '''
+    def __init__(self, problem, basisrule, nquadpoints, systemklass, usecache = False, **kwargs):
+        self.computationinfo = ComputationInfo(problem, basisrule, nquadpoints, usecache)
+        self.system = systemklass(self.computationinfo, **kwargs)
                     
     def solution(self, solve, *args, **kwargs):
         ''' Solve the system 
@@ -107,7 +114,7 @@ class Computation(object):
             args, kwargs: additional parameters to pass to the getSystem method
         '''
         x = solve(self.system, args, kwargs)
-        return Solution(self, x)        
+        return Solution(self.computationinfo, x)        
 
 def noop(x): return x
 

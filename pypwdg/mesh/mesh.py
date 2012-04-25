@@ -202,22 +202,16 @@ class Mesh(EtofInfo):
         self.nonfacevertex = numpy.array([e[i] for e in elements for i in range(0,nev)])    
         
         EtofInfo.__init__(self, dim, len(elements), len(faces))
-                
+        
+        # the face to vertex map        
         ftov = ss.csr_matrix((numpy.ones(self.nfaces * dim), faces.ravel(), np.arange(0, self.nfaces+1)*dim), dtype=int)
-        ftov2=(ftov*ftov.transpose()).tocsr() # Multiply to get connectivity.
-        ftof = ss.csr_matrix((ftov2.data / dim, ftov2.indices, ftov2.indptr))  # ftov2 contains integer data, so dividing by dim means we're left with matching faces
-        
-        self._connectivity = ftof - ss.eye(self.nfaces, self.nfaces, dtype=int)
-        self._connectivity.eliminate_zeros()
-        self._internal = self._connectivity **2
-        self._boundary = ss.eye(self.nfaces, self.nfaces) - self._internal
-        self._boundary.eliminate_zeros()
-        
-# Used for ray tracing:        
-        self.entities = set()
+
+        # determine the boundary faces        
+        self.vtof = ftov.transpose().tocsr()
+                
+        self.entities = set() # Used for ray tracing
         self.faceentities = np.empty(self.nfaces, dtype=object)
-        
-        self.vtof = ftov.transpose().tocsr()  
+        nb = np.ones(self.nfaces, dtype=int)
         for entityid, bnodes in boundaries:
             vs = set(bnodes)
             for v in vs:
@@ -225,8 +219,23 @@ class Mesh(EtofInfo):
                     if vs.issuperset(self.faces[f]): 
                         self.entities.add(entityid)            
                         self.faceentities[f] = entityid
+                        nb[f] = 0
+        
+        print nb
+        # anything assigned to a boundary should not be involved in connectivity (this allows for internal boundaries)
+        nonboundary = ss.spdiags(nb, 0, self.nfaces,self.nfaces)
+        nbftov = nonboundary * ftov 
                 
-        bdyunassigned = self._boundary.getnnz() - len(self.faceentities.nonzero()[0])        
+        # now determine connectivity.  
+        ftov2=(nbftov*nbftov.transpose()).tocsr() # Multiply to get connectivity.
+        ftof = ss.csr_matrix((ftov2.data / dim, ftov2.indices, ftov2.indptr))  # ftov2 contains integer data, so dividing by dim means we're left with matching faces
+        
+        self._connectivity = ftof - nonboundary
+        self._connectivity.eliminate_zeros()
+        self._internal = self._connectivity **2
+        self._boundary = ss.eye(self.nfaces, self.nfaces, dtype=int) - self._internal
+        self._boundary.eliminate_zeros()
+        bdyunassigned = (self._boundary * nonboundary).getnnz()        
         if bdyunassigned:
             print "Warning: %s non-internal faces not assigned to physical entities" %bdyunassigned
             print [self.faces[id] for id in self._boundary.diagonal().nonzero()[0] if self.faceentities[id]==None]

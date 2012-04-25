@@ -41,6 +41,23 @@ class SubMesh(pmm.EtofInfo):
         self.neighbourelts = np.array([])
         self.elements = np.array(mesh.elements)[mesh.partition]
         self.nodes = mesh.nodes
+        
+@ppd.distribute()
+class SubMesh2(object):
+    def __init__(self, mesh, internalbdytag):
+        self.mesh = mesh
+        nf = mesh.nfaces
+        innerbdyfaces = ss.spdiags(mesh.cutfaces[mesh.fs], [0], nf, nf)
+        noninnerbdyfaces = ss.eye(nf, nf, dtype=int) - innerbdyfaces
+         
+    
+    def __getattr__( self, name ):
+        return self.mesh.__getattribute__(name)
+    
+    
+    
+    
+        
 
 def skeletonmesh(mesh):
     return pmm.Mesh(mesh.nodes, mesh.faces[mesh.cutfaces], None, {}, mesh.dim - 1)

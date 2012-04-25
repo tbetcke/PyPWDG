@@ -43,5 +43,5 @@ def constructBasis(problem, basisrule):
     etob = manager.getDict()
     localPopulateBasis(etob, basisrule, problem)
     manager.sync()   
-    return pcbu.ElementToBases(etob, problem.mesh)
+    return pcbu.CellToBases(etob, range(problem.mesh.nelements))
 

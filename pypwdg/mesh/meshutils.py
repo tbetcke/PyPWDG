@@ -39,6 +39,14 @@ class MeshElementMaps(object):
         dirs = self.mesh.directions[self.mesh.etof[e][0]]
         return pum.Affine(dirs[0], dirs[1:])
     
+class MeshFaceMaps(object):
+    def __init__(self, mesh):
+        self.mesh = mesh
+    
+    def getMap(self, face):
+        dirs = self.mesh.directions[face]
+        return pum.Affine(dirs[0], dirs[1:])
+
 
 class MeshElementQuadratures(object):
     def __init__(self, mesh, quadrule):

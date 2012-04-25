@@ -54,7 +54,7 @@ def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True, *
     vals /= counts
 #    contour(points.toArray(), vals, npoints)
     image(vals, npoints, bounds, **kwargs)
-    if plotmesh: showmesh(solution.problem.mesh)
+    if plotmesh: showmesh(solution.computation.problem.mesh)
     mp.show()
        
 def output2dfn(bounds, fn, npoints, **kwargs):
