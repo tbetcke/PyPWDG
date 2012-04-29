@@ -215,7 +215,7 @@ class SimplicialMeshInfo(object):
         self.boundaries = boundaries
     
     def partition(self, nparts):
-        return partition(self.elements, self.nnodes, npart, self.dim)
+        return partition(self.elements, self.nnodes, nparts, self.dim)
 
 @ppd.immutable                
 class Topology(object):
@@ -258,13 +258,14 @@ class Topology(object):
             print [self.faces[fid] for fid in self.boundary.diagonal().nonzero()[0] if self.faceentities[fid]==None]
 
 class MeshView(object):
-    def __init__(self, basicinfo, topology, partition = None):
+    def __init__(self, basicinfo, topology, partition = None, partidx = 0):
         self.basicinfo = basicinfo
         self.topology = topology
-        self.initialiseview(partition)
+        self.initialiseview(partition, partidx)
     
-    def initialiseview(self, partition):
+    def initialiseview(self, partition, partidx):
         self.partition = np.arange(self.nelements) if partition is None else partition 
+	self.partidx = partidx
         self.fs = self.basicinfo.etof[partition].ravel()
         fpindex = np.zeros((self.basicinfo.nfaces,), dtype=int)
         fpindex[self.fs] = 1
@@ -299,7 +300,7 @@ class MeshView(object):
     def entityfaces(self):
         return dict([(entity, self.fp * ss.spdiags((self.topology.faceentities == entity) * 1, [0], self.nfaces,self.nfaces)) for entity in self.topology.entities])
 
-@ppd.distribute(lambda n: lambda basicinfo, topology: [((basicinfo, topology, partition, i),{}) for i, partition in enumerate(basicinfo.partitions(n))]) 
+@ppd.distribute(lambda n: lambda basicinfo, topology: [((basicinfo, topology, partition, i),{}) for i, partition in enumerate(basicinfo.partition(n))]) 
 class DistributedMeshView(MeshView):
     pass    
 
