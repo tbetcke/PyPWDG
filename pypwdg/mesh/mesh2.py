@@ -125,8 +125,9 @@ def gmshInfo(fname, dim, *args, **kwargs):
 
 def gmshMesh(*args, **kwargs):
     meshinfo = gmshInfo(*args, **kwargs)
-    topology = Topology(meshinfo)    
-    meshview = DistributedMeshView(meshinfo, topology)
+    topology = Topology(meshinfo)
+    partition = DistributedPartition(meshinfo, topology)    
+    meshview = MeshView(meshinfo, topology, partition)
     return meshview
 
 def compute_facedata(nodes, faces, nonfacevertex, dim):
@@ -257,25 +258,33 @@ class Topology(object):
             print "Warning: %s non-internal faces not assigned to physical entities" %bdyunassigned
             print [self.faces[fid] for fid in self.boundary.diagonal().nonzero()[0] if self.faceentities[fid]==None]
 
-class MeshView(object):
-    def __init__(self, basicinfo, topology, partition = None, partidx = 0):
-        self.basicinfo = basicinfo
-        self.topology = topology
-        self.initialiseview(partition, partidx)
-    
-    def initialiseview(self, partition, partidx):
-        self.partition = np.arange(self.nelements) if partition is None else partition 
-	self.partidx = partidx
-        self.fs = self.basicinfo.etof[partition].ravel()
-        fpindex = np.zeros((self.basicinfo.nfaces,), dtype=int)
+
+class Partition(object):
+    def __init__(self, basicinfo, topology, partition=None, partidx=0):
+        self.partition = np.arange(basicinfo.nelements) if partition is None else partition 
+        self.partidx = partidx
+        self.fs = basicinfo.etof[partition].ravel()
+        fpindex = np.zeros((basicinfo.nfaces,), dtype=int)
         fpindex[self.fs] = 1
-        nf = self.basicinfo.nfaces
+        nf = basicinfo.nfaces
         self.fp = ss.spdiags(fpindex, [0], nf, nf)
         
-        self.cutfaces = (self.topology.internal - self.topology.connectivity) * fpindex
-        cutelts = self.elttofaces * self.cutfaces
+        self.cutfaces = (topology.internal - topology.connectivity) * fpindex
+        cutelts = basicinfo.elttofaces * self.cutfaces
         self.neighbourelts = (cutelts <= -1).nonzero()[0]
         self.innerbdyelts = (cutelts >= 1).nonzero()[0]
+    
+
+@ppd.distribute(lambda n: lambda basicinfo, topology: [((basicinfo, topology, partition, i),{}) for i, partition in enumerate(basicinfo.partition(n))]) 
+class DistributedPartition(Partition):
+    pass    
+
+class MeshView(object):
+    def __init__(self, basicinfo, topology, partition):
+        self.basicinfo = basicinfo
+        self.topology = topology
+        self.part = partition
+        
         
     dim = property(lambda self: self.basicinfo.dim)
     nelements = property(lambda self: self.basicinfo.nelements)
@@ -291,16 +300,17 @@ class MeshView(object):
     directions = property(lambda self: self.basicinfo.directions)
     dets = property(lambda self: self.basicinfo.dets)
     
-    facepartition = property(lambda self: self.fp)
-    connectivity = property(lambda self: self.fp * self.topology.connectivity) 
-    internal = property(lambda self: self.fp * self.topology.internal)
-    boundary = property(lambda self: self.fp * self.topology.boundary)
+    partition = property(lambda self: self.part.partition)
+    cutfaces = property(lambda self: self.part.cutfaces)
+    neighbourelts = property(lambda self: self.part.neighbourelts)
+    innerbdyelts = property(lambda self: self.part.innerbdyelts)
+    facepartition = property(lambda self: self.part.fp)
+    connectivity = property(lambda self: self.part.fp * self.topology.connectivity) 
+    internal = property(lambda self: self.part.fp * self.topology.internal)
+    boundary = property(lambda self: self.part.fp * self.topology.boundary)
 
     @property
     def entityfaces(self):
-        return dict([(entity, self.fp * ss.spdiags((self.topology.faceentities == entity) * 1, [0], self.nfaces,self.nfaces)) for entity in self.topology.entities])
+        return dict([(entity, self.part.fp * ss.spdiags((self.topology.faceentities == entity) * 1, [0], self.nfaces,self.nfaces)) for entity in self.topology.entities])
 
-@ppd.distribute(lambda n: lambda basicinfo, topology: [((basicinfo, topology, partition, i),{}) for i, partition in enumerate(basicinfo.partition(n))]) 
-class DistributedMeshView(MeshView):
-    pass    
 
