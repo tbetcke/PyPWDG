@@ -1,5 +1,5 @@
 import pypwdg.core.bases as pcb
-import pypwdg.mesh.mesh as pmm
+import pypwdg.mesh.mesh2 as pmm
 import pypwdg.core.boundary_data as pcbd
 import pypwdg.setup.problem as psp
 import pypwdg.setup.computation as psc

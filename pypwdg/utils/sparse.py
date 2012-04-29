@@ -7,8 +7,6 @@ from pypwdg.utils.timing import print_timing, Timer
 import numpy as np
 import scipy.sparse as ss
 
-from pypwdg.parallel.mpiload import comm
-
 def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
     """ Creates a variable block sparse matrix
     
@@ -36,7 +34,7 @@ def createvbsr(mat, blocks, bsizerows = None, bsizecols = None):
         (r,c) = block.shape
 #        print r,c
         if not bsizerows[i] in [r, None]: raise ValueError("Incompatible block sizes. row:%s, r:%s, bsizerows[i]:%s" %(i,r,bsizerows[i]))  
-        if not bsizecols[j] in [c, None]: raise ValueError("Incompatible block sizes. col:%s, c:%s, bsizecols[i]:%s %s" %(j,c,bsizecols[i], comm.rank))
+        if not bsizecols[j] in [c, None]: raise ValueError("Incompatible block sizes. col:%s, c:%s, bsizecols[i]:%s %s" %(j,c,bsizecols[i]))
         bsizerows[i] = r
         bsizecols[j] = c 
     

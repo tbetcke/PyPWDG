@@ -5,7 +5,7 @@ Created on Jul 14, 2010
 '''
 
 import numpy
-from pypwdg.parallel.decorate import distribute, parallelmethod, immutable, comm
+from pypwdg.parallel.decorate import distribute, parallelmethod, immutable
 
 
 
