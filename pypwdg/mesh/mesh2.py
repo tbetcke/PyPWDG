@@ -280,6 +280,7 @@ class MeshView(object):
     nelements = property(lambda self: self.basicinfo.nelements)
     elements = property(lambda self: self.basicinfo.elements)
     nodes = property(lambda self: self.basicinfo.nodes)
+    nnodes = property(lambda self: self.basicinfo.nnodes)
     nfaces = property(lambda self: self.basicinfo.nfaces)
     ftoe = property(lambda self: self.basicinfo.ftoe)
     etof = property(lambda self: self.basicinfo.etof)
