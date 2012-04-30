@@ -26,6 +26,9 @@ def meshes2d():
     return [regularsquaremesh(n) for n in [1,3,5]] + examplemeshes2d()
 
 def regularsquaremesh(n = 1, bdytag="BDY"):
+    return pmm.meshFromInfo(regularsquaremeshinfo(n, bdytag))
+    
+def regularsquaremeshinfo(n = 1, bdytag="BDY"):
     """ Returns a mesh object for the unit square composed of n*n squares each sub-divided into 2 triangles"""
     n1 = n+1
     points = np.linspace(0,1,n1)[np.mgrid[0:n1,0:n1]].reshape(2,-1).transpose()
@@ -35,9 +38,12 @@ def regularsquaremesh(n = 1, bdytag="BDY"):
     bdyfaces = np.vstack((bdy1, bdy1 + n1*n, bdy1*n1, bdy1*n1 + n))
     boundary = [(bdytag, tuple(bf)) for bf in bdyfaces]
     geomEntity=[1]*len(elements)
-    return pmm.Mesh(points, elements, geomEntity, boundary, 2)
+    return pmm.SimplicialMeshInfo(points, elements, geomEntity, boundary, 2)
 
 def regularrectmesh(xlims, ylims, nx, ny):
+    return pmm.meshFromInfo(regularrectmeshinfo(xlims,ylims, nx,ny))
+
+def regularrectmeshinfo(xlims, ylims, nx, ny):
     ''' Returns a mesh object for the rectangle xlims x ylims consisting of 
         nx x ny rectangles, each subdivided into 2 triangles.
         The edges of the grid are labelled 1,2,3,4 anti-clockwise from the left-hand edge (assuming the origin is in the lower-left)
@@ -57,7 +63,7 @@ def regularrectmesh(xlims, ylims, nx, ny):
     cc = np.array([[c[0],c[2]],[c[1],c[3]]]) # hold tight, it's a 4-dimensional array
     bdys = [(bdyid+1, face) for bdyid, side in enumerate([cc[0,:,0,:].T,cc[:,0,:,0].T,cc[1,:,-1,:].T,cc[:,1,:,-1].T]) for face in side]
     geomEntity = [5]*len(elts)
-    return pmm.Mesh(nodes, elts, geomEntity, bdys, 2)
+    return pmm.SimplicialMeshInfo(nodes, elts, geomEntity, bdys, 2)
     
     
     

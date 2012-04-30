@@ -27,7 +27,7 @@ mesh = tum.regularsquaremesh(n, bdytag)
 #print mesh.elements
     
 problem = psp.Problem(mesh, k, bnddata)
-computation = psc.Computation(problem, pcb.planeWaveBases(2,k,5), pcp.HelmholtzSystem, 13)
+computation = psc.Computation(problem, pcb.planeWaveBases(2,k,5), 13, pcp.HelmholtzSystem)
 
 solbrutal = computation.solution(psi.BrutalSolver(np.complex, psi.DomainDecompOperator(mesh)).solve)
 #print "DD solve"

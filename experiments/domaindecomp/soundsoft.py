@@ -27,7 +27,7 @@ with puf.pushd('../../examples/2D'):
     mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
     
 problem = psp.Problem(mesh, k, bnddata)
-computation = psc.Computation(problem, pcb.planeWaveBases(2,k,21), pcp.HelmholtzSystem, 5)
+computation = psc.Computation(problem, pcb.planeWaveBases(2,k,21), 5, pcp.HelmholtzSystem)
 
 #solbrutal = computation.solution(psi.BrutalSolver(np.complex, psi.DomainDecompOperator(mesh)).solve)
 soldd = computation.solution(psi.IndirectSolver(np.complex, psi.DomainDecompOperator(mesh)).solve)
