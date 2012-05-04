@@ -193,10 +193,10 @@ class DistributedPartition(Partition):
     pass    
 
 class MeshView(object):
-    def __init__(self, basicinfo, topology, partition):
+    def __init__(self, basicinfo, topology = None, partition=None):
         self.basicinfo = basicinfo
-        self.topology = topology
-        self.part = partition
+        self.topology = Topology(basicinfo) if topology is None else topology
+        self.part = Partition(basicinfo, self.topology) if partition is None else partition
         
         
     dim = property(lambda self: self.basicinfo.dim)
@@ -204,6 +204,7 @@ class MeshView(object):
     elements = property(lambda self: self.basicinfo.elements)
     nodes = property(lambda self: self.basicinfo.nodes)
     nnodes = property(lambda self: self.basicinfo.nnodes)
+    faces = property(lambda self: self.basicinfo.faces)
     nfaces = property(lambda self: self.basicinfo.nfaces)
     ftoe = property(lambda self: self.basicinfo.ftoe)
     etof = property(lambda self: self.basicinfo.etof)

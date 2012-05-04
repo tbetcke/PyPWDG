@@ -302,4 +302,4 @@ class FaceToScaledBasis(FaceToBasis):
         e = self.mesh.ftoe[faceid] 
         (vals, derivs) = super(FaceToScaledBasis, self).evaluate(faceid, points)
         return (vals * self.entityton[e](points).reshape(-1,1), derivs)    
-     
+    
