@@ -68,7 +68,7 @@ def compute_facedata(nodes, faces, nonfacevertex, dim, vdim):
     dirs = np.tensordot(vertices, M, ([1],[1]))
     # Ensure that the directions live in the last dimension
     directions = np.transpose(dirs, (0,2,1))
-    
+    print directions.shape
     normals=np.zeros((len(vertices),vdim))
     
     if dim==1:

@@ -36,7 +36,7 @@ def skeletonMesh(mesh, skeletontag):
 
 def skeletonBasis(skelemesh, basisrule):
     etob = {}
-    ei = pcbu.ElementInfo(mesh, 0)
+    ei = pcbu.ElementInfo(skelemesh, 0)
     for e in skelemesh.partition:
         etob[e] = basisrule.populate(ei.info(e))
     return pcbu.CellToBases(etob)

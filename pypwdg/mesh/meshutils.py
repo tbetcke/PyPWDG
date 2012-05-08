@@ -59,6 +59,7 @@ class MeshElementQuadratures(object):
         # for each face.  So just pick the first face associated with this element
 
         dirs = self.__mesh.directions[self.__mesh.etof[eltid][0]]
+        print dirs.shape, self.__qp.shape
         return dirs[0] + numpy.dot(self.__qp, dirs[1:])
 
     def quadweights(self, eltid):
