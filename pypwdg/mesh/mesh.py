@@ -43,7 +43,7 @@ def gmshMesh(*args, **kwargs):
     meshview = MeshView(meshinfo, topology, partition)
     return meshview
 
-def compute_facedata(nodes, faces, nonfacevertex, dim):
+def compute_facedata(nodes, faces, nonfacevertex, dim, vdim):
     """ Compute directions, normals and determinants for the faces given by relevantfaces 
     
         The following arrays are computed:
@@ -63,12 +63,13 @@ def compute_facedata(nodes, faces, nonfacevertex, dim):
     vertices = np.array([[nodes[fv] for fv in fvs] + [nodes[otherv]] for fvs, otherv in zip(faces, nonfacevertex)])
     # M picks out the first coord and the differences to the others
     M = np.bmat([[np.mat([[1]]), np.zeros((1,dim))], [np.ones((dim,1))*-1, np.eye(dim)]])
+    print vertices.shape, M.shape
     # Apply the differencing matrix to each set of coordinates
     dirs = np.tensordot(vertices, M, ([1],[1]))
     # Ensure that the directions live in the last dimension
     directions = np.transpose(dirs, (0,2,1))
     
-    normals=np.zeros((len(vertices),dim))
+    normals=np.zeros((len(vertices),vdim))
     
     if dim==1:
         normals[:,0]=directions[:,1,0]
@@ -86,7 +87,7 @@ def compute_facedata(nodes, faces, nonfacevertex, dim):
     dets = np.sqrt(np.sum(normals * normals, axis = 1))
             
     normals *= (-np.sign(np.sum(normals * directions[:,-1,:], axis = 1)) / dets ).reshape((-1,1))
-    if dim==1: dets=np.ones(dets.shape,dtype=np.float64)
+   # if dim==1: dets=np.ones(dets.shape,dtype=np.float64)   ??????????????????
 
     return directions, normals, dets
 
@@ -107,9 +108,10 @@ def partition(elements, nnodes, nparts, dim):
 
 @ppd.immutable    
 class SimplicialMeshInfo(object):
-    def __init__(self, nodes, elements, elemIdentity, boundaries, dim):
+    def __init__(self, nodes, elements, elemIdentity, boundaries, dim, vdim = None):
         self.dim = dim
-        self.elements = elements
+        vdim = dim if vdim is None else vdim
+        self.elements = map(tuple, elements)
         self.nodes = np.array(nodes)
         self.elemIdentity=elemIdentity
         self.nnodes=len(nodes)        
@@ -125,7 +127,7 @@ class SimplicialMeshInfo(object):
         self.ftoe = np.repeat(np.arange(self.nelements), self.dim+1)
         self.etof = np.arange(self.nfaces).reshape((-1, self.dim+1))
         self.elttofaces = ss.csr_matrix((np.ones(self.nfaces), np.concatenate(self.etof), np.cumsum([0] + map(len, self.etof))))        
-        self.directions, self.normals, self.dets = compute_facedata(nodes, self.faces, nonfacevertex, dim)
+        self.directions, self.normals, self.dets = compute_facedata(nodes, self.faces, nonfacevertex, dim, vdim)
         self.boundaries = boundaries
     
     def partition(self, nparts):
@@ -169,7 +171,7 @@ class Topology(object):
         bdyunassigned = (self.boundary * nonboundary).getnnz()        
         if bdyunassigned:
             print "Warning: %s non-internal faces not assigned to physical entities" %bdyunassigned
-            print [self.faces[fid] for fid in self.boundary.diagonal().nonzero()[0] if self.faceentities[fid]==None]
+            print [meshinfo.faces[fid] for fid in self.boundary.diagonal().nonzero()[0] if self.faceentities[fid]==None]
 
 
 class Partition(object):
@@ -177,12 +179,12 @@ class Partition(object):
         self.partition = np.arange(basicinfo.nelements) if partition is None else partition 
         self.partidx = partidx
         self.fs = basicinfo.etof[partition].ravel()
-        fpindex = np.zeros((basicinfo.nfaces,), dtype=int)
-        fpindex[self.fs] = 1
+        fpindicator = np.zeros((basicinfo.nfaces,), dtype=int)
+        fpindicator[self.fs] = 1
         nf = basicinfo.nfaces
-        self.fp = ss.spdiags(fpindex, [0], nf, nf)
+        self.fp = ss.spdiags(fpindicator, [0], nf, nf)
         
-        self.cutfaces = (topology.internal - topology.connectivity) * fpindex
+        self.cutfaces = (topology.internal - topology.connectivity) * fpindicator
         cutelts = basicinfo.elttofaces * self.cutfaces
         self.neighbourelts = (cutelts <= -1).nonzero()[0]
         self.innerbdyelts = (cutelts >= 1).nonzero()[0]

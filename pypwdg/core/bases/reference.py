@@ -77,6 +77,8 @@ class Legendre1D(object):
     
     def __init__(self,n):
         self.n = n+1
+        self.volume = puq.legendrequadrature(n+1)
+        self.face = puq.pointquadrature()
         
     def values(self, x):
         return pup.jacobidnorm(self.n-1,0,0,0,x.ravel())
