@@ -65,7 +65,9 @@ class MeshElementQuadratures(object):
     def quadweights(self, eltid):
         """ return the quadrature weights on face faceid"""
         # The area of a simplex is 1/n! times the area of a parallepiped;
-        area = abs(nl.det(self.__mesh.directions[self.__mesh.etof[eltid][0]][1:]))# / math.factorial(self.__mesh.dim))
+#        area = abs(nl.det(self.__mesh.directions[self.__mesh.etof[eltid][0]][1:]))# / math.factorial(self.__mesh.dim))
+        area = abs(np.prod(nl.qr(self.__mesh.directions[self.__mesh.etof[eltid][0]][1:].T, mode='r').diagonal()))
+        
         return self.__qw * area
 
 class ScaledQuadweights:

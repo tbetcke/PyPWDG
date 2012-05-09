@@ -18,7 +18,7 @@ class HelmholtzBoundary(object):
         self.B = self.mesh.entityfaces[entity]
         self.delta = delta
         
-    def load(self):
+    def load(self, collapseload = True):
         ''' The load vector (due to the boundary conditions)'''            
         delta = self.delta
         B = self.B
@@ -26,7 +26,7 @@ class HelmholtzBoundary(object):
         GB = self.loadassembly.assemble([[(1-delta) * B, (1-delta) *B], 
                                     [-delta* B,     -delta *B]])
                 
-        return pms.sumrhs(self.mesh,GB)
+        return pms.sumrhs(self.mesh, GB) if collapseload else pms.sumleftfaces(self.mesh,GB)
         
     def stiffness(self):
         delta = self.delta
@@ -53,7 +53,11 @@ class HelmholtzSystem(object):
         self.volumeassembly = computationinfo.volumeAssembly()
         self.weightedassembly = computationinfo.volumeAssembly(True)
         self.problem = computationinfo.problem 
-        self.boundaries = [HelmholtzBoundary(computationinfo, entity, bdyinfo, delta) for (entity, bdyinfo) in self.problem.bdyinfo.items()]
+        self.computationinfo = computationinfo
+        self.boundaries = [self.getBoundary(entity, bdyinfo) for (entity, bdyinfo) in self.problem.bdyinfo.items()]
+
+    def getBoundary(self, entity, bdyinfo):
+        return HelmholtzBoundary(self.computationinfo, entity, bdyinfo, self.delta) 
 
     @ppd.parallelmethod(None, ppd.tuplesum)        
     def getSystem(self, dovolumes = False):

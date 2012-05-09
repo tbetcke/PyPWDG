@@ -28,6 +28,9 @@ def sumfaces(mesh,S):
     """
     return (S * mesh.elttofaces.transpose()).__rmul__(mesh.elttofaces)
 
+def sumleftfaces(mesh, G):
+    return G.__rmul__(mesh.elttofaces)
+
 def sumrhs(mesh,G):
     """For the rows, sum the faces that contribute to each element; for the cols, sum everything
     

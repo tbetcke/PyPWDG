@@ -21,7 +21,7 @@ class Affine(object):
     
     def __calcinverse(self):
         if self.__inverse == None:
-            invlinear = nl.inv(self.linear)
+            invlinear = nl.pinv(self.linear) # TODO: Not clear that pinv is the correct thing to do here.  Could manually construct an orthogonal vector
             invoffset = -np.dot(self.offset, invlinear)
             self.__inverse = Affine(invoffset, invlinear, self)
         return self.__inverse
