@@ -9,6 +9,12 @@ import pypwdg.setup.indirect as psi
 import pypwdg.core.physics as pcp
 import pypwdg.output.solution as pos
 import pypwdg.parallel.decorate as ppd
+import pypwdg.mesh.meshutils as pmmu
+import pypwdg.utils.quadrature as puq
+import pypwdg.core.assembly as pca
+import pypwdg.core.vandermonde as pcv
+import pypwdg.mesh.structure as pms
+
 import pypwdg.test.utils.mesh as tum
 import numpy as np
 np.set_printoptions(threshold='nan')
@@ -23,9 +29,11 @@ class SkeletonPartition(pmm.Partition):
 class SkeletonFaceMap(object):
     
     def __init__(self, mesh, skeletontag):
+        print "SkeletonFaceMap.init"
         self.indicator = mesh.topology.faceentities==skeletontag
-        self.index = np.ones(mesh.nfaces, dtype=int)  -1
+        self.index = np.ones(mesh.nfaces, dtype=int) * -1
         self.index[self.indicator] = np.arange(sum(self.indicator))
+        self.skeltomeshindex = self.indicator.nonzero()[0]
         self.mesh = mesh
         
     def expand(self, skeleeltarray):
@@ -34,7 +42,7 @@ class SkeletonFaceMap(object):
         return meshfacearray
     
     def partition(self):
-        return mesh.facepartition.diagonal()[self.indicator].nonzero()[0]
+        return self.mesh.facepartition.diagonal()[self.indicator].nonzero()[0]
 
                         
 import pypwdg.parallel.main
@@ -59,18 +67,15 @@ def skeletonBasis(skelemesh, basisrule):
         print e
         etob[e] = basisrule.populate(ei.info(e))
     return pcbu.CellToBases(etob, np.arange(skelemesh.nelements))
-    
 
 class SkeletonFaceToBasis(object):
     def __init__(self, skeleelttobasis, skeletonfacemap):
         self.elttobasis = skeleelttobasis
-        self.numbases = skeletonfacemap.expand(skeleelttobasis.getSizes())
-        self.indices = np.cumsum(np.concatenate(([0], self.numbases)))
-        self.skeletonfaceindex = skeletonfacemap.index
+        self.skeletonfacemap = skeletonfacemap
              
     def evaluate(self, faceid, points):        
         print "SkeletonFaceToBasis.evaluate %s"%faceid
-        skeletonelt = self.skeletonfaceindex[faceid]
+        skeletonelt = self.skeletonfacemap.index[faceid]
         print skeletonelt
         if skeletonelt >=0: 
             vals = self.elttobasis.getValues(skeletonelt, points)
@@ -79,8 +84,17 @@ class SkeletonFaceToBasis(object):
             return (vals,derivs)
         else:
             raise Exception('Bad faceid for Skeleton %s,%s'%(faceid, skeletonelt))
+    
+    @property
+    def numbases(self):
+        return self.skeletonfacemap.expand(self.elttobasis.getSizes())
+    
+    @property
+    def indices(self):
+        return np.cumsum(np.concatenate(([0], self.numbases)))
 
 nparts = 3
+nquad = 10
 k = 10
 n = 5
 g = pcb.FourierHankel([-1,-1], [0], k)
@@ -104,32 +118,39 @@ meshinfo2 = pmm.SimplicialMeshInfo(meshinfo.nodes, meshinfo.elements, meshinfo.e
 topology2 = pmm.Topology(meshinfo2)
 
 mortarrule = pcbr.ReferenceBasisRule(pcbr.Legendre1D(2))
-
-class DummySolver(object):
-    def __init__(self, skelftob):
-        self.skelftob = skelftob
-        
-    def solve(self, system, sysargs, syskwargs):
-        S,G = system.getSystem(*sysargs, **syskwargs)
-        M = S.tocsr()
-        print M
-        print G
-        L = system.getBoundary('INTERNAL', (pcbd.BoundaryCoefficients([-1j*k, 1], [1, 0]), self.skelftob))
-        print L.load(False).tocsr()
-        print L.stiffness().tocsr()
-
+Bs = []
 for part in parts:
     mesh = pmm.MeshView(meshinfo2, topology2, part)
     skeletonmesh, skeletonfacemap = skeletonMesh(mesh, 'INTERNAL')
     print skeletonmesh.partition
+    print skeletonmesh.directions.shape, mesh.directions.shape
 
     skeletob  = skeletonBasis(skeletonmesh, mortarrule)
     skelftob = SkeletonFaceToBasis(skeletob, skeletonfacemap)
     
     problem = psp.Problem(mesh, k, bnddata)
-    computation = psc.Computation(problem, pcb.planeWaveBases(2,k,5), 13, pcp.HelmholtzSystem)
+    compinfo = psc.ComputationInfo(problem, pcb.planeWaveBases(2,k,5), nquad)
+    system = pcp.HelmholtzSystem(compinfo)
+    
+    AA,G = system.getSystem()
+    A = AA.tocsr()
+    print A
+    print G
+    B = system.getBoundary('INTERNAL', (pcbd.BoundaryCoefficients([-1j*k, 1], [1, 0]), skelftob))
+    print B.load(False).tocsr()
+    print B.stiffness().tocsr()
+    Bs.append(B.load(False).tocsr())
+    
+    fquad, equad = puq.quadrules(skeletonmesh.dim, nquad)
+    elementquads = pmmu.MeshElementQuadratures(skeletonmesh, equad)
+    ev = pcv.ElementVandermondes(skeletonmesh, skeletob, elementquads)
+    massassembly = pca.Assembly(ev, ev, elementquads.quadweights)
+    E = pms.ElementMatrices(skeletonmesh)
+    M = massassembly.assemble([[E.I, E.Z],[E.Z, E.Z]])
+    print M.tocsr()
+    
+    
 
-    solbrutal = computation.solution(DummySolver(skelftob).solve)
     
     
     
