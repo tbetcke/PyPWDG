@@ -147,17 +147,10 @@ class ElementInfo(object):
         common ground between the Problem class and the above Bases classes.  Can be sub-classed to provide
         more information (see p.c.b.variable)'''
     
-    def __init__(self, mesh, k):
+    def __init__(self, mesh):
         self.mesh = mesh
-        self.kk = k
         self.mems = pmmu.MeshElementMaps(mesh)
-    
-    def k(self, e):
-        return self.kk    
-    
-    def kp(self, e):
-        return lambda p: self.kk
-        
+            
     def origin(self, e):
         return np.sum(self.mesh.nodes[self.mesh.elements[e]], axis=0) / len(self.mesh.elements[e])
     
@@ -189,6 +182,17 @@ class ElementInfo(object):
     
     def vertices(self, e):
         return self.mesh.elements[e]
+            
+class KElementInfo(ElementInfo):
+    def __init__(self, mesh, k):
+        ElementInfo.__init__(self, mesh)
+        self.kk = k
+
+    def k(self, e):
+        return self.kk    
+    
+    def kp(self, e):
+        return lambda p: self.kk
             
 #    
 #@ppd.parallel(None, None)

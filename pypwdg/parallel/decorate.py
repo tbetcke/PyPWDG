@@ -45,7 +45,7 @@ def wrapfn(fn):
     if type(fn) is types.FunctionType: return functionwrapper(fn)
     return fn             
 
-def parallel(scatterargs, reduceop = opadd):     
+def parallel(scatterargs = None, reduceop = opadd):     
     """ A decorator that will parallelise a function (in some circumstances)
     
         The underlying function is run on all available worker processes.  The results are reduced back to

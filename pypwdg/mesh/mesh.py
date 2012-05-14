@@ -188,6 +188,7 @@ class Partition(object):
         cutelts = basicinfo.elttofaces * self.cutfaces
         self.neighbourelts = (cutelts <= -1).nonzero()[0]
         self.innerbdyelts = (cutelts >= 1).nonzero()[0]
+        print 'Neighbour elements', self.neighbourelts
     
 
 @ppd.distribute(lambda n: lambda basicinfo, topology: [((basicinfo, topology, partition, i),{}) for i, partition in enumerate(basicinfo.partition(n))]) 

@@ -6,6 +6,7 @@ Created on Aug 11, 2010
 import pypwdg.mesh.structure as pms
 import pypwdg.parallel.decorate as ppd
 
+@ppd.distribute()
 class HelmholtzBoundary(object):
     def __init__(self, computationinfo, entity, bdyinfo, delta=0.5):
         bdycoeffs, bdyftob = bdyinfo
@@ -17,7 +18,8 @@ class HelmholtzBoundary(object):
         self.mesh = computationinfo.problem.mesh
         self.B = self.mesh.entityfaces[entity]
         self.delta = delta
-        
+    
+    @ppd.parallelmethod()    
     def load(self, collapseload = True):
         ''' The load vector (due to the boundary conditions)'''            
         delta = self.delta
@@ -27,7 +29,8 @@ class HelmholtzBoundary(object):
                                     [-delta* B,     -delta *B]])
                 
         return pms.sumrhs(self.mesh, GB) if collapseload else pms.sumleftfaces(self.mesh,GB)
-        
+    
+    @ppd.parallelmethod()    
     def stiffness(self):
         delta = self.delta
         B = self.B
