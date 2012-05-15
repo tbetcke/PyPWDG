@@ -72,7 +72,7 @@ class SkeletonisedDomain(object):
         
         self.skel2mesh = pus.sparseindex(np.arange(nskelelts), self.skeltomeshindex, nskelelts, self.mesh.nfaces)
         self.skel2oppmesh = self.skel2mesh * mesh.topology.connectivity
-        self.skel2skel = self.skel2mesh * mesh.connectivity * self.skel2mesh.transpose()
+        self.skel2skel = self.skel2oppmesh * self.skel2mesh.transpose()
         
         skeletonelts = self.mesh.faces[self.indicator]
         meshinfo = pmm.SimplicialMeshInfo(self.mesh.nodes, skeletonelts, None, {}, self.mesh.dim -1)
