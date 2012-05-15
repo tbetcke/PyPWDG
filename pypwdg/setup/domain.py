@@ -83,7 +83,7 @@ class MortarComputation(object):
         self.compinfo = psc.ComputationInfo(problem2, basisrule, nquadpoints)
 
         skeleproblem = psp.BasisAllocator(sd.skeletonmesh)
-        skelecompinfo = psc.ComputationInfo(skeleproblem, mortarrule)
+        skelecompinfo = psc.ComputationInfo(skeleproblem, mortarrule, nquadpoints)
         
         skeletob = skelecompinfo.basis 
         skelftob = SkeletonFaceToBasis(skeletob, sd)
