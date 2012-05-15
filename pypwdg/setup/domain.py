@@ -13,6 +13,7 @@ import pypwdg.parallel.decorate as ppd
 
 import scipy.sparse.linalg as ssl
 import numpy as np
+import copy
             
 ''' Domain decomposition iterative procedure:
     - Create sub problems.  
@@ -77,7 +78,8 @@ class MortarComputation(object):
     def __init__(self, problem, basisrule, mortarrule, nquadpoints, systemklass, tracebc, usecache = False, **kwargs):
         skeletontag = 'INTERNAL'
         sd = pmsm.SkeletonisedDomain(problem.mesh, skeletontag)
-        problem2 = psp.Problem(sd.mesh, problem.k, problem.bnddata)
+        problem2 = copy.copy(problem)
+        problem2.mesh = sd.mesh
         self.compinfo = psc.ComputationInfo(problem2, basisrule, nquadpoints)
 
         skeleproblem = psp.BasisAllocator(sd.skeletonmesh)
