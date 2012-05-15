@@ -37,43 +37,52 @@ bnddata={bdytag:pcbd.dirichlet(g)}
 
 bounds=array([[0,1],[0,1]],dtype='d')
 npoints=array([200,200])
-meshinfo = tum.regularsquaremeshinfo(n, bdytag)
-sd = pmsm.SkeletonisedDomain(meshinfo, 'INTERNAL')
-#
-#mesh = pmm.meshFromInfo(meshinfo)
-#
-#cutvertices = pmsm.getCutVertices(mesh)
-#
-#boundaries = list(meshinfo.boundaries)
-#boundaries.append(('INTERNAL', cutvertices))
-#
-#meshinfo2 = pmm.SimplicialMeshInfo(meshinfo.nodes, meshinfo.elements, meshinfo.elemIdentity, boundaries, meshinfo.dim)
-#topology2 = pmm.Topology(meshinfo2)
-
+mesh = tum.regularsquaremesh(n, bdytag)
+problem = psp.Problem(mesh, k, bnddata)
+basisrule = pcb.planeWaveBases(2,k,7)
 mortarrule = pcbr.ReferenceBasisRule(pcbr.Legendre1D(2))
-skeletob = psp.constructBasisOnMesh(sd.skeletonmesh, mortarrule) 
-skelftob = psd.SkeletonFaceToBasis(skeletob, sd)
+tracebc = [1j*k,0]
 
-    
-problem = psp.Problem(sd.mesh, k, bnddata)
-compinfo = psc.ComputationInfo(problem, pcb.planeWaveBases(2,k,5), nquad)
-system = pcp.HelmholtzSystem(compinfo)
-
-AA,G = system.getSystem()
-A = AA.tocsr()
-#    print A
-#    print G
-boundary = pcp.HelmholtzBoundary(compinfo, 'INTERNAL', (pcbd.BoundaryCoefficients([-1j*k, 1], [1, 0]), skelftob))
-#    print B.load(False).tocsr()
-#    print B.stiffness().tocsr()
-B = boundary.load(False).tocsr()
-
-mp.spy(A, markersize = 1)
-mp.figure()
-mp.spy(B, markersize = 1)
-mp.show()
+mc = psd.MortarComputation(problem, basisrule, mortarrule, nquad, pcp.HelmholtzSystem, tracebc)
+sol = mc.solution(psd.BrutalSolver(np.complex).solve)
 
 #
+#sd = pmsm.SkeletonisedDomain(meshinfo, 'INTERNAL')
+##
+##mesh = pmm.meshFromInfo(meshinfo)
+##
+##cutvertices = pmsm.getCutVertices(mesh)
+##
+##boundaries = list(meshinfo.boundaries)
+##boundaries.append(('INTERNAL', cutvertices))
+##
+##meshinfo2 = pmm.SimplicialMeshInfo(meshinfo.nodes, meshinfo.elements, meshinfo.elemIdentity, boundaries, meshinfo.dim)
+##topology2 = pmm.Topology(meshinfo2)
+#
+#mortarrule = pcbr.ReferenceBasisRule(pcbr.Legendre1D(2))
+#skeletob = psp.constructBasisOnMesh(sd.skeletonmesh, mortarrule) 
+#skelftob = psd.SkeletonFaceToBasis(skeletob, sd)
+#
+#    
+#problem = psp.Problem(sd.mesh, k, bnddata)
+#compinfo = psc.ComputationInfo(problem, pcb.planeWaveBases(2,k,5), nquad)
+#system = pcp.HelmholtzSystem(compinfo)
+#
+#AA,G = system.getSystem()
+#A = AA.tocsr()
+##    print A
+##    print G
+#boundary = pcp.HelmholtzBoundary(compinfo, 'INTERNAL', (pcbd.BoundaryCoefficients([-1j*k, 1], [1, 0]), skelftob))
+##    print B.load(False).tocsr()
+##    print B.stiffness().tocsr()
+#B = boundary.load(False).tocsr()
+#
+#mp.spy(A, markersize = 1)
+#mp.figure()
+#mp.spy(B, markersize = 1)
+#mp.show()
+#
+##
 #Bs = []
 #for part in parts:
 #    mesh = pmm.MeshView(meshinfo2, topology2, part)
