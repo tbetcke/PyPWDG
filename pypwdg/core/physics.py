@@ -39,6 +39,11 @@ class HelmholtzBoundary(object):
         SB = self.bdyassembly.assemble([[(1-delta) * B, (1-delta)*B],
                               [-delta * B, -delta *B]])
         return pms.sumfaces(self.mesh,SB)     
+    
+    @ppd.parallelmethod()
+    def trace(self):
+        ''' projects onto the space spanned by the bdyinfo '''
+        return pms.sumleftfaces(self.mesh, )
 
             
 

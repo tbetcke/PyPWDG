@@ -53,15 +53,15 @@ class SkeletonPartition(pmm.Partition):
 #    
     
 class SkeletonisedDomain(object):
-    def __init__(self, meshinfo, skeletontag):    
-        self.underlyingmesh = pmm.meshFromInfo(meshinfo)
-        cutvertices = getCutVertices(self.underlyingmesh)
+    def __init__(self, mesh, skeletontag):    
+        meshinfo = mesh.basicinfo
+        cutvertices = getCutVertices(mesh)
         
         boundaries = list(meshinfo.boundaries)
         boundaries.append((skeletontag, cutvertices))
         
         meshinfo2 = pmm.SimplicialMeshInfo(meshinfo.nodes, meshinfo.elements, meshinfo.elemIdentity, boundaries, meshinfo.dim)
-        self.mesh = pmm.MeshView(meshinfo2, pmm.Topology(meshinfo2), self.underlyingmesh.part)
+        self.mesh = pmm.MeshView(meshinfo2, pmm.Topology(meshinfo2), mesh.part)
 
         self.indicator = self.mesh.topology.faceentities==skeletontag
 #        print self.indicator
@@ -71,13 +71,13 @@ class SkeletonisedDomain(object):
         self.skeltomeshindex = self.indicator.nonzero()[0]
         
         self.skel2mesh = pus.sparseindex(np.arange(nskelelts), self.skeltomeshindex, nskelelts, self.mesh.nfaces)
-        self.skel2oppmesh = self.skel2mesh * self.underlyingmesh.topology.connectivity
-        self.skel2skel = self.skel2mesh * self.underlyingmesh.connectivity * self.skel2mesh.transpose()
+        self.skel2oppmesh = self.skel2mesh * mesh.topology.connectivity
+        self.skel2skel = self.skel2mesh * mesh.connectivity * self.skel2mesh.transpose()
         
         skeletonelts = self.mesh.faces[self.indicator]
         meshinfo = pmm.SimplicialMeshInfo(self.mesh.nodes, skeletonelts, None, {}, self.mesh.dim -1)
         topology = pmm.Topology(meshinfo)
-        partition = SkeletonPartition(self.underlyingmesh, meshinfo, topology, self.indicator, self.index)
+        partition = SkeletonPartition(mesh, meshinfo, topology, self.indicator, self.index)
         
         self.skeletonmesh =  pmm.MeshView(meshinfo, topology, partition)
 
