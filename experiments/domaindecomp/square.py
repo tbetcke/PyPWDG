@@ -15,7 +15,7 @@ import pypwdg.parallel.main
 from numpy import array,sqrt
 
 k = 10
-n = 2
+n = 6
 g = pcb.FourierHankel([-1,-1], [0], k)
 bdytag = "BDY"
 bnddata={bdytag:pcbd.dirichlet(g)}
@@ -27,7 +27,7 @@ mesh = tum.regularsquaremesh(n, bdytag)
 #print mesh.elements
     
 problem = psp.Problem(mesh, k, bnddata)
-computation = psc.Computation(problem, pcb.planeWaveBases(2,k,5), 13, pcp.HelmholtzSystem)
+computation = psc.Computation(problem, pcb.planeWaveBases(2,k,9), 13, pcp.HelmholtzSystem)
 
 solbrutal = computation.solution(psi.BrutalSolver(np.complex, psi.DomainDecompOperator(mesh)).solve)
 #print "DD solve"
@@ -47,4 +47,4 @@ print np.max(np.abs(soldirect.x - solbrutal.x))
 #solindirect = computation.solution(psi.IndirectSolver().solve)
 #print solindirect.x[0:20]
 
-#pos.standardoutput(computation, soldirect, 20, bounds, npoints, 'soundsoft')
+pos.standardoutput(soldirect, 20, bounds, npoints, 'square', mploutput = True)

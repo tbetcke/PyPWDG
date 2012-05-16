@@ -10,78 +10,52 @@ import scipy.sparse as ss
 import pypwdg.mesh.mesh as pmm
 
 @ppd.parallel()
-def getCutVertices(mesh):
-    return list(mesh.faces[mesh.cutfaces==1].flatten())
+def getCutFaces(mesh):
+    ''' Extract the faces along which a partitioned mesh has been cut'''
+    return map(tuple, list(mesh.faces[mesh.cutfaces==1]))
 
 @ppd.distribute()
 class SkeletonPartition(pmm.Partition):
+    ''' A partition of a Skeleton mesh.  self.neighbourelts is updated to be the faces on the other side of the cut'''
     def __init__(self, meshview, skelemeshinfo, skelemeshtopology, skeleindicator, skeleindex):
         pmm.Partition.__init__(self, skelemeshinfo, skelemeshtopology, meshview.facepartition.diagonal()[skeleindicator].nonzero()[0])
-        self.neighbourelts = skeleindex[np.array(meshview.connectivity * skeleindicator, dtype=bool)]
-        
-#        
-#class SkeletonFaceMap(object):
-#    
-#    def __init__(self, mesh, skeletontag):
-##        print "SkeletonFaceMap.init"
-#        self.indicator = mesh.topology.faceentities==skeletontag
-#        self.index = np.ones(mesh.nfaces, dtype=int) * -1
-#        self.index[self.indicator] = np.arange(sum(self.indicator))
-#        self.skeltomeshindex = self.indicator.nonzero()[0]
-#        self.mesh = mesh
-#        
-#    def expand(self, skeleeltarray):
-#        meshfacearray = np.zeros(len(self.indicator), dtype=skeleeltarray.dtype)
-#        meshfacearray[self.indicator] = skeleeltarray
-#        return meshfacearray
-#    
-#    def partition(self):
-#        return self.mesh.facepartition.diagonal()[self.indicator].nonzero()[0]
-#
-#
-#def skeletonMesh(mesh, skeletontag):
-#    ''' Creates a codimension 1 submesh consisting of the faces associated with the boundary highlighted by skeletontag
-#        Also returns the element->face map from the submesh back to the original mesh
-#    '''
-#    skeletonfacemap = SkeletonFaceMap(mesh, skeletontag)
-#    skeletonelts = mesh.faces[skeletonfacemap.indicator]
-#    meshinfo = pmm.SimplicialMeshInfo(mesh.nodes, skeletonelts, None, {}, mesh.dim -1)
-#    topology = pmm.Topology(meshinfo)
-#    partition = SkeletonPartition(mesh, meshinfo, topology, skeletonfacemap)
-#    return pmm.MeshView(meshinfo, topology, partition), skeletonfacemap
-#    
-#    
+        self.neighbourelts = skeleindex[np.array(meshview.connectivity.transpose() * skeleindicator, dtype=bool)]
+#        print "SkeletonPartition", self.partition, self.neighbourelts
+#        print skeleindicator, skeleindex, meshview.connectivity
     
 class SkeletonisedDomain(object):
+    ''' Information about a decomposed domain, along with its skeleton mesh.  '''
     def __init__(self, mesh, skeletontag):    
         meshinfo = mesh.basicinfo
-        cutvertices = getCutVertices(mesh)
+        cutvertices = getCutFaces(mesh)
         
-        boundaries = list(meshinfo.boundaries)
-        boundaries.append((skeletontag, cutvertices))
+        boundaries = list(meshinfo.boundaries) # Get the boundaries from the underlying mesh
+        boundaries.extend([(skeletontag, vs) for vs in cutvertices]) # And add a new boundary, labelled 'skeletontag'
         
-        meshinfo2 = pmm.SimplicialMeshInfo(meshinfo.nodes, meshinfo.elements, meshinfo.elemIdentity, boundaries, meshinfo.dim)
+        meshinfo2 = pmm.SimplicialMeshInfo(meshinfo.nodes, meshinfo.elements, meshinfo.elemIdentity, boundaries, meshinfo.dim) # Construct a new mesh, with the new boundary information
         self.mesh = pmm.MeshView(meshinfo2, pmm.Topology(meshinfo2), mesh.part)
 
-        self.indicator = self.mesh.topology.faceentities==skeletontag
+        self.indicator = self.mesh.topology.faceentities==skeletontag #Identify the faces that are along the skeleton boundary
 #        print self.indicator
         nskelelts = sum(self.indicator)
         self.index = np.ones(self.mesh.nfaces, dtype=int) * -1
-        self.index[self.indicator] = np.arange(nskelelts)
-        self.skeltomeshindex = self.indicator.nonzero()[0]
+        self.index[self.indicator] = np.arange(nskelelts) # self.index maps from mesh faces to the skeleton elements (contains -1 for non-skeleton faces)
+        self.skeltomeshindex = self.indicator.nonzero()[0] # the indices of the faces in the mesh that are on the skeleton
         
-        self.skel2mesh = pus.sparseindex(np.arange(nskelelts), self.skeltomeshindex, nskelelts, self.mesh.nfaces)
-        self.skel2oppmesh = self.skel2mesh * mesh.topology.connectivity
-        self.skel2skel = self.skel2oppmesh * self.skel2mesh.transpose()
+        self.skel2mesh = pus.sparseindex(np.arange(nskelelts), self.skeltomeshindex, nskelelts, self.mesh.nfaces) # A sparse matrix that maps skeleton elements to mesh faces
+        self.skel2oppmesh = self.skel2mesh * mesh.topology.connectivity # A sparse matrix that maps skeleton elements to the opposite mesh face
+        self.skel2skel = self.skel2oppmesh * self.skel2mesh.transpose() # A sparse matrix that maps skeleton elements to the neighbouring skeleton element
+#        print self.skel2skel
         
         skeletonelts = self.mesh.faces[self.indicator]
         meshinfo = pmm.SimplicialMeshInfo(self.mesh.nodes, skeletonelts, None, {}, self.mesh.dim -1)
         topology = pmm.Topology(meshinfo)
         partition = SkeletonPartition(mesh, meshinfo, topology, self.indicator, self.index)
         
-        self.skeletonmesh =  pmm.MeshView(meshinfo, topology, partition)
+        self.skeletonmesh =  pmm.MeshView(meshinfo, topology, partition) # Build the skeleton mesh.  N.B. it's topology should probably not be trusted.
 
     def expand(self, skeleeltarray):
+        ''' Given data in an array corresponding to skeleton elements, create an array with the same data on the corresponding mesh faces '''
         meshfacearray = np.zeros(len(self.indicator), dtype=skeleeltarray.dtype)
         meshfacearray[self.indicator] = skeleeltarray
         return meshfacearray

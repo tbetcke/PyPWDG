@@ -108,6 +108,16 @@ def partition(elements, nnodes, nparts, dim):
 
 @ppd.immutable    
 class SimplicialMeshInfo(object):
+    ''' Defines a mesh with simplicial elements.
+    
+        Parameters:
+            nodes: list of nodes
+            elements: list of dim+1-tuples
+            elemIdentity: confusingly named parameter that gives the geometric entity that each element belongs to
+            boundaries: list of (tag, [nodes]) tuples that indicates that the face defined by [nodes] belongs to boundary 'tag'
+            dim: dimension of the elements
+            vdim: dimension of the space in which the mesh is embedded (e.g. a surface mesh would have dim=2 and vdim=3)
+    '''             
     def __init__(self, nodes, elements, elemIdentity, boundaries, dim, vdim = None):
         self.dim = dim
         vdim = dim if vdim is None else vdim
@@ -135,6 +145,7 @@ class SimplicialMeshInfo(object):
 
 @ppd.immutable                
 class Topology(object):
+    ''' Calculate and store the topological information for a mesh''' 
     def __init__(self, meshinfo):
         # the face to vertex map        
         ftov = ss.csr_matrix((np.ones(meshinfo.nfaces * meshinfo.dim), meshinfo.faces.ravel(), np.arange(0, meshinfo.nfaces+1)*meshinfo.dim), dtype=int)
@@ -145,6 +156,8 @@ class Topology(object):
         self.entities = set() # Used for ray tracing
         self.faceentities = np.empty(meshinfo.nfaces, dtype=object)
         nb = np.ones(meshinfo.nfaces, dtype=int)
+        
+        # this allows you to do something quite dangerous with the boundaries.  It's best to define boundaries in terms of faces (not larger collections of vertices)
         for entityid, bnodes in meshinfo.boundaries:
             vs = set(bnodes)
             for v in vs:
@@ -175,6 +188,7 @@ class Topology(object):
 
 
 class Partition(object):
+    ''' A partition of a mesh'''
     def __init__(self, basicinfo, topology, partition=None, partidx=0):
         self.partition = np.arange(basicinfo.nelements) if partition is None else partition 
         self.partidx = partidx
@@ -188,14 +202,20 @@ class Partition(object):
         cutelts = basicinfo.elttofaces * self.cutfaces
         self.neighbourelts = (cutelts <= -1).nonzero()[0]
         self.innerbdyelts = (cutelts >= 1).nonzero()[0]
+        print "cut faces", (self.cutfaces==1).nonzero()[0], sum(self.cutfaces==1)
         print 'Neighbour elements', self.neighbourelts
     
 
 @ppd.distribute(lambda n: lambda basicinfo, topology: [((basicinfo, topology, partition, i),{}) for i, partition in enumerate(basicinfo.partition(n))]) 
 class DistributedPartition(Partition):
+    ''' A helper class that creates one mesh partition per worker process'''
     pass    
 
 class MeshView(object):
+    ''' Pulls all the mesh information together.  Provides a partition-specific view onto bits of the topology
+    
+        todo: document all the properties.
+    '''
     def __init__(self, basicinfo, topology = None, partition=None):
         self.basicinfo = basicinfo
         self.topology = Topology(basicinfo) if topology is None else topology
@@ -236,4 +256,5 @@ def meshFromInfo(meshinfo):
     return MeshView(meshinfo, topology, partition)
 
 def Mesh(points, elements, geomEntity, boundary, dim):
+    ''' Helper function to compute a new simplicial mesh ''' 
     return meshFromInfo(SimplicialMeshInfo(points, elements, geomEntity, boundary, dim))
