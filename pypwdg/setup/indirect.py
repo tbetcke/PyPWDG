@@ -92,15 +92,15 @@ class GMRESSolver(object):
         b = operator.rhs()        
         n = len(b)
 #        print b.shape
-        lo = ssl.LinearOperator((n,n), self.op.multiply, dtype=self.dtype)
-        pc = ssl.LinearOperator((n,n), self.op.precond, dtype=self.dtype) if hasattr(self.op, 'precond') else None
+        lo = ssl.LinearOperator((n,n), operator.multiply, dtype=self.dtype)
+        pc = ssl.LinearOperator((n,n), operator.precond, dtype=self.dtype) if hasattr(operator, 'precond') else None
         
 #        x, status = ssl.bicgstab(lo, b, callback = ItCounter(), M=pc)
         x, status = ssl.gmres(lo, b, callback = ItCounter(), M=pc, restart=450)
         print status
 
-        if hasattr(self.op, 'postprocess'):
-            x = self.op.postprocess(x)
+        if hasattr(operator, 'postprocess'):
+            x = operator.postprocess(x)
         return x
             
 #
