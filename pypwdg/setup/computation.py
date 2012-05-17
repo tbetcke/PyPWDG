@@ -43,16 +43,28 @@ class DirectSolver(object):
         print "umfpacksolve"
         return solve(M,b)
         
-    def solve(self, system, sysargs, syskwargs):
-        S,G = system.getSystem(*sysargs, **syskwargs)
-        M = S.tocsr()
+    def solve(self, operator):
+        M = operator.mass()
         print "Solve linear system of equations ",M.shape
         if self.callback:
             self.callback(M)
-        b = np.array(G.todense()).squeeze()
+        b = operator.rhs()
         x = self.solvemethod(M,b).squeeze()
         print "Relative residual: ", np.linalg.norm(M * x -b) / np.linalg.norm(x)
-        return x        
+        return x
+
+class DirectOperator():
+    def setup(self, system, sysargs, syskwargs):
+        S,G = system.getSystem(*sysargs, **syskwargs)
+        self.M = S.tocsr()
+        self.b = np.array(G.todense()).squeeze()
+    
+    def mass(self):
+        return self.M
+    
+    def rhs(self):
+        return self.b
+    
 
 class ComputationInfo(object):
     ''' A class to manage the construction of a linear system for a Galerkin approximation to a problem and the computation of its solution
@@ -102,19 +114,25 @@ class Computation(object):
         
         systemklass: The class of the object that will construct the stiffness matrix and load vector (see p.c.p.HelmholtzSystem);
                     must have a getSystem method.
-    '''
-    def __init__(self, problem, basisrule, nquadpoints, systemklass, usecache = False, **kwargs):
-        self.computationinfo = ComputationInfo(problem, basisrule, nquadpoints, usecache)
-        self.system = systemklass(self.computationinfo, **kwargs)
                     
-    def solution(self, solve, *args, **kwargs):
-        ''' Solve the system 
-        
-            solver: a function that takes a vbsr matrix S and a csr matrix G and returns S \ G
-            args, kwargs: additional parameters to pass to the getSystem method
-        '''
-        x = solve(self.system, args, kwargs)
-        return Solution(self.computationinfo, x)        
+        code that previously used Computation should probably switch to DirectComputation
+    '''
+    def __init__(self, computationinfo, systemklass, **kwargs):
+        self.computationinfo = computationinfo
+        self.system = systemklass(computationinfo, **kwargs)
+                
+    def solution(self, operator, solver, *sysargs, **syskwargs):
+        operator.setup(self.system, sysargs, syskwargs)
+        x = solver.solve(operator)
+        return Solution(self.computationinfo, x)    
+
+class DirectComputation(Computation):
+    ''' A convenience class to make it easier to switch over old code that just used a Computation'''
+    def __init__(self, problem, basisrule, nquadpoints, systemklass, usecache = False, **kwargs):
+        Computation.__init__(self, ComputationInfo(problem, basisrule, nquadpoints, usecache), systemklass)
+                    
+    def solution(self, *args, **kwargs):
+        return Computation.solution(self, DirectOperator(), DirectSolver())
 
 def noop(x): return x
 

@@ -1,11 +1,12 @@
 import pypwdg.core.bases as pcb
-import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
 import pypwdg.setup.problem as psp
 import pypwdg.setup.computation as psc
 import pypwdg.setup.indirect as psi
+import pypwdg.setup.domain as psd
 import pypwdg.core.physics as pcp
 import pypwdg.output.solution as pos
+
 import pypwdg.test.utils.mesh as tum
 import numpy as np
 np.set_printoptions(threshold='nan')
@@ -27,15 +28,15 @@ mesh = tum.regularsquaremesh(n, bdytag)
 #print mesh.elements
     
 problem = psp.Problem(mesh, k, bnddata)
-computation = psc.Computation(problem, pcb.planeWaveBases(2,k,9), 13, pcp.HelmholtzSystem)
-
-solbrutal = computation.solution(psi.BrutalSolver(np.complex, psi.DomainDecompOperator(mesh)).solve)
+compinfo = psc.ComputationInfo(problem, pcb.planeWaveBases(2,k,9), 13)
+computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
+solbrutal = computation.solution(psd.DomainDecompOperator(mesh), psi.BrutalSolver(np.complex))
 #print "DD solve"
 #soldd = computation.solution(psi.IndirectSolver(np.complex, psi.DomainDecompOperator(mesh)).solve)
 #print "Block precond solve"
 #solindirect = computation.solution(psi.IndirectSolver(np.complex, psi.BlockPrecondOperator(mesh)).solve)
 print "Direct solve"
-soldirect = computation.solution(psc.DirectSolver().solve)
+soldirect = computation.solution(psc.DirectOperator(), psc.DirectSolver())
 
 #print soldirect.x
 #print solbrutal.x

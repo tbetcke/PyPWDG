@@ -40,14 +40,14 @@ bounds=array([[0,1],[0,1]],dtype='d')
 npoints=array([200,200])
 mesh = tum.regularsquaremesh(n, bdytag)
 problem = psp.Problem(mesh, k, bnddata)
-basisrule = pcb.planeWaveBases(2,k,9)
+basisrule = pcb.planeWaveBases(2,k,7)
 #basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(3))
-mortarrule = pcbr.ReferenceBasisRule(pcbr.Legendre1D(5))
+mortarrule = pcbr.ReferenceBasisRule(pcbr.Legendre1D(3))
 tracebc = [-2j*k,0]
 #tracebc = [0,0]
 
 mc = psm.MortarComputation(problem, basisrule, mortarrule, nquad, pcp.HelmholtzSystem, pcp.HelmholtzBoundary, tracebc)
-sol = mc.solution(psm.BrutalSolver(np.complex).solve, dovolumes=True)
+sol = mc.solution(psi.BrutalSolver(np.complex), dovolumes=True)
 #print sol.x
 pos.standardoutput(sol, 20, bounds, npoints, 'squaremortar', mploutput=True)
 

@@ -116,14 +116,14 @@ class MortarComputation(object):
         
         self.mortarsystem = MortarSystem(self.compinfo, skelecompinfo, skelftob, sd, tracebc)
         
-    def solution(self, solve, *args, **kwargs):
+    def solution(self, solver, *args, **kwargs):
         ''' Calculate a solution.  The solve method should accept an operator'''
         operator = MortarOperator(self.system, self.boundary, self.mortarsystem, args, kwargs)
 #        print "scol", worker.getScol().shape
         mp.spy(operator.getScol(), markersize=1)
         mp.figure()
         mp.spy(operator.getM(), markersize=1)
-        x = solve(operator)
+        x = solver.solve(operator)
         return psc.Solution(self.compinfo, x)        
 
 @ppd.distribute()
@@ -193,58 +193,58 @@ class MortarOperator(object):
         u = self.Ainv.solve(self.G - self.Brow * x)  
 #        print 'u',u
         return self.localtoglobal * u      
-
-class BrutalSolver(object):
-    def __init__(self, dtype):
-        self.dtype = dtype
-    
-    def solve(self, operator):
-        b = operator.rhs()
-        n = len(b)
-        M = np.hstack([operator.multiply(x).reshape(-1,1) for x in np.eye(n, dtype=self.dtype)])
-        print M.shape, b.shape
-#        print "Brutal Solver", M
-#        print 'b',b
-        mp.figure()
-        mp.spy(M, markersize=1)
-        x = ssl.spsolve(M, b)
-#        print x
-#        print x
-        if hasattr(operator, 'postprocess'):
-            x = operator.postprocess(x)
-#        print x
-        return x
-        
-    
-class IndirectSolver(object):
-
-    def __init__(self, dtype):
-        self.dtype = dtype
-
-    def solve(self, operator, sysargs, syskwargs):
-        b = operator.rhs()        
-        n = len(b)
-#        print b.shape
-        lo = ssl.LinearOperator((n,n), self.op.multiply, dtype=self.dtype)
-        pc = ssl.LinearOperator((n,n), self.op.precond, dtype=self.dtype) if hasattr(self.op, 'precond') else None
-        
-#        x, status = ssl.bicgstab(lo, b, callback = ItCounter(), M=pc)
-        x, status = ssl.gmres(lo, b, callback = ItCounter(), M=pc, restart=450)
-        print status
-
-        if hasattr(self.op, 'postprocess'):
-            x = self.op.postprocess(x)
-        return x
-    
-
-class ItCounter(object):
-    def __init__(self, stride = 20):
-        self.n = 0
-        self.stride = 20
-    
-    def __call__(self, x):
-        self.n +=1
-        if self.n % self.stride == 0:
-            print self.n    
-            
+#
+#class BrutalSolver(object):
+#    def __init__(self, dtype):
+#        self.dtype = dtype
+#    
+#    def solve(self, operator):
+#        b = operator.rhs()
+#        n = len(b)
+#        M = np.hstack([operator.multiply(x).reshape(-1,1) for x in np.eye(n, dtype=self.dtype)])
+#        print M.shape, b.shape
+##        print "Brutal Solver", M
+##        print 'b',b
+#        mp.figure()
+#        mp.spy(M, markersize=1)
+#        x = ssl.spsolve(M, b)
+##        print x
+##        print x
+#        if hasattr(operator, 'postprocess'):
+#            x = operator.postprocess(x)
+##        print x
+#        return x
+#        
+#    
+#class IndirectSolver(object):
+#
+#    def __init__(self, dtype):
+#        self.dtype = dtype
+#
+#    def solve(self, operator, sysargs, syskwargs):
+#        b = operator.rhs()        
+#        n = len(b)
+##        print b.shape
+#        lo = ssl.LinearOperator((n,n), self.op.multiply, dtype=self.dtype)
+#        pc = ssl.LinearOperator((n,n), self.op.precond, dtype=self.dtype) if hasattr(self.op, 'precond') else None
+#        
+##        x, status = ssl.bicgstab(lo, b, callback = ItCounter(), M=pc)
+#        x, status = ssl.gmres(lo, b, callback = ItCounter(), M=pc, restart=450)
+#        print status
+#
+#        if hasattr(self.op, 'postprocess'):
+#            x = self.op.postprocess(x)
+#        return x
+#    
+#
+#class ItCounter(object):
+#    def __init__(self, stride = 20):
+#        self.n = 0
+#        self.stride = 20
+#    
+#    def __call__(self, x):
+#        self.n +=1
+#        if self.n % self.stride == 0:
+#            print self.n    
+#            
             

@@ -3,6 +3,7 @@ import pypwdg.mesh.mesh as pmm
 import pypwdg.core.boundary_data as pcbd
 import pypwdg.setup.problem as psp
 import pypwdg.setup.computation as psc
+import pypwdg.setup.domain as psd
 import pypwdg.setup.indirect as psi
 import pypwdg.core.physics as pcp
 import pypwdg.output.solution as pos
@@ -27,13 +28,13 @@ with puf.pushd('../../examples/2D'):
     mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
     
 problem = psp.Problem(mesh, k, bnddata)
-computation = psc.Computation(problem, pcb.planeWaveBases(2,k,21), 5, pcp.HelmholtzSystem)
+compinfo = psc.ComputationInfo(problem, pcb.planeWaveBases(2,k,21), 5)
+computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
 
 #solbrutal = computation.solution(psi.BrutalSolver(np.complex, psi.DomainDecompOperator(mesh)).solve)
-soldd = computation.solution(psi.IndirectSolver(np.complex, psi.DomainDecompOperator(mesh)).solve)
-solindirect = computation.solution(psi.IndirectSolver(np.complex, psi.BlockPrecondOperator(mesh)).solve)
-soldirect = computation.solution(psc.DirectSolver().solve)
-
+soldd = computation.solution(psd.DomainDecompOperator(mesh), psi.GMRESSolver(np.complex))
+solindirect = computation.solution(psi.BlockPrecondOperator(mesh), psi.GMRESSolver(np.complex))
+soldirect = computation.solution(psc.DirectOperator(), psc.DirectSolver())
 
 #print np.max(np.abs(soldirect.x - solbrutal.x))
 print np.max(np.abs(soldirect.x - solindirect.x))
