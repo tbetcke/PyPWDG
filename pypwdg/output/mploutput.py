@@ -44,7 +44,7 @@ def output2derror(bounds, solution, fn, npoints, plotmesh = True):
     mp.show()
     
 
-def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True, **kwargs):    
+def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True, show = True, **kwargs):    
     bounds=np.array(bounds,dtype='d')
     points = pug.StructuredPoints(bounds.transpose(), npoints)
     spe = solution.getEvaluator(filter)
@@ -55,7 +55,7 @@ def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True, *
 #    contour(points.toArray(), vals, npoints)
     image(vals, npoints, bounds, **kwargs)
     if plotmesh: showmesh(solution.computation.problem.mesh)
-    mp.show()
+    if show: mp.show()
        
 def output2dfn(bounds, fn, npoints, **kwargs):
     bounds=np.array(bounds,dtype='d')

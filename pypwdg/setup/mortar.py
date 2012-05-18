@@ -12,6 +12,9 @@ import pypwdg.setup.computation as psc
 import pypwdg.parallel.decorate as ppd
 import pypwdg.utils.sparseutils as pusu
 
+import pypwdg.core.assembly as pca
+
+import scipy.sparse as ss
 import scipy.sparse.linalg as ssl
 import numpy as np
 import copy
@@ -67,10 +70,10 @@ class MortarSystem(object):
         print 'idxs',self.idxs
     
     @ppd.parallelmethod()    
-    def getMass(self):
+    def getMass(self, doopposite=True):
         ''' Returns a skeleton element x skeleton element mass matrix (as a vbsrmatrix) '''
 #        print "getMass"
-        S2S = self.EM.I * self.sd.skel2skel
+        S2S = self.EM.I * self.sd.skel2skel if doopposite else self.EM.Z
 #        print "S2S", S2S
         M = self.volumeassembly.assemble([[self.EM.I + S2S, self.EM.Z], [self.EM.Z, self.EM.Z]])
         return M
@@ -80,10 +83,27 @@ class MortarSystem(object):
         ''' This returns the product of the traces on the mesh faces with the opposite skeleton element'''
         S2O = (self.sd.skel2mesh.transpose() * self.EM.I * self.sd.skel2oppmesh)
         Z = S2O * 0
-#        print 'S20',S2O
+        print 'S20',S2O
         S = self.traceassembly.assemble([[S2O*self.tracebc[0],Z],[S2O * self.tracebc[1],Z]])
         return self.sumleft(S)
-        
+
+@ppd.distribute()
+class MortarProjection(object):
+    def __init__(self, compinfo, skelftob, fnftob, sd, coeffs):
+        fnv = compinfo.faceVandermondes(fnftob)
+        lambdav = compinfo.faceVandermondes(skelftob)  
+        self.loadassembly = pca.Assembly(lambdav, fnv, compinfo.facequads.quadweights)
+        self.I = compinfo.problem.mesh.entityfaces['INTERNAL']
+        self.Z = pms.AveragesAndJumps(compinfo.problem.mesh).Z
+        self.coeffs = coeffs
+        self.sd = sd
+    
+    @ppd.parallelmethod()
+    def product(self):
+        c1, c2 = self.coeffs
+        lblock = self.loadassembly.assemble([[c1 * self.I, c2 * self.I], [self.Z, self.Z]])
+        lblockcol = lblock.__rmul__(self.sd.skel2mesh) * ss.csr_matrix(np.ones((self.sd.mesh.nfaces, 1)))
+        return lblockcol
          
 class MortarComputation(object):
     ''' A Mortar Computation.  This probably ought to be integrated with the basic Computation class - just don't know how yet
@@ -98,33 +118,47 @@ class MortarComputation(object):
     '''
     def __init__(self, problem, basisrule, mortarrule, nquadpoints, systemklass, boundaryklass, tracebc, usecache = False, **kwargs):
         skeletontag = 'INTERNAL'
-        sd = pmsm.SkeletonisedDomain(problem.mesh, skeletontag)
+        self.sd = pmsm.SkeletonisedDomain(problem.mesh, skeletontag)
         problem2 = copy.copy(problem)
-        problem2.mesh = sd.mesh
+        problem2.mesh = self.sd.mesh
         self.compinfo = psc.ComputationInfo(problem2, basisrule, nquadpoints)
 
-        skeleproblem = psp.BasisAllocator(sd.skeletonmesh)
+        skeleproblem = psp.BasisAllocator(self.sd.skeletonmesh)
         skelecompinfo = psc.ComputationInfo(skeleproblem, mortarrule, nquadpoints)
         
         skeletob = skelecompinfo.basis 
-        skelftob = SkeletonFaceToBasis(skeletob, sd)
+        self.skelftob = SkeletonFaceToBasis(skeletob, self.sd)
         
         self.system = systemklass(self.compinfo, **kwargs)
         mortarbcs = pcbd.BoundaryCoefficients([-1j*problem.k, 1], [1, 0])
-        mortarinfo = (mortarbcs, skelftob)
+        mortarinfo = (mortarbcs, self.skelftob)
         self.boundary = boundaryklass(self.compinfo, skeletontag, mortarinfo)
         
-        self.mortarsystem = MortarSystem(self.compinfo, skelecompinfo, skelftob, sd, tracebc)
+        self.mortarsystem = MortarSystem(self.compinfo, skelecompinfo, self.skelftob, self.sd, tracebc)
         
     def solution(self, solver, *args, **kwargs):
         ''' Calculate a solution.  The solve method should accept an operator'''
         operator = MortarOperator(self.system, self.boundary, self.mortarsystem, args, kwargs)
-#        print "scol", worker.getScol().shape
+#        print "scol", worker.getScol().shape        
         mp.spy(operator.getScol(), markersize=1)
         mp.figure()
+#        print operator.getScol()
         mp.spy(operator.getM(), markersize=1)
+#        print operator.getM().todense()
         x = solver.solve(operator)
-        return psc.Solution(self.compinfo, x)        
+        return psc.Solution(self.compinfo, x)
+    
+    def fakesolution(self, truesoln, coeffs, *args, **kwargs):
+        operator = MortarOperator(self.system, self.boundary, self.mortarsystem, args, kwargs)
+        trueftob = pcbu.UniformFaceToBases(truesoln, self.compinfo.problem.mesh)
+        Ml = MortarProjection(self.compinfo, self.skelftob, trueftob, self.sd, coeffs).product().tocsr().toarray()
+        M = self.mortarsystem.getMass(False).tocsr() * (1+0j)
+        l = ssl.spsolve(M, Ml)
+        print l
+        x = operator.postprocess(l)
+        return psc.Solution(self.compinfo, x)
+        
+        
 
 @ppd.distribute()
 class MortarOperator(object):
@@ -154,18 +188,21 @@ class MortarOperator(object):
     '''
     def __init__(self, system, boundary, mortarsystem, sysargs, syskwargs):
         AA,G = system.getSystem(*sysargs, **syskwargs)
-        A = AA.tocsr()
+        BS = boundary.stiffness()
+        #print 'BS',BS.tocsr()
+        A = (AA+BS).tocsr()
         A.eliminate_zeros()
-        B = boundary.load(False).tocsr()
+        BL = boundary.load(False).tocsr()
         idxs = mortarsystem.idxs
         self.M = mortarsystem.getMass().tocsr().transpose()
         self.Ainv = ssl.splu(A[idxs, :][:, idxs])
-        self.Brow = B[idxs, :]
+        self.Brow = BL[idxs, :]
         T = mortarsystem.getOppositeTrace().tocsr().transpose()
         self.Scol = T[:, idxs]
         self.G = G.tocsr().todense()[idxs].A.flatten()
         self.localtoglobal = pusu.sparseindex(idxs, np.arange(len(idxs)), A.shape[0], len(idxs))
-        print 'nnz', B.nnz, self.Brow.nnz, A.nnz, A[idxs, :][:, idxs].nnz, T.nnz, T[:,idxs].nnz
+#        print 'localtoglobal', self.localtoglobal
+        print 'nnz', BL.nnz, self.Brow.nnz, A.nnz, A[idxs, :][:, idxs].nnz, T.nnz, T[:,idxs].nnz
 #        print "scol", mortarsystem.getTrace().tocsr().transpose()
     
     @ppd.parallelmethod()
@@ -190,8 +227,9 @@ class MortarOperator(object):
     @ppd.parallelmethod()
     def postprocess(self, x):
         ''' Post-process the global solution (the lambdas) to obtain u'''
+#        print "postprocess ",x
         u = self.Ainv.solve(self.G - self.Brow * x)  
-#        print 'u',u
+        print 'scol * u', self.Scol * u
         return self.localtoglobal * u      
 #
 #class BrutalSolver(object):

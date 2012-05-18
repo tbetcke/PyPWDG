@@ -84,6 +84,9 @@ class ComputationInfo(object):
 
     def faceVandermondes(self, ftob, usecache = False):
         return pcv.LocalVandermondes(ftob, self.facequads, usecache=usecache)
+    
+    def eltVandermondes(self, etob):
+        return pcv.ElementVandermondes(self.problem.mesh, etob, self.elementquads)
 
     def faceAssembly(self, trialv = None, scale=None):
         if scale is not None:
@@ -98,15 +101,16 @@ class ComputationInfo(object):
         if trialv is None: trialv = testv
         return pca.Assembly(testv, trialv if trialv is None else trialv, qws)
     
-    def volumeAssembly(self, weighted = False):
+    def volumeAssembly(self, weighted = False, trialv = None):
         if weighted:
             def qws(e): 
                 return self.elementquads.quadweights(e).squeeze()* (self.problem.elementinfo.kp(e)(self.elementquads.quadpoints(e))**2)
         else:
             qws = self.elementquads.quadweights
         
-        ev = self.elementvandermondes
-        return pca.Assembly(ev, ev, qws)
+        evtest = self.elementvandermondes
+        evtrial = evtest if trialv is None else trialv
+        return pca.Assembly(evtest, evtrial, qws)
 
 
 class Computation(object):

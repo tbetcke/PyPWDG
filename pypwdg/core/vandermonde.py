@@ -99,6 +99,6 @@ class LocalInnerProducts(object):
             
             if len(p.shape)==0: p = p.reshape(1,1)
             self.__cache[(i,j)] = p
+#            print p, vl.flatten(), vr.flatten()
 #            print vl.shape, vr.shape, w.shape, p.shape
-        
         return p        
