@@ -3,7 +3,9 @@ import pypwdg.core.bases.reference as pcbr
 import pypwdg.core.boundary_data as pcbd
 import pypwdg.setup.mortar as psm
 import pypwdg.setup.problem as psp
+import pypwdg.setup.computation as psc
 import pypwdg.setup.indirect as psi
+import pypwdg.mesh.mesh as pmm
 import pypwdg.core.physics as pcp
 import pypwdg.output.solution as pos
 import pypwdg.output.mploutput as pom
@@ -22,30 +24,54 @@ import matplotlib.pyplot as mp
 
 nparts = 3
 nquad = 3
-k = 5
+k = 2
 n = 4
 g = pcb.FourierHankel([-1,-1], [0], k)
-#g = pcb.ConstantBasis()
+c = pcb.ConstantBasis()
+dg = pcbd.dirichlet(g)
+ig = pcbd.generic_boundary_data([-1j*k, 1], [-1j*k, 1], g)
+ic = pcbd.generic_boundary_data([-1j*k, 1], [1, 0], c)
 bdytag = "BDY"
-bnddata={bdytag:pcbd.dirichlet(g)}
+bnddata={1:dg,2:dg,3:dg,4:dg}
 
 bounds=array([[0,1],[0,1]],dtype='d')
 npoints=array([200,200])
-mesh = tum.regularsquaremesh(n, bdytag)
+#mesh = tum.regularsquaremesh(n, bdytag)
+meshinfo = tum.regularrectmeshinfo([0,1], [0,1], 2, 2)
+topology = pmm.Topology(meshinfo)
+
+def partitions(n):
+    ne = meshinfo.nelements
+    return [np.arange((i * ne) / n, ((i+1) * ne) / n) for i in range(n)] 
+
+partition = pmm.BespokePartition(meshinfo, topology, partitions)
+
+mesh = pmm.MeshView(meshinfo, topology, partition)
+
 problem = psp.Problem(mesh, k, bnddata)
 basisrule = pcb.planeWaveBases(2,k,9)
 #basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(0))
-mortarrule = pcbr.ReferenceBasisRule(pcbr.Legendre1D(2))
-tracebc = [-2j*k,0]
+mortarrule = pcbr.ReferenceBasisRule(pcbr.Legendre1D(3))
+s = -1j*k
+#s = 0
 #tracebc = [0,0]
 
-mc = psm.MortarComputation(problem, basisrule, mortarrule, nquad, pcp.HelmholtzSystem, pcp.HelmholtzBoundary, tracebc)
+mc = psm.MortarComputation(problem, basisrule, mortarrule, nquad, pcp.HelmholtzSystem, pcp.HelmholtzBoundary, s)
 sol = mc.solution(psi.BrutalSolver(np.complex), dovolumes=True)
-solfaked = mc.fakesolution(g, [-1j*k, 1])
+solfaked = mc.fakesolution(c, [s, 1])
 #print sol.x
-pos.standardoutput(sol, 20, bounds, npoints, 'squaremortar')
+#pos.standardoutput(sol, 20, bounds, npoints, 'squaremortar')
 pom.output2dsoln(bounds, sol, npoints, plotmesh = True, show = False)
 pom.output2dsoln(bounds, solfaked, npoints, plotmesh = True, show = False)
+pom.output2dfn(bounds, g.values, npoints, show=False)
+
+rectmesh = tum.regularrectmesh([0,0.5], [0,1.0], 1, 2)
+rectbd = {1:dg, 2:dg, 3:ig, 4:dg}
+rectprob = psp.Problem(rectmesh, k, rectbd)
+rectcmp = psc.DirectComputation(rectprob, basisrule, nquad, pcp.HelmholtzSystem)
+rectsol = rectcmp.solution()
+pom.output2dsoln([[0,0.5],[0,1]],rectsol, npoints, plotmesh=True, show=False)
+
 mp.show()
 #
 #sold = psc.DirectComputation(problem, basisrule, nquad, pcp.HelmholtzSystem).solution()

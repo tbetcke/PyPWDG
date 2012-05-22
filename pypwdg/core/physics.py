@@ -18,6 +18,7 @@ class HelmholtzBoundary(object):
         self.mesh = computationinfo.problem.mesh
         self.B = self.mesh.entityfaces[entity]
         self.delta = delta
+        self.entity = entity
     
     @ppd.parallelmethod()    
     def load(self, collapseload = True):
@@ -27,7 +28,10 @@ class HelmholtzBoundary(object):
         # todo - check the cross terms.  Works okay with delta = 1/2.  
         GB = self.loadassembly.assemble([[(1-delta) * B, (1-delta) *B], 
                                     [-delta* B,     -delta *B]])
-                
+        
+
+        print 'GB', self.entity, GB.tocsr()
+        
         return pms.sumrhs(self.mesh, GB) if collapseload else pms.sumleftfaces(self.mesh,GB)
     
     @ppd.parallelmethod()    

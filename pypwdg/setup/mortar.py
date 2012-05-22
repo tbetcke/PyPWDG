@@ -29,9 +29,8 @@ class SkeletonFaceToBasis(object):
         self.skeletonfacemap = skeletonfacemap
              
     def evaluate(self, faceid, points):        
-#        print "SkeletonFaceToBasis.evaluate %s"%faceid
         skeletonelt = self.skeletonfacemap.index[faceid]
-#        print skeletonelt
+#        print "SkeletonFaceToBasis.evaluate", faceid, skeletonelt
         if skeletonelt >=0: 
             vals = self.elttobasis.getValues(skeletonelt, points)
             derivs = vals
@@ -116,8 +115,9 @@ class MortarComputation(object):
             boundaryklass: Defines the physics on the boundary (can't use getBoundary on the systemklass because of limited parallelisation functionality)
             tracebc: Defines the S map
     '''
-    def __init__(self, problem, basisrule, mortarrule, nquadpoints, systemklass, boundaryklass, tracebc, usecache = False, **kwargs):
+    def __init__(self, problem, basisrule, mortarrule, nquadpoints, systemklass, boundaryklass, s, usecache = False, **kwargs):
         skeletontag = 'INTERNAL'
+        tracebc = [2*s,0]
         self.sd = pmsm.SkeletonisedDomain(problem.mesh, skeletontag)
         problem2 = copy.copy(problem)
         problem2.mesh = self.sd.mesh
@@ -130,7 +130,7 @@ class MortarComputation(object):
         self.skelftob = SkeletonFaceToBasis(skeletob, self.sd)
         
         self.system = systemklass(self.compinfo, **kwargs)
-        mortarbcs = pcbd.BoundaryCoefficients([-1j*problem.k, 1], [1, 0])
+        mortarbcs = pcbd.BoundaryCoefficients([s, 1], [1, 0])
         mortarinfo = (mortarbcs, self.skelftob)
         self.boundary = boundaryklass(self.compinfo, skeletontag, mortarinfo)
         
@@ -139,8 +139,9 @@ class MortarComputation(object):
     def solution(self, solver, *args, **kwargs):
         ''' Calculate a solution.  The solve method should accept an operator'''
         operator = MortarOperator(self.system, self.boundary, self.mortarsystem, args, kwargs)
-#        print "scol", worker.getScol().shape        
-        mp.spy(operator.getScol(), markersize=1)
+        S = operator.getScol()
+        print 'S',S   
+        mp.spy(S, markersize=1)
         mp.figure()
 #        print operator.getScol()
         mp.spy(operator.getM(), markersize=1)
@@ -154,7 +155,7 @@ class MortarComputation(object):
         Ml = MortarProjection(self.compinfo, self.skelftob, trueftob, self.sd, coeffs).product().tocsr().toarray()
         M = self.mortarsystem.getMass(False).tocsr() * (1+0j)
         l = ssl.spsolve(M, Ml)
-        print l
+        print 'l',l
         x = operator.postprocess(l)
         return psc.Solution(self.compinfo, x)
         
@@ -203,8 +204,12 @@ class MortarOperator(object):
         self.localtoglobal = pusu.sparseindex(idxs, np.arange(len(idxs)), A.shape[0], len(idxs))
 #        print 'localtoglobal', self.localtoglobal
         print 'nnz', BL.nnz, self.Brow.nnz, A.nnz, A[idxs, :][:, idxs].nnz, T.nnz, T[:,idxs].nnz
+        print 'A', A
+        print 'BL', BL
+        print 'Brow', self.Brow
+        
 #        print "scol", mortarsystem.getTrace().tocsr().transpose()
-    
+        
     @ppd.parallelmethod()
     def getM(self):
         return self.M
@@ -228,6 +233,7 @@ class MortarOperator(object):
     def postprocess(self, x):
         ''' Post-process the global solution (the lambdas) to obtain u'''
 #        print "postprocess ",x
+        print 'postprocess', self.G - self.Brow * x
         u = self.Ainv.solve(self.G - self.Brow * x)  
         print 'scol * u', self.Scol * u
         return self.localtoglobal * u      

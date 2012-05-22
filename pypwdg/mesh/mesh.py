@@ -191,6 +191,7 @@ class Partition(object):
     ''' A partition of a mesh'''
     def __init__(self, basicinfo, topology, partition=None, partidx=0):
         self.partition = np.arange(basicinfo.nelements) if partition is None else partition 
+        print 'Partition', self.partition
         self.partidx = partidx
         self.fs = basicinfo.etof[partition].ravel()
         fpindicator = np.zeros((basicinfo.nfaces,), dtype=int)
@@ -210,6 +211,12 @@ class Partition(object):
 class DistributedPartition(Partition):
     ''' A helper class that creates one mesh partition per worker process'''
     pass    
+
+@ppd.distribute(lambda n: lambda basicinfo, topology, partitions: [((basicinfo, topology, partition, i),{}) for i, partition in enumerate(partitions(n))]) 
+class BespokePartition(Partition):
+    ''' A helper class that creates one mesh partition per worker process'''
+    pass    
+
 
 class MeshView(object):
     ''' Pulls all the mesh information together.  Provides a partition-specific view onto bits of the topology

@@ -57,7 +57,9 @@ class DirectOperator():
     def setup(self, system, sysargs, syskwargs):
         S,G = system.getSystem(*sysargs, **syskwargs)
         self.M = S.tocsr()
+        print 'M', self.M
         self.b = np.array(G.todense()).squeeze()
+        print 'b', self.b.T
     
     def mass(self):
         return self.M

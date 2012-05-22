@@ -65,7 +65,7 @@ class BrutalSolver(object):
 #        mp.figure()
 #        mp.spy(M, markersize=1)
         x = ssl.spsolve(M, b)
-        print x
+        print 'solve: x', x
 #        print x
         if hasattr(operator, 'postprocess'):
             x = operator.postprocess(x)

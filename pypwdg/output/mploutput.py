@@ -57,13 +57,13 @@ def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True, s
     if plotmesh: showmesh(solution.computation.problem.mesh)
     if show: mp.show()
        
-def output2dfn(bounds, fn, npoints, **kwargs):
+def output2dfn(bounds, fn, npoints, show = True, **kwargs):
     bounds=np.array(bounds,dtype='d')
     points = pug.StructuredPoints(bounds.transpose(), npoints).toArray()
     v = np.real(fn(points))
 #    contour(points, v, npoints)
     image(v, npoints, bounds, **kwargs)
-    mp.show()
+    if show: mp.show()
 
 def showdirections2(mesh, etods, **kwargs):
     ''' Todo: combine this with showdirections'''
