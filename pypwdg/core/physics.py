@@ -19,15 +19,19 @@ class HelmholtzBoundary(object):
         self.B = self.mesh.entityfaces[entity]
         self.delta = delta
         self.entity = entity
+        self.k = computationinfo.problem.k
     
     @ppd.parallelmethod()    
     def load(self, collapseload = True):
         ''' The load vector (due to the boundary conditions)'''            
         delta = self.delta
+        dik = delta / (1j * self.k)
         B = self.B
         # todo - check the cross terms.  Works okay with delta = 1/2.  
-        GB = self.loadassembly.assemble([[(1-delta) * B, (1-delta) *B], 
-                                    [-delta* B,     -delta *B]])
+#        GB = self.loadassembly.assemble([[(1-delta) * B, (1-delta) *B], 
+#                                    [-dik* B,     -dik *B]])
+        GB = self.loadassembly.assemble([[-(1-delta) * B, (1-delta) *B], 
+                                    [dik* B,     -dik *B]])
         
 
         print 'GB', self.entity, GB.tocsr()
@@ -37,11 +41,14 @@ class HelmholtzBoundary(object):
     @ppd.parallelmethod()    
     def stiffness(self):
         delta = self.delta
+        dik = delta / (1j * self.k)
         B = self.B
         
         # The contribution of the boundary conditions
-        SB = self.bdyassembly.assemble([[(1-delta) * B, (1-delta)*B],
-                              [-delta * B, -delta *B]])
+#        SB = self.bdyassembly.assemble([[(1-delta) * B, (1-delta)*B],
+#                              [-dik * B, -dik *B]])
+        SB = self.bdyassembly.assemble([[-(1-delta) * B, (1-delta)*B],
+                              [dik * B, -dik *B]])
         return pms.sumfaces(self.mesh,SB)     
     
     @ppd.parallelmethod()

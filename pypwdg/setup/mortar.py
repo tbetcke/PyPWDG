@@ -33,7 +33,7 @@ class SkeletonFaceToBasis(object):
 #        print "SkeletonFaceToBasis.evaluate", faceid, skeletonelt
         if skeletonelt >=0: 
             vals = self.elttobasis.getValues(skeletonelt, points)
-            derivs = vals
+            derivs = vals * 15E20
 #         print derivs.shape
             return (vals,derivs)
         else:
@@ -140,7 +140,7 @@ class MortarComputation(object):
         ''' Calculate a solution.  The solve method should accept an operator'''
         operator = MortarOperator(self.system, self.boundary, self.mortarsystem, args, kwargs)
         S = operator.getScol()
-        print 'S',S   
+#        print 'S',S   
         mp.spy(S, markersize=1)
         mp.figure()
 #        print operator.getScol()
@@ -197,7 +197,7 @@ class MortarOperator(object):
         idxs = mortarsystem.idxs
         self.M = mortarsystem.getMass().tocsr().transpose()
         self.Ainv = ssl.splu(A[idxs, :][:, idxs])
-        self.Brow = BL[idxs, :]
+        self.Brow = -BL[idxs, :]
         T = mortarsystem.getOppositeTrace().tocsr().transpose()
         self.Scol = T[:, idxs]
         self.G = G.tocsr().todense()[idxs].A.flatten()
@@ -206,7 +206,7 @@ class MortarOperator(object):
         print 'nnz', BL.nnz, self.Brow.nnz, A.nnz, A[idxs, :][:, idxs].nnz, T.nnz, T[:,idxs].nnz
         print 'A', A
         print 'BL', BL
-        print 'Brow', self.Brow
+#        print 'Brow', self.Brow
         
 #        print "scol", mortarsystem.getTrace().tocsr().transpose()
         
@@ -230,12 +230,13 @@ class MortarOperator(object):
         return self.Scol * self.Ainv.solve(self.Brow * x) + self.M * x
     
     @ppd.parallelmethod()
-    def postprocess(self, x):
+    def postprocess(self, l):
         ''' Post-process the global solution (the lambdas) to obtain u'''
 #        print "postprocess ",x
-        print 'postprocess', self.G - self.Brow * x
-        u = self.Ainv.solve(self.G - self.Brow * x)  
-        print 'scol * u', self.Scol * u
+        l = np.zeros_like(l)
+        print 'postprocess', self.G - self.Brow * l
+        u = self.Ainv.solve(self.G - self.Brow * l)
+        print "u", u  
         return self.localtoglobal * u      
 #
 #class BrutalSolver(object):

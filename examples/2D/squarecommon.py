@@ -60,8 +60,8 @@ basisrule = pw
 #basisrule = pcbred.SVDBasisReduceRule(puq.trianglequadrature(quadpoints), basisrule)
 
 problem = psp.Problem(mesh, k, bnddata)
-computation = psc.Computation(problem, basisrule, quadpoints, pcp.HelmholtzSystem)
-solution = computation.solution(psc.DirectSolver().solve, dovolumes=True)
+computation = psc.DirectComputation(problem, basisrule, quadpoints, pcp.HelmholtzSystem)
+solution = computation.solution(dovolumes=True)
 
 pos.comparetrue(bounds, npoints, g, solution)
-pos.standardoutput(solution, quadpoints, bounds, npoints, 'square')
+pos.standardoutput(solution, quadpoints, bounds, npoints, 'square', mploutput = True)
