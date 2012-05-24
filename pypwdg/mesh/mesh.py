@@ -167,7 +167,7 @@ class Topology(object):
                         self.faceentities[f] = entityid
                         nb[f] = 0
         
-        print nb
+#        print nb
         # anything assigned to a boundary should not be involved in connectivity (this allows for internal boundaries)
         nonboundary = ss.spdiags(nb, 0, meshinfo.nfaces,meshinfo.nfaces)
         nbftov = nonboundary * ftov 
@@ -191,7 +191,7 @@ class Partition(object):
     ''' A partition of a mesh'''
     def __init__(self, basicinfo, topology, partition=None, partidx=0):
         self.partition = np.arange(basicinfo.nelements) if partition is None else partition 
-        print 'Partition', self.partition
+#        print 'Partition', self.partition
         self.partidx = partidx
         self.fs = basicinfo.etof[partition].ravel()
         fpindicator = np.zeros((basicinfo.nfaces,), dtype=int)
@@ -203,8 +203,8 @@ class Partition(object):
         cutelts = basicinfo.elttofaces * self.cutfaces
         self.neighbourelts = (cutelts <= -1).nonzero()[0]
         self.innerbdyelts = (cutelts >= 1).nonzero()[0]
-        print "cut faces", (self.cutfaces==1).nonzero()[0], sum(self.cutfaces==1)
-        print 'Neighbour elements', self.neighbourelts
+#        print "cut faces", (self.cutfaces==1).nonzero()[0], sum(self.cutfaces==1)
+#        print 'Neighbour elements', self.neighbourelts
     
 
 @ppd.distribute(lambda n: lambda basicinfo, topology: [((basicinfo, topology, partition, i),{}) for i, partition in enumerate(basicinfo.partition(n))]) 

@@ -28,13 +28,13 @@ class HelmholtzBoundary(object):
         dik = delta / (1j * self.k)
         B = self.B
         # todo - check the cross terms.  Works okay with delta = 1/2.  
-#        GB = self.loadassembly.assemble([[(1-delta) * B, (1-delta) *B], 
-#                                    [-dik* B,     -dik *B]])
-        GB = self.loadassembly.assemble([[-(1-delta) * B, (1-delta) *B], 
-                                    [dik* B,     -dik *B]])
+        GB = self.loadassembly.assemble([[(1-delta) * B, (1-delta) *B], 
+                                    [-dik* B,     -dik *B]])
+#        GB = self.loadassembly.assemble([[-(1-delta) * B, (1-delta) *B], 
+#                                    [dik* B,     -dik *B]])
         
 
-        print 'GB', self.entity, GB.tocsr()
+#        print 'GB', self.entity, GB.tocsr()
         
         return pms.sumrhs(self.mesh, GB) if collapseload else pms.sumleftfaces(self.mesh,GB)
     
@@ -45,10 +45,10 @@ class HelmholtzBoundary(object):
         B = self.B
         
         # The contribution of the boundary conditions
-#        SB = self.bdyassembly.assemble([[(1-delta) * B, (1-delta)*B],
-#                              [-dik * B, -dik *B]])
-        SB = self.bdyassembly.assemble([[-(1-delta) * B, (1-delta)*B],
-                              [dik * B, -dik *B]])
+        SB = self.bdyassembly.assemble([[(1-delta) * B, (1-delta)*B],
+                              [-dik * B, -dik *B]])
+#        SB = self.bdyassembly.assemble([[-(1-delta) * B, (1-delta)*B],
+#                              [dik * B, -dik *B]])
         return pms.sumfaces(self.mesh,SB)     
     
     @ppd.parallelmethod()

@@ -53,7 +53,7 @@ class SkeletonisedDomain(object):
         partition = SkeletonPartition(mesh, meshinfo, topology, self.indicator, self.index)
         
         self.skeletonmesh =  pmm.MeshView(meshinfo, topology, partition) # Build the skeleton mesh.  N.B. it's topology should probably not be trusted.
-        print "skeltomesh", self.skeltomeshindex
+#        print "skeltomesh", self.skeltomeshindex
 
     def expand(self, skeleeltarray):
         ''' Given data in an array corresponding to skeleton elements, create an array with the same data on the corresponding mesh faces '''

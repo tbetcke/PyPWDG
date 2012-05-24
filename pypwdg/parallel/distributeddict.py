@@ -66,7 +66,7 @@ class ddict(dict):
     def __init__(self, ddictinfo):
         self.ownedkeys = ddictinfo.getOwnedKeys()
         self.unownedkeys = ddictinfo.getUnownedKeys()
-        print "Unowned Keys", self.unownedkeys
+#        print "Unowned Keys", self.unownedkeys
         self.lastsync = [None]*len(self.ownedkeys)
             
     @ppd.parallelmethod(None, combinedict)

@@ -50,7 +50,7 @@ class DirectSolver(object):
             self.callback(M)
         b = operator.rhs()
         x = self.solvemethod(M,b).squeeze()
-        print 'x', x
+#        print 'x', x
         print "Relative residual: ", np.linalg.norm(M * x -b) / np.linalg.norm(x)
         return x
 
@@ -58,9 +58,9 @@ class DirectOperator():
     def setup(self, system, sysargs, syskwargs):
         S,G = system.getSystem(*sysargs, **syskwargs)
         self.M = S.tocsr()
-        print 'M', self.M
+#        print 'M', self.M
         self.b = np.array(G.todense()).squeeze()
-        print 'b', self.b.T
+#        print 'b', self.b.T
     
     def mass(self):
         return self.M

@@ -66,7 +66,7 @@ class MortarSystem(object):
         localindicesandsizes = indicesandsizes[compinfo.problem.mesh.partition]
         
         self.idxs = np.concatenate([np.arange(i, i+s, dtype=int) for (i,s) in localindicesandsizes])
-        print 'idxs',self.idxs
+#        print 'idxs',self.idxs
     
     @ppd.parallelmethod()    
     def getMass(self, doopposite=True):
@@ -82,8 +82,9 @@ class MortarSystem(object):
         ''' This returns the product of the traces on the mesh faces with the opposite skeleton element'''
         S2O = (self.sd.skel2mesh.transpose() * self.EM.I * self.sd.skel2oppmesh)
         Z = S2O * 0
-        print 'S20',S2O
-        S = self.traceassembly.assemble([[S2O*self.tracebc[0],Z],[S2O * self.tracebc[1],Z]])
+#        print 'S20',S2O
+#        S = self.traceassembly.assemble([[S2O*self.tracebc[0],Z],[S2O * self.tracebc[1],Z]])
+        S = self.traceassembly.assemble([[S2O*self.tracebc[0],Z],[Z,Z]])
         return self.sumleft(S)
 
 @ppd.distribute()
@@ -101,6 +102,7 @@ class MortarProjection(object):
     def product(self):
         c1, c2 = self.coeffs
         lblock = self.loadassembly.assemble([[c1 * self.I, c2 * self.I], [self.Z, self.Z]])
+#        print 'lblock', lblock.tocsr()
         lblockcol = lblock.__rmul__(self.sd.skel2mesh) * ss.csr_matrix(np.ones((self.sd.mesh.nfaces, 1)))
         return lblockcol
          
@@ -155,8 +157,17 @@ class MortarComputation(object):
         Ml = MortarProjection(self.compinfo, self.skelftob, trueftob, self.sd, coeffs).product().tocsr().toarray()
         M = self.mortarsystem.getMass(False).tocsr() * (1+0j)
         l = ssl.spsolve(M, Ml)
-        print 'l',l
+#        print 'l',l
+#        print np.vstack((operator.multiply(l), operator.rhs())).T
         x = operator.postprocess(l)
+#        
+#        f,g = operator.fullmultiply(x, l)
+#        rhs = operator.fullrhs()
+#        print f.shape, g.shape, rhs.shape
+#        print "comparing full solution"
+#        print np.vstack((f, rhs)).T
+#        print g
+#        print operator.getScol() * x                
         return psc.Solution(self.compinfo, x)
         
         
@@ -199,16 +210,32 @@ class MortarOperator(object):
         self.Ainv = ssl.splu(A[idxs, :][:, idxs])
         self.Brow = -BL[idxs, :]
         T = mortarsystem.getOppositeTrace().tocsr().transpose()
-        self.Scol = T[:, idxs]
+        self.Scol = -T[:, idxs].conj() # Why?
         self.G = G.tocsr().todense()[idxs].A.flatten()
         self.localtoglobal = pusu.sparseindex(idxs, np.arange(len(idxs)), A.shape[0], len(idxs))
 #        print 'localtoglobal', self.localtoglobal
         print 'nnz', BL.nnz, self.Brow.nnz, A.nnz, A[idxs, :][:, idxs].nnz, T.nnz, T[:,idxs].nnz
-        print 'A', A
-        print 'BL', BL
+#        print 'T',T
+#        print 'M', self.M
+        
+#        self.A = A
+#        self.idxs = idxs
+        
+#        print 'A', A
+#        print 'BL', BL
 #        print 'Brow', self.Brow
         
 #        print "scol", mortarsystem.getTrace().tocsr().transpose()
+    
+#    @ppd.parallelmethod(None, ppd.tuplesum)
+#    def fullmultiply(self, u, l):
+#        g = self.A * u + self.localtoglobal * self.Brow * l
+#        f = - self.Scol * u[self.idxs] + self.M * l
+#        return (g,f)
+#
+#    @ppd.parallelmethod()
+#    def fullrhs(self):
+#        return self.localtoglobal * self.G
         
     @ppd.parallelmethod()
     def getM(self):
@@ -221,23 +248,24 @@ class MortarOperator(object):
     @ppd.parallelmethod()
     def rhs(self):
         ''' Return the RHS used for the global solve'''
-#        print 'rhs', self.G, self.Ainv.solve(self.G)
+#        print 'rhs', self.Ainv.solve(self.G)
         return self.Scol * self.Ainv.solve(self.G)
     
     @ppd.parallelmethod()
-    def multiply(self, x):
+    def multiply(self, l):
         ''' Mat-vec multiplication used for the global solve'''
-        return self.Scol * self.Ainv.solve(self.Brow * x) + self.M * x
+#        print 'multiply', l, self.Scol * self.Ainv.solve(self.Brow * l), self.M * l
+        return self.Scol * self.Ainv.solve(self.Brow * l) + self.M * l
     
     @ppd.parallelmethod()
     def postprocess(self, l):
         ''' Post-process the global solution (the lambdas) to obtain u'''
 #        print "postprocess ",x
-        l = np.zeros_like(l)
-        print 'postprocess', self.G - self.Brow * l
+#        l = np.zeros_like(l)
+#        print 'postprocess', self.G - self.Brow * l
         u = self.Ainv.solve(self.G - self.Brow * l)
-        print "u", u  
-        return self.localtoglobal * u      
+#        print "u", u  
+        return self.localtoglobal * u
 #
 #class BrutalSolver(object):
 #    def __init__(self, dtype):
