@@ -82,10 +82,21 @@ class ItCounter(object):
         self.n +=1
         if self.n % self.stride == 0:
             print self.n
+
+class IterationConvergence(object):
+    def __init__(self, operator):
+        self.operator = operator
+        self.iterates = []
+        
+    def __call__(self, x):
+        self.iterates.append(x)
+    
+    def geterrors(self):
+        
     
 class GMRESSolver(object):
 
-    def __init__(self, dtype):
+    def __init__(self, dtype, callback=None):
         self.dtype = dtype
 
     def solve(self, operator):

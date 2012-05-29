@@ -24,8 +24,8 @@ import matplotlib.pyplot as mp
 
 #nparts = 3
 nquad = 5
-k = 6
-n = 6
+k = 60
+n = 20
 g = pcb.FourierHankel([-1,-1], [0], k)
 #g = pcb.PlaneWaves([3.0/5,-4.0/5], k)
 c = pcb.ConstantBasis()
@@ -51,28 +51,29 @@ topology = pmm.Topology(meshinfo)
 mesh = pmm.meshFromInfo(meshinfo)
 
 problem = psp.Problem(mesh, k, bnddata)
-basisrule = pcb.planeWaveBases(2,k,7)
+basisrule = pcb.planeWaveBases(2,k,11)
 #basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(0))
-mortarrule = pcbr.ReferenceBasisRule(pcbr.Legendre1D(3))
+mortarrule = pcbr.ReferenceBasisRule(pcbr.Legendre1D(2))
 s = -1j*k
 #s = 0
 #tracebc = [0,0]
 
 mc = psm.MortarComputation(problem, basisrule, mortarrule, nquad, pcp.HelmholtzSystem, pcp.HelmholtzBoundary, s)
-sol = mc.solution(psi.BrutalSolver(np.complex), dovolumes=True)
-solfaked = mc.fakesolution(g, [s, 1])
+#sol = mc.solution(psi.BrutalSolver(np.complex), dovolumes=True)
+sol = mc.solution(psi.GMRESSolver(np.complex), dovolumes=True)
+#solfaked = mc.fakesolution(g, [s, 1])
 #print sol.x
 #pos.standardoutput(sol, 20, bounds, npoints, 'squaremortar')
 pom.output2dsoln(bounds, sol, npoints, plotmesh = True, show = False)
-pom.output2dsoln(bounds, solfaked, npoints, plotmesh = True, show = False)
+#pom.output2dsoln(bounds, solfaked, npoints, plotmesh = True, show = False)
 pom.output2dfn(bounds, g.values, npoints, show=False)
 
-rectmesh = tum.regularrectmesh([0,0.5], [0,1.0], n/2, n)
-rectbd = {1:ig, 2:ig, 3:ig, 4:ig}
-rectprob = psp.Problem(rectmesh, k, rectbd)
-rectcmp = psc.DirectComputation(rectprob, basisrule, nquad, pcp.HelmholtzSystem)
-rectsol = rectcmp.solution()
-pom.output2dsoln([[0,0.5],[0,1]],rectsol, npoints, plotmesh=True, show=False)
+#rectmesh = tum.regularrectmesh([0,0.5], [0,1.0], n/2, n)
+#rectbd = {1:ig, 2:ig, 3:ig, 4:ig}
+#rectprob = psp.Problem(rectmesh, k, rectbd)
+#rectcmp = psc.DirectComputation(rectprob, basisrule, nquad, pcp.HelmholtzSystem)
+#rectsol = rectcmp.solution()
+#pom.output2dsoln([[0,0.5],[0,1]],rectsol, npoints, plotmesh=True, show=False)
 
 mp.show()
 #
