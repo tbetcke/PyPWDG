@@ -7,6 +7,8 @@ import pypwdg.parallel.decorate as ppd
 import numpy as np
 import scipy.sparse.linalg as ssl
 import pypwdg.setup.computation as psc
+import pypwdg.utils.gmres as pug
+
 
 np.set_printoptions(precision=4, threshold='nan',  linewidth=1000)
 
@@ -83,80 +85,67 @@ class ItCounter(object):
         if self.n % self.stride == 0:
             print self.n
 
-class IterationConvergence(object):
-    def __init__(self, operator):
-        self.operator = operator
-        self.iterates = []
+class ItTracker(object):
+    def __init__(self, fn = None, stride = 1):
+        self.its = []
+        self.fn = fn
+        self.stride = stride
         
     def __call__(self, x):
-        self.iterates.append(x)
-    
-    def geterrors(self):
-        
+        if len(self.its) % self.stride==0: 
+            self.its.append(x if self.fn is None else self.fn(x))   
     
 class GMRESSolver(object):
 
-    def __init__(self, dtype, callback=None):
+    def __init__(self, dtype, callback=ItCounter()):
         self.dtype = dtype
+        self.callback = callback
 
     def solve(self, operator):
+        if self.dtype=='ctor':
+            dtype = np.float
+            operator = ComplexToRealOperator(operator)
+            def callback(x):
+                print 'callback', x
+#                return self.callback(operator.rtoc(x))
+        else:
+            dtype = self.dtype
+            callback = self.callback
+        
         b = operator.rhs()        
         n = len(b)
-#        print b.shape
-        lo = ssl.LinearOperator((n,n), operator.multiply, dtype=self.dtype)
-        pc = ssl.LinearOperator((n,n), operator.precond, dtype=self.dtype) if hasattr(operator, 'precond') else None
+        print b.shape, n
         
-#        x, status = ssl.bicgstab(lo, b, callback = ItCounter(), M=pc)
-        x, status = ssl.gmres(lo, b, callback = ItCounter(), M=pc, restart=450)
+        lo = ssl.LinearOperator((n,n), operator.multiply, dtype=dtype)
+        pc = ssl.LinearOperator((n,n), operator.precond, dtype=dtype) if hasattr(operator, 'precond') else None
+        
+#        x, status = ssl.bicgstab(lo, b, callback = callback, M=pc)
+        x, status = ssl.gmres(lo, b, callback = callback, M=pc, restart=450)
         print status
 
         if hasattr(operator, 'postprocess'):
             x = operator.postprocess(x)
         return x
-            
-#
-#class BrutalSolver(object):
-#    def __init__(self, dtype, operator):
-#        self.op = operator
-#        self.dtype = dtype
-#    
-#    def solve(self, system, sysargs, syskwargs):
-#        self.op.setup(system, sysargs, syskwargs)
-#        b = self.op.rhs()
-#        n = len(b)
-#        M = np.hstack([self.op.multiply(x).reshape(-1,1) for x in np.eye(n, dtype=self.dtype)])
-##        print M.shape, b.shape
-##        print "Brutal Solver", M
-#        x = ssl.spsolve(M, b)
-##        print x
-##        print x
-#        if hasattr(self.op, 'postprocess'):
-#            x = self.op.postprocess(x)
-##        print x
-#        return x
-#        
-#    
-#class IndirectSolver(object):
-#
-#    def __init__(self, dtype, operator):
-#        self.op = operator
-#        self.dtype = dtype
-#
-#    def solve(self, system, sysargs, syskwargs):
-#        self.op.setup(system,sysargs,syskwargs)
-#        b = self.op.rhs()        
-#        n = len(b)
-##        print b.shape
-#        lo = ssl.LinearOperator((n,n), self.op.multiply, dtype=self.dtype)
-#        pc = ssl.LinearOperator((n,n), self.op.precond, dtype=self.dtype) if hasattr(self.op, 'precond') else None
-#        
-##        x, status = ssl.bicgstab(lo, b, callback = ItCounter(), M=pc)
-#        x, status = ssl.gmres(lo, b, callback = ItCounter(), M=pc, restart=450)
-#        print status
-#
-#        if hasattr(self.op, 'postprocess'):
-#            x = self.op.postprocess(x)
-#        return x
-        
-        
+
+class ComplexToRealOperator(object):
+    def __init__(self, complexop):
+        self.op = complexop
+        if hasattr(complexop, 'precond'):
+            self.precond = lambda self, x: self.ctor(self.op.precond(self.rtoc(x)))
+    
+    def ctor(self, x):
+        return np.concatenate((x.real, x.imag))
+    
+    def rtoc(self, x):
+        return x[0:len(x)/2] + x[len(x)/2:]*1j
+    
+    def rhs(self):
+        return self.ctor(self.op.rhs())
+    
+    def multiply(self, x):
+        return self.ctor(self.op.multiply(self.rtoc(x)))
+
+    def postprocess(self, x):
+        xp = self.rtoc(x)
+        return self.op.postprocess(xp) if hasattr(self.op, 'postprocess') else x
         

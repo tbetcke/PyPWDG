@@ -24,8 +24,8 @@ import matplotlib.pyplot as mp
 
 #nparts = 3
 nquad = 5
-k = 60
-n = 20
+k = 3
+n = 2
 g = pcb.FourierHankel([-1,-1], [0], k)
 #g = pcb.PlaneWaves([3.0/5,-4.0/5], k)
 c = pcb.ConstantBasis()
@@ -53,14 +53,14 @@ mesh = pmm.meshFromInfo(meshinfo)
 problem = psp.Problem(mesh, k, bnddata)
 basisrule = pcb.planeWaveBases(2,k,11)
 #basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(0))
-mortarrule = pcbr.ReferenceBasisRule(pcbr.Legendre1D(2))
+mortarrule = pcbr.ReferenceBasisRule(pcbr.Legendre1D(1))
 s = -1j*k
 #s = 0
 #tracebc = [0,0]
 
 mc = psm.MortarComputation(problem, basisrule, mortarrule, nquad, pcp.HelmholtzSystem, pcp.HelmholtzBoundary, s)
 #sol = mc.solution(psi.BrutalSolver(np.complex), dovolumes=True)
-sol = mc.solution(psi.GMRESSolver(np.complex), dovolumes=True)
+sol = mc.solution(psi.GMRESSolver('ctor'), dovolumes=True)
 #solfaked = mc.fakesolution(g, [s, 1])
 #print sol.x
 #pos.standardoutput(sol, 20, bounds, npoints, 'squaremortar')

@@ -23,7 +23,7 @@ class EvalElementResiduals(object):
         
     @parallelmethod()
     def evaluate(self, x):
-        ei = pcbu.KElementInfo(self.problem.mesh, self.problem.k)
+        ei = pcbu.ElementInfo(self.problem.mesh, self.problem.k)
         idxs = self.basis.getIndices()
         elem_error=np.zeros(self.problem.mesh.nelements)        
         for e in self.problem.mesh.partition:
