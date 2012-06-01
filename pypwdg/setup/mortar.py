@@ -143,10 +143,10 @@ class MortarComputation(object):
         operator = MortarOperator(self.system, self.boundary, self.mortarsystem, args, kwargs)
         S = operator.getScol()
 #        print 'S',S   
-        mp.spy(S, markersize=1)
-        mp.figure()
+#        mp.spy(S, markersize=1)
+#        mp.figure()
 #        print operator.getScol()
-        mp.spy(operator.getM(), markersize=1)
+#        mp.spy(operator.getM(), markersize=1)
 #        print operator.getM().todense()
         x = solver.solve(operator)
         return psc.Solution(self.compinfo, x)

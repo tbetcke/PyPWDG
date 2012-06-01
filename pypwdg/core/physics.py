@@ -113,3 +113,5 @@ class HelmholtzSystem(object):
         B = pms.sumfaces(self.problem.mesh, self.internalassembly.assemble([[AJ.Z,AJ.Z],[AJ.I,AJ.Z]]))
         
         return H1 - L2K - B   
+    
+    boundaryclass = HelmholtzBoundary

@@ -7,8 +7,8 @@ import pypwdg.parallel.decorate as ppd
 import numpy as np
 import scipy.sparse.linalg as ssl
 import pypwdg.setup.computation as psc
-import pypwdg.utils.gmres as pug
-
+import logging
+log = logging.getLogger(__name__)
 
 np.set_printoptions(precision=4, threshold='nan',  linewidth=1000)
 
@@ -61,7 +61,7 @@ class BrutalSolver(object):
         b = operator.rhs()
         n = len(b)
         M = np.hstack([operator.multiply(x).reshape(-1,1) for x in np.eye(n, dtype=self.dtype)])
-        print M.shape, b.shape
+        log.debug("M = %s, b = %s", M.shape, b.shape)
 #        print "Brutal Solver", M
 #        print 'b',b
 #        mp.figure()
@@ -92,8 +92,14 @@ class ItTracker(object):
         self.stride = stride
         
     def __call__(self, x):
+        log.debug(x)
         if len(self.its) % self.stride==0: 
             self.its.append(x if self.fn is None else self.fn(x))   
+    
+    def reset(self):
+        its = self.its
+        self.its = []
+        return its
     
 class GMRESSolver(object):
 
@@ -105,23 +111,19 @@ class GMRESSolver(object):
         if self.dtype=='ctor':
             dtype = np.float
             operator = ComplexToRealOperator(operator)
-            def callback(x):
-                print 'callback', x
-#                return self.callback(operator.rtoc(x))
         else:
             dtype = self.dtype
-            callback = self.callback
         
         b = operator.rhs()        
         n = len(b)
-        print b.shape, n
+        log.info("GMRES solving system of size %s", n)
         
         lo = ssl.LinearOperator((n,n), operator.multiply, dtype=dtype)
         pc = ssl.LinearOperator((n,n), operator.precond, dtype=dtype) if hasattr(operator, 'precond') else None
         
 #        x, status = ssl.bicgstab(lo, b, callback = callback, M=pc)
-        x, status = ssl.gmres(lo, b, callback = callback, M=pc, restart=450)
-        print status
+        x, status = ssl.gmres(lo, b, callback = self.callback, M=pc, restart=450)
+        log.info(status)
 
         if hasattr(operator, 'postprocess'):
             x = operator.postprocess(x)
@@ -131,7 +133,7 @@ class ComplexToRealOperator(object):
     def __init__(self, complexop):
         self.op = complexop
         if hasattr(complexop, 'precond'):
-            self.precond = lambda self, x: self.ctor(self.op.precond(self.rtoc(x)))
+            self.precond = lambda x: self.ctor(self.op.precond(self.rtoc(x)))
     
     def ctor(self, x):
         return np.concatenate((x.real, x.imag))
@@ -147,5 +149,5 @@ class ComplexToRealOperator(object):
 
     def postprocess(self, x):
         xp = self.rtoc(x)
-        return self.op.postprocess(xp) if hasattr(self.op, 'postprocess') else x
+        return self.op.postprocess(xp) if hasattr(self.op, 'postprocess') else xp
         
