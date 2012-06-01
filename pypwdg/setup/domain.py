@@ -68,7 +68,7 @@ class DomainDecompWorker(object):
     
     @ppd.parallelmethod()
     def precondext(self, x):
-        return x
+#        return x
         return [self.DE.solve(x[self.localfromallext])]
     
     @ppd.parallelmethod()
@@ -97,8 +97,8 @@ class DomainDecompOperator(object):
         return y
     
     def precond(self, x):
-        return x
-#        return np.concatenate(self.workers.precondext(x))
+#        return x
+        return np.concatenate(self.workers.precondext(x))
     
     def postprocess(self, x):
         return self.workers.recoverfullsoln(x)

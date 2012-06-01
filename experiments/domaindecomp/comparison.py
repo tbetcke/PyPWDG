@@ -57,7 +57,7 @@ def compare(problem, basisrule, mortardegree, nquad, system, plotdata = None):
 #    mp.figure()
     mp.semilogy(itsdd, 'r')
 #    mp.figure()
-    mp.semilogy(itsb)
+    mp.semilogy(itsb, 'g')
     mp.show()
 #    print itsm, itsdd, itsb
 
