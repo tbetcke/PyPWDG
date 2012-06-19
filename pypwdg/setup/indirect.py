@@ -92,7 +92,7 @@ class ItTracker(object):
         self.stride = stride
         
     def __call__(self, x):
-        log.debug(x)
+        log.debug("res=%s, n=%s"%(x, len(self.its)))
         if len(self.its) % self.stride==0: 
             self.its.append(x if self.fn is None else self.fn(x))   
     
@@ -122,7 +122,7 @@ class GMRESSolver(object):
         pc = ssl.LinearOperator((n,n), operator.precond, dtype=dtype) if hasattr(operator, 'precond') else None
         
 #        x, status = ssl.bicgstab(lo, b, callback = callback, M=pc)
-        x, status = ssl.gmres(lo, b, callback = self.callback, M=pc, restart=450)
+        x, status = ssl.gmres(lo, b, callback = self.callback, M=pc)#, restart=-1)
         log.info(status)
 
         if hasattr(operator, 'postprocess'):

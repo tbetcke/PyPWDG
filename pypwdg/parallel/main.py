@@ -35,7 +35,7 @@ if mpiloaded:
         # this will only work if parallel is imported before anything that initialises the BLAS libraries
         # there is a better way to do this ... there's a C call that will set OMP_NUM_THREADS at run-time
         # todo: create a wrapper for it.   
-        nt = max(multiprocessing.cpu_count() / comm.size, 1)
+        nt = max((multiprocessing.cpu_count()-1) / comm.size, 1)
              
         os.putenv('OMP_NUM_THREADS', nt.__str__())
         ppm.workerloop()
