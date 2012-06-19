@@ -47,9 +47,9 @@ def compare(problem, basisrule, mortardegree, nquad, system, plotdata = None):
     sdd = computation.solution(psd.DomainDecompOperator(problem.mesh), solver)
     if plotdata: pom.output2dsoln(bounds, sdd, npoints, show=False)
     itsdd = np.array(it.reset())
-#    sb = computation.solution(psi.BlockPrecondOperator(problem.mesh), solver)
-#    if plotdata: pom.output2dsoln(bounds, sb, npoints, show=False)
-#    itsb = np.array(it.reset())
+    sb = computation.solution(psi.BlockPrecondOperator(problem.mesh), solver)
+    if plotdata: pom.output2dsoln(bounds, sb, npoints, show=False)
+    itsb = np.array(it.reset())
     
     mp.figure()
     mp.hold(True)
@@ -57,7 +57,7 @@ def compare(problem, basisrule, mortardegree, nquad, system, plotdata = None):
 #    mp.figure()
     mp.semilogy(itsdd, 'r')
 #    mp.figure()
-#    mp.semilogy(itsb, 'g')
+    mp.semilogy(itsb, 'g')
     mp.show()
 #    print itsm, itsdd, itsb
 
