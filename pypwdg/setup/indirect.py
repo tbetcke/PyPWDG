@@ -122,7 +122,7 @@ class GMRESSolver(object):
         pc = ssl.LinearOperator((n,n), operator.precond, dtype=dtype) if hasattr(operator, 'precond') else None
         
 #        x, status = ssl.bicgstab(lo, b, callback = callback, M=pc)
-        x, status = ssl.gmres(lo, b, callback = self.callback, M=pc)#, restart=-1)
+        x, status = ssl.gmres(lo, b, callback = self.callback, M=pc, restart=n)
         log.info(status)
 
         if hasattr(operator, 'postprocess'):
