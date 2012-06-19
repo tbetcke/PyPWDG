@@ -21,7 +21,7 @@ import numpy as np
 import math
 import logging
 logging.getLogger().setLevel(logging.WARNING)
-logging.getLogger('pypwdg.setup.indirect').setLevel(logging.INFO)
+logging.getLogger('pypwdg.setup.indirect').setLevel(logging.DEBUG)
 
 import pypwdg.parallel.main
 
@@ -47,9 +47,9 @@ def compare(problem, basisrule, mortardegree, nquad, system, plotdata = None):
     sdd = computation.solution(psd.DomainDecompOperator(problem.mesh), solver)
     if plotdata: pom.output2dsoln(bounds, sdd, npoints, show=False)
     itsdd = np.array(it.reset())
-    sb = computation.solution(psi.BlockPrecondOperator(problem.mesh), solver)
-    if plotdata: pom.output2dsoln(bounds, sb, npoints, show=False)
-    itsb = np.array(it.reset())
+#    sb = computation.solution(psi.BlockPrecondOperator(problem.mesh), solver)
+#    if plotdata: pom.output2dsoln(bounds, sb, npoints, show=False)
+#    itsb = np.array(it.reset())
     
     mp.figure()
     mp.hold(True)
@@ -57,13 +57,13 @@ def compare(problem, basisrule, mortardegree, nquad, system, plotdata = None):
 #    mp.figure()
     mp.semilogy(itsdd, 'r')
 #    mp.figure()
-    mp.semilogy(itsb, 'g')
+#    mp.semilogy(itsb, 'g')
     mp.show()
 #    print itsm, itsdd, itsb
 
 
 if __name__=="__main__":
-    k = 10
+    k = 20
     direction=np.array([[1.0,1.0]])/math.sqrt(2)
     g = pcb.PlaneWaves(direction, k)
     
@@ -78,5 +78,5 @@ if __name__=="__main__":
     nquad = 5
     problem = psp.Problem(mesh, k, bnddata)
     
-    compare(problem, basisrule, 2, nquad, pcp.HelmholtzSystem)#, (bounds, npoints))
+    compare(problem, basisrule, 2, nquad, pcp.HelmholtzSystem, (bounds, npoints))
     
