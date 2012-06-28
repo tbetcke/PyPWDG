@@ -19,7 +19,7 @@ import pypwdg.parallel.main
 
 import numpy as np
 
-k = 10
+k = 40
 direction=np.array([[1.0,1.0]])/np.sqrt(2)
 #g = pcb.PlaneWaves(direction, k)
 g = pcb.FourierHankel([-2,-2], [0], k)

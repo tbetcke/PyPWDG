@@ -10,7 +10,7 @@ try:
     import mpi4py.MPI as mpi    
     comm = mpi.COMM_WORLD
     mpiloaded = comm.size > 1
-except ImportError:    
+except ImportError: 
     print "Failed to import mpi4py"
     logging.info("Failed to import mpi4py")
 
