@@ -8,7 +8,9 @@ import pymeshpart.mesh
 import scipy.sparse as ss
 import pypwdg.parallel.decorate as ppd
 from pypwdg.mesh.gmsh_reader import gmsh_reader
-    
+import logging
+log = logging.getLogger(__name__)
+
 def gmshInfo(fname, dim, *args, **kwargs):
     ''' Construct a Mesh from a gmsh dictionary '''
     
@@ -63,12 +65,10 @@ def compute_facedata(nodes, faces, nonfacevertex, dim, vdim):
     vertices = np.array([[nodes[fv] for fv in fvs] + [nodes[otherv]] for fvs, otherv in zip(faces, nonfacevertex)])
     # M picks out the first coord and the differences to the others
     M = np.bmat([[np.mat([[1]]), np.zeros((1,dim))], [np.ones((dim,1))*-1, np.eye(dim)]])
-    print vertices.shape, M.shape
     # Apply the differencing matrix to each set of coordinates
     dirs = np.tensordot(vertices, M, ([1],[1]))
     # Ensure that the directions live in the last dimension
     directions = np.transpose(dirs, (0,2,1))
-    print directions.shape
     normals=np.zeros((len(vertices),vdim))
     
     if dim==1:
@@ -183,8 +183,8 @@ class Topology(object):
         self.boundary.eliminate_zeros()
         bdyunassigned = (self.boundary * nonboundary).getnnz()        
         if bdyunassigned:
-            print "Warning: %s non-internal faces not assigned to physical entities" %bdyunassigned
-            print [meshinfo.faces[fid] for fid in self.boundary.diagonal().nonzero()[0] if self.faceentities[fid]==None]
+            log.warn("Warning: %s non-internal faces not assigned to physical entities" %bdyunassigned)
+            log.debug([meshinfo.faces[fid] for fid in self.boundary.diagonal().nonzero()[0] if self.faceentities[fid]==None])
 
 
 class Partition(object):

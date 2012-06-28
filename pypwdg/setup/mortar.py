@@ -143,10 +143,10 @@ class MortarComputation(object):
         operator = MortarOperator(self.system, self.boundary, self.mortarsystem, args, kwargs)
         S = operator.getScol()
 #        print 'S',S   
-        mp.spy(S, markersize=1)
-        mp.figure()
+#        mp.spy(S, markersize=1)
+#        mp.figure()
 #        print operator.getScol()
-        mp.spy(operator.getM(), markersize=1)
+#        mp.spy(operator.getM(), markersize=1)
 #        print operator.getM().todense()
         x = solver.solve(operator)
         return psc.Solution(self.compinfo, x)
@@ -207,7 +207,9 @@ class MortarOperator(object):
         BL = boundary.load(False).tocsr()
         idxs = mortarsystem.idxs
         self.M = mortarsystem.getMass().tocsr().transpose()
+        print self.M.shape
         self.Ainv = ssl.splu(A[idxs, :][:, idxs])
+        self.Minv = ssl.splu(self.M[idxs, :][:, idxs])
         self.Brow = -BL[idxs, :]
         T = mortarsystem.getOppositeTrace().tocsr().transpose()
         self.Scol = -T[:, idxs].conj() # Why?
@@ -267,6 +269,11 @@ class MortarOperator(object):
 #        print "u", u  
         return self.localtoglobal * u
 #
+    @ppd.parallelmethod()
+    def precond(self, l):
+        return self.Minv.solve(l)
+    
+    
 #class BrutalSolver(object):
 #    def __init__(self, dtype):
 #        self.dtype = dtype
