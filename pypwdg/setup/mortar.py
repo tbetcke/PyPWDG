@@ -211,7 +211,7 @@ class MortarOperator(object):
         self.skelidxs = MM.subrows(skelmesh.partition)
         print self.M.shape
         self.Ainv = ssl.splu(A[idxs, :][:, idxs])
-        self.Minv = ssl.splu(self.M[self.skelidxs, :][:, self.skelidxs])
+        self.Minv = ssl.splu(self.M[self.skelidxs, :][:, self.skelidxs]*(1 + 0j))
         self.Brow = -BL[idxs, :]
         T = mortarsystem.getOppositeTrace().tocsr().transpose()
         self.Scol = -T[:, idxs].conj() # Why?
@@ -275,7 +275,8 @@ class MortarOperator(object):
     def precond(self, l):
         y = np.zeros_like(l, dtype=np.complex)
         y[self.skelidxs] = self.Minv.solve(l[self.skelidxs])
-        return y
+        y[self.skelidxs] = l[self.skelidxs]
+	return y
     
     
 #class BrutalSolver(object):

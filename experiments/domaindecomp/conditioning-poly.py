@@ -41,7 +41,7 @@ ps = []
 conds = []
 errs = []
 problem = psp.Problem(mesh, k, bnddata)
-for p in range(5,7):
+for p in range(16,25):
     quadpoints = 2*(p+1)
     nb = ((p+1)*(p+2))/2
     # Original basis:
@@ -59,9 +59,9 @@ for p in range(5,7):
     ps.append(p)
     print p, err, cond
 
-print ps
-print errs
-print conds    
+    print ps
+    print errs
+    print conds    
 #solind = computation.solution(psi.DefaultOperator(), psi.GMRESSolver(dtype='ctor'))
 
 #pom.output2dsoln(bounds, solution, npoints)
