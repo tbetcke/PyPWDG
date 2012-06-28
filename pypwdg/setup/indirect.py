@@ -6,8 +6,7 @@ Created on Feb 20, 2012
 import pypwdg.parallel.decorate as ppd
 import numpy as np
 import scipy.sparse.linalg as ssl
-import pypwdg.setup.computation as psc
-import pypwdg.utils.gmres as pug
+#import pypwdg.setup.computation as psc
 
 
 np.set_printoptions(precision=4, threshold='nan',  linewidth=1000)
