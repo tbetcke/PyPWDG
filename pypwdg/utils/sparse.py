@@ -79,6 +79,12 @@ class vbsr_matrix(object):
         self.shape = (self.bindi[-1], self.bindj[-1])
         
 
+    def diagonal(self):
+        n = len(self.blocks)
+        nn = len(self.bsizei)
+        indexmat = ss.csr_matrix((np.arange(0,n,dtype=int), self.indices, self.indptr), shape = [nn,nn])
+        return vbsr_matrix([self.blocks[i]for i in indexmat.diagonal()], np.arange(0,nn), np.arange(0,nn+1), self.bsizei, self.bsizej, self.scalar)
+
     def nnz(self):
         '''Return number of nonzeros in blocks'''
         nelems=0
@@ -225,7 +231,6 @@ class vbsr_matrix(object):
         data = []
         for i, (ip0,ip1) in enumerate(zip(self.indptr[:-1], self.indptr[1:])):
             idx = self.indices[ip0:ip1]
-            
             if len(idx) > 0 : data.append(sum(self.blocks[ip0:ip1] * x.reshape(-1,1,1)[idx], axis=0) )
             else:
                 data.append(zeros((self.bsizei[i], self.bsizej[0]))) 

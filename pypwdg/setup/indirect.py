@@ -52,6 +52,38 @@ class BlockPrecondOperator(DefaultOperator):
         PIx[self.localidxs] = self.PLU.solve(x[self.localidxs])
         return PIx
 
+@ppd.distribute()
+class DiagonalBlockOperator():
+    
+    def __init__(self, mesh):
+        self.mesh = mesh
+    
+    @ppd.parallelmethod()    
+    def setup(self, system, sysargs, syskwargs):   
+        S,G = system.getSystem(*sysargs, **syskwargs)
+        self.localidxs = S.subrows(self.mesh.partition)
+ 
+        M = S.tocsr()
+        D = S.diagonal().tocsr()
+        self.C = (D - M)[self.localidxs, :]
+        self.Dlu = ssl.splu(D[self.localidxs, :][:, self.localidxs])
+        self.n = S.shape[0]
+
+        self.b = np.zeros(self.n, dtype=np.complex)        
+        self.b[self.localidxs] = self.Dlu.solve(G.tocsr().todense().A[self.localidxs].ravel()) 
+        
+        self.dtype = M.dtype
+    
+    @ppd.parallelmethod()
+    def rhs(self):        
+        return self.b
+    
+    @ppd.parallelmethod()
+    def multiply(self, x):
+        y = np.zeros_like(x)
+        y[self.localidxs] = x[self.localidxs] - self.Dlu.solve(self.C * x)
+        return y
+        
 
 class BrutalSolver(object):
     def __init__(self, dtype):

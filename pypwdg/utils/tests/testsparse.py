@@ -26,6 +26,12 @@ class testSparse(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def testDiagonal(self):
+        d = self.VS1.diagonal().tocsr().todense()
+        dd = self.VS1D.copy()
+        dd[[0,1], 2] = 0
+        np.testing.assert_array_equal(dd, d) 
+
     def testSubrows(self):
         np.testing.assert_array_equal(self.VS1.subrows([0]), [0,1])
         np.testing.assert_array_equal(self.VS1.subrows([1]), [2,3,4])
