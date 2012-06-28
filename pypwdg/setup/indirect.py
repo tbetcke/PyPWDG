@@ -53,7 +53,7 @@ class BlockPrecondOperator(DefaultOperator):
         return PIx
 
 @ppd.distribute()
-class DiagonalBlockOperator():
+class DiagonalBlockOperator(object):
     
     def __init__(self, mesh):
         self.mesh = mesh
