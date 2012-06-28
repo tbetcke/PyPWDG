@@ -36,12 +36,12 @@ system = pcp.HelmholtzSystem
 compinfo = psc.ComputationInfo(problem, basisrule, 10)
 computation = psc.Computation(compinfo, system)
 
-solblockdiagonal = computation.solution(psi.DiagonalBlockOperator(mesh), psi.GMRESSolver('ctor'))
-soldomaindecomp = computation.solution(psd.DomainDecompOperator(mesh), psi.GMRESSolver('ctor'))
+solblockdiagonal = computation.solution(psi.DiagonalBlockOperator(mesh), psi.GMRESSolver('ctor', psi.ItCounter()))
+soldomaindecomp = computation.solution(psd.DomainDecompOperator(mesh), psi.GMRESSolver('ctor', psi.ItCounter()))
 mortarrule = pcbr.ReferenceBasisRule(pcbr.Legendre1D(3))
 s = -1j*k
 mc = psm.MortarComputation(problem, basisrule, mortarrule, nquad, system, system.boundaryclass, s)
-solmortar = mc.solution(psi.GMRESSolver('ctor'))
+solmortar = mc.solution(psi.GMRESSolver('ctor'), psi.ItCounter(5))
 
 
 #solbrutal = computation.solution(psd.DomainDecompOperator(mesh), psi.GMRESSolver('ctor'))
