@@ -273,7 +273,7 @@ class MortarOperator(object):
 #
     @ppd.parallelmethod()
     def precond(self, l):
-        y = np.zeros_like(l)
+        y = np.zeros_like(l, dtype=np.complex)
         y[self.skelidxs] = self.Minv.solve(l[self.skelidxs])
         return y
     
