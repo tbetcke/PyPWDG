@@ -140,7 +140,7 @@ class MortarComputation(object):
         
     def solution(self, solver, *args, **kwargs):
         ''' Calculate a solution.  The solve method should accept an operator'''
-        operator = MortarOperator(self.system, self.boundary, self.mortarsystem, args, kwargs)
+        operator = MortarOperator(self.system, self.boundary, self.mortarsystem, self.sd.skeletonmesh, args, kwargs)
         S = operator.getScol()
 #        print 'S',S   
 #        mp.spy(S, markersize=1)
@@ -198,18 +198,20 @@ class MortarOperator(object):
          [S_13]                 
          
     '''
-    def __init__(self, system, boundary, mortarsystem, sysargs, syskwargs):
+    def __init__(self, system, boundary, mortarsystem, skelmesh, sysargs, syskwargs):
         AA,G = system.getSystem(*sysargs, **syskwargs)
         BS = boundary.stiffness()
         #print 'BS',BS.tocsr()
         A = (AA+BS).tocsr()
         A.eliminate_zeros()
         BL = boundary.load(False).tocsr()
+        MM = mortarsystem.getMass()
+        self.M = MM.tocsr().transpose()
         idxs = mortarsystem.idxs
-        self.M = mortarsystem.getMass().tocsr().transpose()
+        self.skelidxs = MM.subrows(skelmesh.partition)
         print self.M.shape
         self.Ainv = ssl.splu(A[idxs, :][:, idxs])
-#        self.Minv = ssl.splu(self.M[idxs, :][:, idxs])
+        self.Minv = ssl.splu(self.M[self.skelidxs, :][:, self.skelidxs])
         self.Brow = -BL[idxs, :]
         T = mortarsystem.getOppositeTrace().tocsr().transpose()
         self.Scol = -T[:, idxs].conj() # Why?
@@ -269,9 +271,11 @@ class MortarOperator(object):
 #        print "u", u  
         return self.localtoglobal * u
 #
-#    @ppd.parallelmethod()
-#    def precond(self, l):
-#        return self.Minv.solve(l)
+    @ppd.parallelmethod()
+    def precond(self, l):
+        y = np.zeros_like(l)
+        y[self.skelidxs] = self.Minv.solve(l[self.skelidxs])
+        return y
     
     
 #class BrutalSolver(object):
