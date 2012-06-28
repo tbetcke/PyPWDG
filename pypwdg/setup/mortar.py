@@ -209,7 +209,7 @@ class MortarOperator(object):
         self.M = mortarsystem.getMass().tocsr().transpose()
         print self.M.shape
         self.Ainv = ssl.splu(A[idxs, :][:, idxs])
-        self.Minv = ssl.splu(self.M[idxs, :][:, idxs])
+#        self.Minv = ssl.splu(self.M[idxs, :][:, idxs])
         self.Brow = -BL[idxs, :]
         T = mortarsystem.getOppositeTrace().tocsr().transpose()
         self.Scol = -T[:, idxs].conj() # Why?
@@ -269,9 +269,9 @@ class MortarOperator(object):
 #        print "u", u  
         return self.localtoglobal * u
 #
-    @ppd.parallelmethod()
-    def precond(self, l):
-        return self.Minv.solve(l)
+#    @ppd.parallelmethod()
+#    def precond(self, l):
+#        return self.Minv.solve(l)
     
     
 #class BrutalSolver(object):
