@@ -136,7 +136,7 @@ class Computation(object):
 class DirectComputation(Computation):
     ''' A convenience class to make it easier to switch over old code that just used a Computation'''
     def __init__(self, problem, basisrule, nquadpoints, systemklass, usecache = False, **kwargs):
-        Computation.__init__(self, ComputationInfo(problem, basisrule, nquadpoints, usecache), systemklass)
+        Computation.__init__(self, ComputationInfo(problem, basisrule, nquadpoints, usecache), systemklass, **kwargs)
                     
     def solution(self, *args, **kwargs):
         return Computation.solution(self, DirectOperator(), DirectSolver(), *args, **kwargs)

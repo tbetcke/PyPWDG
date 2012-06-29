@@ -8,13 +8,13 @@ import pypwdg.utils.geometry as pug
 import numpy as np
 import matplotlib.pyplot as mp
 
-def image(v, npoints, bounds, alpha = 1.0, cmap=None):    
+def image(v, npoints, bounds, alpha = 1.0, cmap=None, colorbar = True):    
     z = v.reshape(npoints)
     
     mp.figure()
     print bounds.ravel()
     c = mp.imshow(z.T, extent=bounds.ravel(), origin='lower', alpha = alpha, cmap=cmap)
-    mp.colorbar(c)
+    if colorbar: mp.colorbar(c)
 
 
 def contour(p, v, npoints):    
@@ -42,7 +42,19 @@ def output2derror(bounds, solution, fn, npoints, plotmesh = True):
     image(np.log10(np.abs(vals - fv)), npoints, bounds)
     if plotmesh: showmesh(solution.problem.mesh)
     mp.show()
-    
+
+def outputMeshPartition(bounds, npoints, mesh, nparts):
+    bounds=np.array(bounds,dtype='d')
+    points = pug.StructuredPoints(bounds.transpose(), npoints)
+    parts = mesh.basicinfo.partition(nparts)
+    epart = np.ones(mesh.nelements)*-1
+    v = np.ones(points.length)*-1
+    for i,p in enumerate(parts):
+        for eid in p:
+            epoints, _ = pug.elementToStructuredPoints(points, mesh, eid) 
+            v[np.array(epoints)] = i
+    image(v, npoints, bounds, colorbar=False)
+    showmesh(mesh)
 
 def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True, show = True, **kwargs):    
     bounds=np.array(bounds,dtype='d')
