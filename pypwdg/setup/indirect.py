@@ -124,7 +124,7 @@ class ItTracker(object):
         self.stride = stride
         
     def __call__(self, x):
-        log.debug("res=%s, n=%s"%(x, len(self.its)))
+        if len(self.its) % 50 == 0: log.debug("res=%s, n=%s"%(x, len(self.its)))
         if len(self.its) % self.stride==0: 
             self.its.append(x if self.fn is None else self.fn(x))   
     

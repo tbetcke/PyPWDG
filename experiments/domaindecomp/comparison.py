@@ -44,6 +44,15 @@ def compare(problem, basisrule, mortardegree, nquad, system, plotdata = None):
     compinfo = psc.ComputationInfo(problem, basisrule, nquad)
     computation = psc.Computation(compinfo, system)
 
+    sdbb = computation.solution(psi.DiagonalBlockOperator(problem.mesh), solver)
+    if plotdata: pom.output2dsoln(bounds, sbd, npoints, show=False)
+    itsbb = np.array(it.reset())
+
+    sb = computation.solution(psi.BlockPrecondOperator(problem.mesh), solver)
+    if plotdata: pom.output2dsoln(bounds, sb, npoints, show=False)
+    itsb = np.array(it.reset())
+
+
     sdd = computation.solution(psd.DomainDecompOperator(problem.mesh), solver)
     if plotdata: pom.output2dsoln(bounds, sdd, npoints, show=False)
     itsdd = np.array(it.reset())
@@ -58,6 +67,8 @@ def compare(problem, basisrule, mortardegree, nquad, system, plotdata = None):
     mp.semilogy(itsm, 'b')
 #    mp.figure()
     mp.semilogy(itsdd, 'r')
+    mp.semilogy(itsbb, 'g')
+    mp.semilogy(itsb, 'k')
 #    mp.figure()
 #    mp.semilogy(itsb, 'g')
     mp.show()
@@ -65,7 +76,7 @@ def compare(problem, basisrule, mortardegree, nquad, system, plotdata = None):
 
 
 if __name__=="__main__":
-    k = 50
+    k = 20
     direction=np.array([[1.0,1.0]])/math.sqrt(2)
     g = pcb.PlaneWaves(direction, k)
     
@@ -76,7 +87,7 @@ if __name__=="__main__":
     npoints=np.array([200,200])
     with puf.pushd('../../examples/2D'):
         mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
-    basisrule = pcb.planeWaveBases(2,k,25)
+    basisrule = pcb.planeWaveBases(2,k,12)
     nquad = 5
     problem = psp.Problem(mesh, k, bnddata)
     
