@@ -10,6 +10,7 @@ from pypwdg.parallel.mpiload import *
 
 import pypwdg.parallel.messaging as ppm
 
+import logging
 import os
 import atexit
 import sys
@@ -36,6 +37,7 @@ if mpiloaded:
         # there is a better way to do this ... there's a C call that will set OMP_NUM_THREADS at run-time
         # todo: create a wrapper for it.   
         nt = max((multiprocessing.cpu_count()-1) / comm.size, 1)
-             
+        
+        logging.info("Worker process using %s threads"%nt)     
         os.putenv('OMP_NUM_THREADS', nt.__str__())
         ppm.workerloop()
