@@ -19,10 +19,12 @@ import pypwdg.output.mploutput as pom
 import pypwdg.parallel.decorate as ppd
 import scipy.sparse.linalg as ssl
 import pypwdg.parallel.mpiload as ppm
+import pypwdg.test.utils.mesh as tum
 import time
 import numpy as np
 import math
 import logging
+log = logging.getLogger(__name__)
 logging.getLogger().setLevel(logging.INFO)
 #logging.getLogger('pypwdg.setup.indirect').setLevel(logging.DEBUG)
         
@@ -32,16 +34,22 @@ class SchwarzWorker(object):
         self.mesh = mesh
         
     @ppd.parallelmethod()
-    def calcexternalidxs(self, system, sysargs, syskwargs):   
+    def calcneighbouridxs(self, system, sysargs, syskwargs):
         self.S,self.G = system.getSystem(*sysargs, **syskwargs) 
-        self.extidxs = self.S.subrows(self.mesh.innerbdyelts)
-        return [self.extidxs]
+        return [self.S.subrows(self.mesh.neighbourelts)]
     
     @ppd.parallelmethod()
     def setexternalidxs(self, allextidxs):
 #        print self.mesh.partition
         localidxs = self.S.subrows(self.mesh.partition)
-        self.internalidxs = np.array(list(set(localidxs).difference(self.extidxs)), dtype=int)
+        sl = set(localidxs)
+        self.extidxs =  np.array(list(sl.intersection(allextidxs)), dtype=int)
+        self.extidxs.sort()
+        self.internalidxs = np.array(list(sl.difference(allextidxs)), dtype=int)
+
+        log.info("local %s"%localidxs)
+        log.info("external %s"%self.extidxs)
+        log.info("internal %s"%self.internalidxs)
 
         M = self.S.tocsr()
         b = self.G.tocsr()
@@ -49,11 +57,11 @@ class SchwarzWorker(object):
         
 #        print self.extidxs, allextidxs
         self.extrow = M[self.extidxs][:, allextidxs]
-        
         Dint = M[self.internalidxs][:,self.internalidxs]
+        print Dint.todense()
         self.DI = ssl.splu(Dint)
         Dext = M[self.extidxs][:, self.extidxs]
-        self.DE = ssl.splu(Dext)
+#        self.DE = ssl.splu(Dext)
         self.Cextint = M[self.internalidxs][:, self.extidxs]
         self.Cintext = M[self.extidxs][:, self.internalidxs]
         time.sleep(ppm.comm.rank * 0.1)
@@ -102,8 +110,8 @@ class SchwarzOperator(object):
         self.workers = SchwarzWorker(mesh)
     
     def setup(self, system, sysargs, syskwargs):
-        extidxs = self.workers.calcexternalidxs(system, sysargs, syskwargs)
-        self.rhsvec = np.concatenate(self.workers.setexternalidxs(np.concatenate(extidxs)))
+        extidxs = np.unique(np.concatenate(self.workers.calcneighbouridxs(system, sysargs, syskwargs)))
+        self.rhsvec = np.concatenate(self.workers.setexternalidxs(extidxs))
     
     def rhs(self):
         return self.rhsvec
@@ -114,8 +122,8 @@ class SchwarzOperator(object):
         return y
     
     def precond(self, x):
-#        return x
-        return np.concatenate(self.workers.precondext(x))
+        return x
+#        return np.concatenate(self.workers.precondext(x))
     
     def postprocess(self, x):
         return self.workers.recoverfullsoln(x)
@@ -123,22 +131,34 @@ class SchwarzOperator(object):
 import pypwdg.parallel.main
 
 if __name__=="__main__":
-    k = 20
-    direction=np.array([[1.0,1.0]])/math.sqrt(2)
-    g = pcb.PlaneWaves(direction, k)
+
+    k = 5
+    n = 4
+    g = pcb.FourierHankel([-1,-1], [0], k)
+    bdytag = "BDY"
+    bnddata={bdytag:pcbd.dirichlet(g)}
     
-    bnddata={11:pcbd.zero_dirichlet(),
-             10:pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g=g)}
-    
-    bounds=np.array([[-2,2],[-2,2]],dtype='d')
+    bounds=np.array([[0,1],[0,1]],dtype='d')
     npoints=np.array([200,200])
-    with puf.pushd('../../examples/2D'):
-        mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
-    basisrule = pcb.planeWaveBases(2,k,15)
+    mesh = tum.regularsquaremesh(n, bdytag)    
+    
+#    direction=np.array([[1.0,1.0]])/math.sqrt(2)
+#    g = pcb.PlaneWaves(direction, k)
+#    
+#    bnddata={11:pcbd.zero_dirichlet(),
+#             10:pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g=g)}
+#    
+#    bounds=np.array([[-2,2],[-2,2]],dtype='d')
+#    npoints=np.array([200,200])
+#    with puf.pushd('../../examples/2D'):
+#        mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
+
+    basisrule = pcb.planeWaveBases(2,k,5)
     nquad = 7
    
     problem = psp.Problem(mesh, k, bnddata)
     compinfo = psc.ComputationInfo(problem, basisrule, nquad)
     computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
-    sol = computation.solution(psc.DirectOperator(), psc.DirectSolver())
+#    sol = computation.solution(SchwarzOperator(mesh), psi.GMRESSolver('ctor'))
+    sol = computation.solution(SchwarzOperator(pmm.overlappingPartitions(mesh)), psi.GMRESSolver('ctor'))
     pom.output2dsoln(bounds, sol, npoints, show=True)
