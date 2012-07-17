@@ -37,7 +37,7 @@ compinfo = psc.ComputationInfo(problem, basisrule, 10)
 computation = psc.Computation(compinfo, system)
 
 solblockdiagonal = computation.solution(psi.DiagonalBlockOperator(mesh), psi.GMRESSolver('ctor', psi.ItCounter()))
-soldomaindecomp = computation.solution(psd.DomainDecompOperator(mesh), psi.GMRESSolver('ctor', psi.ItCounter()))
+soldomaindecomp = computation.solution(psd.SchwarzOperator(mesh), psi.GMRESSolver('ctor', psi.ItCounter()))
 mortarrule = pcbr.ReferenceBasisRule(pcbr.Legendre1D(6))
 s = -1j*k
 mc = psm.MortarComputation(problem, basisrule, mortarrule, nquad, system, system.boundaryclass, s)

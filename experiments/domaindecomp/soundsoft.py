@@ -32,7 +32,7 @@ compinfo = psc.ComputationInfo(problem, pcb.planeWaveBases(2,k,11), 5)
 computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
 
 #solbrutal = computation.solution(psi.BrutalSolver(np.complex, psi.DomainDecompOperator(mesh)).solve)
-soldd = computation.solution(psd.DomainDecompOperator(mesh), psi.GMRESSolver(np.complex))
+soldd = computation.solution(psd.SchwarzOperator(mesh), psi.GMRESSolver(np.complex))
 solindirect = computation.solution(psi.BlockPrecondOperator(mesh), psi.GMRESSolver(np.complex))
 soldirect = computation.solution(psc.DirectOperator(), psc.DirectSolver())
 

@@ -191,7 +191,7 @@ class Partition(object):
     ''' A partition of a mesh'''
     def __init__(self, basicinfo, topology, partition=None, partidx=0):
         self.partition = np.arange(basicinfo.nelements) if partition is None else partition 
-#        print 'Partition', self.partition
+        print 'Partition', self.partition
         self.partidx = partidx
         self.fs = basicinfo.etof[partition].ravel()
         fpindicator = np.zeros((basicinfo.nfaces,), dtype=int)

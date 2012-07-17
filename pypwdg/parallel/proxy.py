@@ -32,7 +32,7 @@ def getnewproxyuid():
     uidint = uid.int
     cs = comm.size # don't want to have to access comm potentially after mpi has been finalized
     def uidcallback(uidref):
-        logging.log(logging.INFO, 'Distributing unregister for %s'%(uidint))
+        logging.log(logging.INFO, 'Distributing unregister for %s'%(uid))
         ppm.asyncfncall(unregisterproxy, [((uuid.UUID(int = uidint),),{})] * (cs-1))        
     uidweakrefs[uid] = weakref.ref(uid, uidcallback)
     return uid
@@ -62,6 +62,7 @@ class Proxy(object):
     def __init__( self, klass, subject = None):
         self.__klass = klass
         self.__id__ = getnewproxyuid()
+        print klass, self.__id__
         self.subject = subject
         
     def __getattr__( self, name ):

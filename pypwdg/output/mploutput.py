@@ -7,6 +7,7 @@ import pypwdg.core.bases.utilities as pcbu
 import pypwdg.utils.geometry as pug
 import numpy as np
 import matplotlib.pyplot as mp
+import pypwdg.parallel.decorate as ppd
 
 def image(v, npoints, bounds, alpha = 1.0, cmap=None, colorbar = True):    
     z = v.reshape(npoints)
@@ -43,16 +44,19 @@ def output2derror(bounds, solution, fn, npoints, plotmesh = True):
     if plotmesh: showmesh(solution.problem.mesh)
     mp.show()
 
-def outputMeshPartition(bounds, npoints, mesh, nparts):
+@ppd.parallel()
+def getPartitions(mesh):
+    return [mesh.partition]
+
+def outputMeshPartition(bounds, npoints, mesh, nparts = 0):
     bounds=np.array(bounds,dtype='d')
     points = pug.StructuredPoints(bounds.transpose(), npoints)
-    parts = mesh.basicinfo.partition(nparts)
-    epart = np.ones(mesh.nelements)*-1
+    parts = getPartitions(mesh) if nparts==0 else mesh.basicinfo.partition(nparts)
     v = np.ones(points.length)*-1
     for i,p in enumerate(parts):
         for eid in p:
             epoints, _ = pug.elementToStructuredPoints(points, mesh, eid) 
-            v[np.array(epoints)] = i
+            v[np.array(epoints)] += (i+1)
     image(v, npoints, bounds, colorbar=False)
     showmesh(mesh)
 
