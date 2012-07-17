@@ -9,6 +9,7 @@ import scipy.sparse.linalg as ssl
 import pypwdg.setup.computation as psc
 import logging
 log = logging.getLogger(__name__)
+log.addHandler(logging.StreamHandler())
 
 np.set_printoptions(precision=4, threshold='nan',  linewidth=1000)
 

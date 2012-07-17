@@ -10,6 +10,7 @@ import time
 import numpy as np
 import logging
 log = logging.getLogger(__name__)
+log.addHandler(logging.StreamHandler())
 
 @ppd.distribute()
 class SchwarzWorker(object):
@@ -40,9 +41,9 @@ class SchwarzWorker(object):
         self.intind = np.zeros(self.S.shape[0], dtype=bool) 
         self.intind[intidxs] = True # Create an indicator for the interior degrees
 
-        log.info("local %s"%localidxs)
-        log.info("external %s"%extidxs)
-        log.info("internal %s"%intidxs)
+        log.debug("local %s"%localidxs)
+        log.debug("external %s"%extidxs)
+        log.debug("internal %s"%intidxs)
 
         M = self.S.tocsr() # Get CSR representations of the system matrix ...
         b = self.G.tocsr() # ... and the load vector
@@ -94,6 +95,7 @@ class SchwarzOperator(object):
     def setup(self, system, sysargs, syskwargs):
         self.extidxs = np.unique(np.concatenate(self.workers.initialise(system, sysargs, syskwargs)))
         self.rhsvec = np.concatenate(self.workers.setexternalidxs(self.extidxs))
+        log.info("Schur complement system has %s dofs"%len(self.extidxs))
     
     def rhs(self):
         return self.rhsvec

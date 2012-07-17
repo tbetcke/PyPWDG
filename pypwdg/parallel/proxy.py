@@ -22,6 +22,8 @@ import weakref
 import uuid
 import logging
 
+log = logging.getLogger(__name__)
+
 workerobjects = {}
 uidweakrefs = weakref.WeakKeyDictionary()
 
@@ -32,7 +34,7 @@ def getnewproxyuid():
     uidint = uid.int
     cs = comm.size # don't want to have to access comm potentially after mpi has been finalized
     def uidcallback(uidref):
-        logging.log(logging.INFO, 'Distributing unregister for %s'%(uid))
+        log.info('Distributing unregister for %s'%(uid))
         ppm.asyncfncall(unregisterproxy, [((uuid.UUID(int = uidint),),{})] * (cs-1))        
     uidweakrefs[uid] = weakref.ref(uid, uidcallback)
     return uid
@@ -46,8 +48,8 @@ def registerproxy(uid, subject):
     workerobjects[uid] = subject
 
 def unregisterproxy(uid):
-    logging.log(logging.INFO, 'Unregistering %s'%(uid))
-    logging.log(logging.DEBUG, 'Remaining worker objects: %s'%(len(workerobjects)))
+    log.info('Unregistering %s'%(uid))
+    log.debug('Remaining worker objects: %s'%(len(workerobjects)))
     del workerobjects[uid]
       
 
@@ -62,7 +64,7 @@ class Proxy(object):
     def __init__( self, klass, subject = None):
         self.__klass = klass
         self.__id__ = getnewproxyuid()
-        print klass, self.__id__
+        log.debug("class = %s, id = %s"%(klass, self.__id__))
         self.subject = subject
         
     def __getattr__( self, name ):

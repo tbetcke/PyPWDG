@@ -26,7 +26,17 @@ import math
 import logging
 log = logging.getLogger(__name__)
 logging.getLogger().setLevel(logging.INFO)
-#logging.getLogger('pypwdg.setup.indirect').setLevel(logging.DEBUG)
+logging.getLogger('pypwdg.setup.domain').setLevel(logging.INFO)
+
+@ppd.distribute()
+class GeneralRobinSystem(object):
+    
+    def __init__(self, computationinfo, cutentity):
+        self.internalassembly = computationinfo.faceAssembly()
+        mesh = computationinfo.problem.mesh
+        self.B = mesh.connectivity * mesh.entityfaces[cutentity]
+        
+
    
 import pypwdg.parallel.main
 
@@ -60,8 +70,8 @@ if __name__=="__main__":
 #    mesh = pmm.overlappingPartitions(mesh)
     
    
-    problem = psp.Problem(mesh, k, bnddata)
-#    problem = psp.Problem(pmm.overlappingPartitions(mesh),k,bnddata)
+#    problem = psp.Problem(mesh, k, bnddata)
+    problem = psp.Problem(pmm.overlappingPartitions(mesh),k,bnddata)
     
     compinfo = psc.ComputationInfo(problem, basisrule, nquad)
     computation = psc.Computation(compinfo, pcp.HelmholtzSystem)

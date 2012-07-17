@@ -14,6 +14,8 @@ import inspect
 import types
 import operator
 
+log = logging.getLogger(__name__)
+
 def opadd(x, y):
     if x is None: return y
     if y is None: return x
