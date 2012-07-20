@@ -71,7 +71,8 @@ def hump(c = 1, yc = 0.3, yr = 0.1, alpha = 0.3):
     return slowness, prw.gradient(slowness, 1E-6)
     
 def bubblematerial(c = 1, N = 20):
-    slowness, gradslowness = bubble(c)
+#    slowness, gradslowness = bubble(c)
+    slowness, gradslowness = hump(c)
     x0 = np.vstack((np.linspace(0,1,N), np.zeros(N))).T
     p0 = np.vstack((np.zeros(N), np.ones(N))).T
     wfs, idxs = prw.wavefront(x0, p0, slowness, gradslowness, 0.1, 1.2/c, 0.1)

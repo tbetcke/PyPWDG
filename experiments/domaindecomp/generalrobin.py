@@ -31,12 +31,17 @@ logging.getLogger('pypwdg.setup.domain').setLevel(logging.INFO)
 @ppd.distribute()
 class GeneralRobinSystem(object):
     
-    def __init__(self, computationinfo, cutentity):
+    def __init__(self, computationinfo, overlapfaceentity, system):
         self.internalassembly = computationinfo.faceAssembly()
         mesh = computationinfo.problem.mesh
-        self.B = mesh.connectivity * mesh.entityfaces[cutentity]
+        self.B = mesh.connectivity * mesh.entityfaces[overlapfaceentity]
+        self.system = system
         
-
+    def getSystem(self):
+        S,G = self.system.getSystem()
+        self.internalassembly.assemble([[jk * self.alpha * AJ.JD,   -AJ.AN - B], 
+                                            [AJ.AD + B,                -(self.beta / jk) * AJ.JN]])
+    
    
 import pypwdg.parallel.main
 
