@@ -6,6 +6,7 @@ Created on Jul 5, 2012
 import pypwdg.core.bases as pcb
 import pypwdg.core.physics as pcp
 import pypwdg.mesh.mesh as pmm
+import pypwdg.mesh.structure as pms
 import pypwdg.core.boundary_data as pcbd
 import pypwdg.utils.file as puf
 import pypwdg.setup.problem as psp
@@ -31,16 +32,19 @@ logging.getLogger('pypwdg.setup.domain').setLevel(logging.INFO)
 @ppd.distribute()
 class GeneralRobinSystem(object):
     
-    def __init__(self, computationinfo, overlapfaceentity, system):
+    def __init__(self, computationinfo, overlapfaceentity, q, system):
         self.internalassembly = computationinfo.faceAssembly()
         mesh = computationinfo.problem.mesh
-        self.B = mesh.connectivity * mesh.entityfaces[overlapfaceentity]
+        self.B = q * mesh.connectivity * mesh.entityfaces[overlapfaceentity]
+        self.Z = pms.AveragesAndJumps(mesh)        
         self.system = system
-        
+
+    @ppd.parallelmethod()            
     def getSystem(self):
         S,G = self.system.getSystem()
-        self.internalassembly.assemble([[jk * self.alpha * AJ.JD,   -AJ.AN - B], 
-                                            [AJ.AD + B,                -(self.beta / jk) * AJ.JN]])
+        M = self.internalassembly.assemble([[self.B, self.B], 
+                                        [self.Z, self.Z]])
+        return M+S, G
     
    
 import pypwdg.parallel.main
