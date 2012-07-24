@@ -80,17 +80,17 @@ class SchwarzWorker(object):
         x = np.zeros_like(self.intind, dtype=complex)
         x[self.intind] = self.intsolveb - self.int_intinv.solve(self.int_allext * xe)
         return x, self.intind*1
-         
-class SchwarzOperator(object):
+
+class GeneralSchwarzOperator(object):
     """ Together with SchwarzWorker, the SchwarzOperator implements a linear system whose
         solution is the fixed point of a Schwarz iteration based on an algebraic decomposition
         of the system.
         
         The decomposition is determined by the partitions of the mesh.  These partitions may be
         overlapping.  
-    """    
-    def __init__(self, mesh):
-        self.workers = SchwarzWorker(mesh)
+    """        
+    def __init__(self, workers):
+        self.workers = workers
     
     def setup(self, system, sysargs, syskwargs):
         self.extidxs = np.unique(np.concatenate(self.workers.initialise(system, sysargs, syskwargs)))
@@ -113,4 +113,9 @@ class SchwarzOperator(object):
         count[self.extidxs]+=1 
         x[self.extidxs] = xe # Now add in the exterior stuff (no point having the workers do this)
         return x / count # Average anything that got duplicated
+             
+class SchwarzOperator(GeneralSchwarzOperator):
+    def __init__(self, mesh):
+        GeneralSchwarzOperator.__init__(self, SchwarzWorker(mesh))
+
  

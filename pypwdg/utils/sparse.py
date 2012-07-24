@@ -137,8 +137,14 @@ class vbsr_matrix(object):
     def todense(self):
         return self.tocsr().todense()
     
-    def subrows(self, structurerows):
-        ''' Return the rows in the csr matrix associated with structurerows'''
+    def subrows(self, structurerows=None):
+        ''' Return the rows in the csr matrix associated with structurerows
+        
+            If structurerows is None, then return the non-empty rows in the csr matrix
+        '''
+        if structurerows is None:
+            structurerows = (self.indptr[1:] - self.indptr[:-1]) > 0
+        
         rowidxs = []
         for s, i in zip(self.bsizei[structurerows], self.bindi[structurerows]):
             rowidxs.append(np.arange(i, i+s))

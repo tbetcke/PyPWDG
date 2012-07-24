@@ -32,23 +32,111 @@ logging.getLogger().setLevel(logging.INFO)
 logging.getLogger('pypwdg.setup.domain').setLevel(logging.INFO)
 
 @ppd.distribute()
-class GeneralRobinSystem(object):
+class GeneralRobinPerturbation(object):
     
-    def __init__(self, computationinfo, q, system):
+    def __init__(self, computationinfo, q):
         self.internalassembly = computationinfo.faceAssembly()
         mesh = computationinfo.problem.mesh
         cut = ss.spdiags(mesh.cutfaces, [0], mesh.nfaces,mesh.nfaces)
         self.B = q * mesh.connectivity * cut
-        self.Z = pms.AveragesAndJumps(mesh)        
-        self.system = system
+        self.Z = pms.AveragesAndJumps(mesh).Z        
 
-    @ppd.parallelmethod()            
-    def getSystem(self):
-        S,G = self.system.getSystem()
-        M = self.internalassembly.assemble([[self.B, self.B], 
+    def getPerturbation(self):
+        return self.internalassembly.assemble([[self.B, self.B], 
                                         [self.Z, self.Z]])
-        return M+S, G
     
+
+#@ppd.distribute()
+#class GeneralRobinWorker(psd.SchwarzWorker):
+#
+#    def __init__(self, perturbation, mesh):
+#        psd.SchwarzWorker.__init__(self, mesh)
+#        self.perturbation = perturbation
+#
+#    @ppd.parallelmethod()
+#    def initialise(self, system, sysargs, syskwargs):
+#        extdofs = psd.SchwarzWorker.initialise(system, sysargs, syskwargs)
+#        self.P = self.perturbation.getPerturbation()
+#        overlapdofs = self.P.subrows()
+#        log.info("Overlap dofs: %s"%overlapdofs) 
+#        extdofs.append(overlapdofs)
+
+@ppd.distribute()
+class GeneralSchwarzWorker(object):
+    def __init__(self, perturbation, mesh):
+        self.mesh = mesh
+        self.perturbation = perturbation
+        
+    @ppd.parallelmethod()
+    def initialise(self, system, sysargs, syskwargs):
+        """ Initialise the system in the worker
+        
+            returns a list of the neighbouring degrees of freedom required by this process
+        """
+        self.S,self.G = system.getSystem(*sysargs, **syskwargs) 
+        self.P = self.perturbation.getPerturbation()
+        self.overlapdofs = self.P.subrows()
+        log.info("Overlap dofs: %s"%self.overlapdofs) 
+        return [self.S.subrows(self.mesh.neighbourelts), self.overlapdofs]
+    
+    @ppd.parallelmethod()
+    def setexternalidxs(self, allextidxs):
+        """ Tell this worker which degrees of freedom are exterior (i.e. are accessed by one process from another) 
+        
+            Returns this worker's contribution to the RHS for the Schur complement system
+        """
+        localidxs = self.S.subrows(self.mesh.partition) # the degrees of freedom calculated by this process
+                                                        # N.B. for an overlapping method these arrays will overlap between processes -
+                                                        # it still all works!
+        sl = set(localidxs)
+        extidxs =  np.sort(np.array(list(sl.intersection(allextidxs)), dtype=int)) # the exterior degrees for this process
+        intidxs = np.array(list(sl.difference(allextidxs).union(self.overlapdofs)), dtype=int) # the interior degrees for this process
+        self.intind = np.zeros(self.S.shape[0], dtype=bool) 
+        self.intind[intidxs] = True # Create an indicator for the interior degrees
+
+        log.debug("local %s"%localidxs)
+        log.debug("external %s"%extidxs)
+        log.debug("internal %s"%intidxs)
+
+        M = self.S.tocsr() # Get CSR representations of the system matrix ...
+        b = self.G.tocsr() # ... and the load vector
+        P = self.P.tocsr()
+        MpP = M + P
+        MmP = M - P
+
+        # Decompose the system matrix.  
+        self.ext_allext = M[extidxs][:, allextidxs] 
+        self.int_intinv = ssl.splu(MpP[intidxs][:,intidxs])
+        self.int_allext = MmP[intidxs][:, allextidxs]
+        self.ext_int = M[extidxs][:, intidxs]
+        
+        self.intsolveb = self.int_intinv.solve(b[intidxs].todense().A.squeeze())
+        rhs = b[extidxs].todense().A.squeeze() - self.ext_int * self.intsolveb
+        return [rhs]
+        
+        
+    @ppd.parallelmethod()
+    def multiplyext(self, x):
+        y = self.ext_allext * x - self.ext_int * self.int_intinv.solve(self.int_allext * x)
+        return [y]  
+    
+    @ppd.parallelmethod()
+    def precondext(self, x):        
+        return x
+#        return [self.DE.solve(x[self.localfromallext])]
+    
+    @ppd.parallelmethod(None, ppd.tuplesum)
+    def recoverinterior(self, xe):
+        """ Recover all the local interior degrees from the exterior degrees
+        
+            returns a tuple of the contribution to the global solution vector and an indicator of what 
+            degrees have been written to.  The indicator is used to average duplicate contributions for 
+            overlapping methods.
+        """ 
+        x = np.zeros_like(self.intind, dtype=complex)
+        x[self.intind] = self.intsolveb - self.int_intinv.solve(self.int_allext * xe)
+        return x, self.intind*1
+        
    
 import pypwdg.parallel.main
 
@@ -79,15 +167,16 @@ if __name__=="__main__":
     nquad = 7
    
 #    mesh = pmo.overlappingPartitions(pmo.overlappingPartitions(mesh))
-#    mesh = pmm.overlappingPartitions(mesh)
+    mesh = pmo.overlappingPartitions(mesh)
     
    
 #    problem = psp.Problem(mesh, k, bnddata)
-    problem = psp.Problem(pmo.overlappingPartitions(mesh),k,bnddata)
+    problem = psp.Problem(mesh,k,bnddata)
     
     compinfo = psc.ComputationInfo(problem, basisrule, nquad)
     computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
-    sol = computation.solution(psd.SchwarzOperator(mesh), psi.GMRESSolver('ctor'))
+    perturbation = GeneralRobinPerturbation(compinfo, 0)
+    sol = computation.solution(psd.GeneralSchwarzOperator(GeneralSchwarzWorker(perturbation, mesh)), psi.GMRESSolver('ctor'))
 #    print sol.x
     
 #    sol = computation.solution(SchwarzOperator(pmm.overlappingPartitions(mesh)), psi.GMRESSolver('ctor'))
