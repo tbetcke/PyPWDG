@@ -4,7 +4,6 @@ Created on Jul 27, 2010
 @author: tbetcke
 '''
 import numpy as np
-import pymeshpart.mesh
 import scipy.sparse as ss
 import pypwdg.parallel.decorate as ppd
 from pypwdg.mesh.gmsh_reader import gmsh_reader
@@ -97,6 +96,7 @@ def partition(elements, nnodes, nparts, dim):
     if nparts ==1:
         return [allelts]
     else:
+        import pymeshpart.mesh
         """ Partition the mesh into nparts partitions """
         if dim==2:
             elemtype=1
