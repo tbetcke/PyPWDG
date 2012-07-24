@@ -216,17 +216,6 @@ class BespokePartition(Partition):
     ''' A helper class that creates one mesh partition per worker process'''
     pass    
 
-@ppd.distribute()
-class OverlappingPartition(Partition):
-    def __init__(self, meshview):
-        overlappart = np.sort(np.concatenate((meshview.partition, meshview.neighbourelts)))
-        log.debug(overlappart)
-        Partition.__init__(self, meshview.basicinfo, meshview.topology, overlappart, meshview.part.partidx)
-        
-
-def overlappingPartitions(meshview):
-    return MeshView(meshview.basicinfo, meshview.topology, OverlappingPartition(meshview))
-
 class MeshView(object):
     ''' Pulls all the mesh information together.  Provides a partition-specific view onto bits of the topology
     

@@ -7,6 +7,7 @@ import pypwdg.core.bases as pcb
 import pypwdg.core.physics as pcp
 import pypwdg.mesh.mesh as pmm
 import pypwdg.mesh.structure as pms
+import pypwdg.mesh.overlap as pmo
 import pypwdg.core.boundary_data as pcbd
 import pypwdg.utils.file as puf
 import pypwdg.setup.problem as psp
@@ -23,6 +24,7 @@ import pypwdg.parallel.mpiload as ppm
 import pypwdg.test.utils.mesh as tum
 import time
 import numpy as np
+import scipy.sparse as ss
 import math
 import logging
 log = logging.getLogger(__name__)
@@ -32,10 +34,11 @@ logging.getLogger('pypwdg.setup.domain').setLevel(logging.INFO)
 @ppd.distribute()
 class GeneralRobinSystem(object):
     
-    def __init__(self, computationinfo, overlapfaceentity, q, system):
+    def __init__(self, computationinfo, q, system):
         self.internalassembly = computationinfo.faceAssembly()
         mesh = computationinfo.problem.mesh
-        self.B = q * mesh.connectivity * mesh.entityfaces[overlapfaceentity]
+        cut = ss.spdiags(mesh.cutfaces, [0], mesh.nfaces,mesh.nfaces)
+        self.B = q * mesh.connectivity * cut
         self.Z = pms.AveragesAndJumps(mesh)        
         self.system = system
 
@@ -75,12 +78,12 @@ if __name__=="__main__":
     basisrule = pcb.planeWaveBases(2,k,9)
     nquad = 7
    
-    mesh = pmm.overlappingPartitions(pmm.overlappingPartitions(mesh))
+#    mesh = pmo.overlappingPartitions(pmo.overlappingPartitions(mesh))
 #    mesh = pmm.overlappingPartitions(mesh)
     
    
 #    problem = psp.Problem(mesh, k, bnddata)
-    problem = psp.Problem(pmm.overlappingPartitions(mesh),k,bnddata)
+    problem = psp.Problem(pmo.overlappingPartitions(mesh),k,bnddata)
     
     compinfo = psc.ComputationInfo(problem, basisrule, nquad)
     computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
