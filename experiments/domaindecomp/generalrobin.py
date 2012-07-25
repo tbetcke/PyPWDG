@@ -39,11 +39,12 @@ class GeneralRobinPerturbation(object):
         mesh = computationinfo.problem.mesh
         cut = ss.spdiags(mesh.cutfaces, [0], mesh.nfaces,mesh.nfaces)
         self.B = q * mesh.connectivity * cut
-        self.Z = pms.AveragesAndJumps(mesh).Z        
+        self.Z = pms.AveragesAndJumps(mesh).Z     
+        self.mesh = mesh   
 
     def getPerturbation(self):
-        return self.internalassembly.assemble([[self.B, self.B], 
-                                        [self.Z, self.Z]])
+        return pms.sumfaces(self.mesh, self.internalassembly.assemble([[self.B, self.B], 
+                                        [self.Z, self.Z]]))
     
 
 #@ppd.distribute()
@@ -117,6 +118,7 @@ class GeneralSchwarzWorker(object):
         
     @ppd.parallelmethod()
     def multiplyext(self, x):
+        print x.shape, self.ext_allext.shape, self.ext_int.shape, self.int_allext.shape
         y = self.ext_allext * x - self.ext_int * self.int_intinv.solve(self.int_allext * x)
         return [y]  
     
@@ -175,7 +177,9 @@ if __name__=="__main__":
     
     compinfo = psc.ComputationInfo(problem, basisrule, nquad)
     computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
-    perturbation = GeneralRobinPerturbation(compinfo, 0)
+    perturbation = GeneralRobinPerturbation(compinfo, 1E-6)
+#    sol = computation.solution(psd.SchwarzOperator(mesh), psi.GMRESSolver('ctor'))
+
     sol = computation.solution(psd.GeneralSchwarzOperator(GeneralSchwarzWorker(perturbation, mesh)), psi.GMRESSolver('ctor'))
 #    print sol.x
     
