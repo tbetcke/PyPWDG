@@ -199,29 +199,29 @@ class WavefrontInterpolate():
         return vfound, phases[vfound] / nTris[vfound].reshape(-1,1)        
 
 
-def nodesToPhases(wavefronts, forwardidxs, mesh, bdys):
-    nodephases = [[] for _ in range(mesh.nnodes)]
-    bdylist = sum([list(nodes) for (i, nodes) in mesh.boundaries if i in bdys], [])    
-    ftov = ss.csr_matrix((np.ones(mesh.nfaces * 2, dtype=np.int8), mesh.faces.ravel(), np.arange(0, mesh.nfaces+1)*2), dtype=np.int8)
+def nodesToPhases(wavefronts, forwardidxs, meshinfo, bdys):
+    nodephases = [[] for _ in range(meshinfo.nnodes)]
+    bdylist = sum([list(nodes) for (i, nodes) in meshinfo.boundaries if i in bdys], [])    
+    ftov = ss.csr_matrix((np.ones(meshinfo.nfaces * 2, dtype=np.int8), meshinfo.faces.ravel(), np.arange(0, meshinfo.nfaces+1)*2), dtype=np.int8)
     vtov = ftov.T * ftov
     vtov.data = vtov.data / vtov.data
  
-    bdynodes = np.zeros(mesh.nnodes, dtype=bool)
+    bdynodes = np.zeros(meshinfo.nnodes, dtype=bool)
     bdynodes[bdylist] = True   
-    nextnodes = np.zeros(mesh.nnodes, dtype=bool)
+    nextnodes = np.zeros(meshinfo.nnodes, dtype=bool)
        
     for ((x0,p0),(x1,p1),idxs) in zip(wavefronts[:-1], wavefronts[1:], forwardidxs[1:]):
         # For each wavefront, we'll search for nodes that are within it.
         # We start with curnodes.  
         curnodes = nextnodes if nextnodes.any() else bdynodes # we start with the neighbours of the previous wavefront (or the boundary)
-        nextnodes = np.zeros(mesh.nnodes, dtype=bool)
+        nextnodes = np.zeros(meshinfo.nnodes, dtype=bool)
         
-        checkednodes = np.zeros(mesh.nnodes, dtype=bool) 
+        checkednodes = np.zeros(meshinfo.nnodes, dtype=bool) 
         (x1p, p1p) = (x1,p1) if idxs is None else (x1[idxs], p1[idxs]) 
         wi = WavefrontInterpolate(x0,x1p,p0,p1p)
         while curnodes.any():
             cnz = curnodes.nonzero()[0]
-            found, phases = wi.interpolate(mesh.nodes[cnz])
+            found, phases = wi.interpolate(meshinfo.nodes[cnz])
             nextnodes[cnz[np.logical_not(found)]] = True
             if len(phases): # we found something
                 for p, idx in zip(phases, cnz[found]):

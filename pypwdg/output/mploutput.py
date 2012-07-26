@@ -98,7 +98,7 @@ def showdirections2(mesh, etods, **kwargs):
     mp.quiver(centres[:,0], centres[:,1], directions[:,0], directions[:,1], **kwargs)    
     
 def showdirections(mesh, etob, **kwargs):
-    elementinfo = pcbu.ElementInfo(mesh, 0)
+    elementinfo = pcbu.ElementInfo(mesh)
     centres = []
     directions = []
     for e in range(mesh.nelements):
