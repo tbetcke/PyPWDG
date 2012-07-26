@@ -15,6 +15,7 @@ import pypwdg.setup.problem as psp
 
 def plotwavefront(wavefronts, forwardidxs = None):
     for (x,p) in wavefronts:
+        print x
         mp.plot(x[:,0], x[:,1])
     if forwardidxs:
         x01s = []

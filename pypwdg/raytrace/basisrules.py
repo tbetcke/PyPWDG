@@ -29,7 +29,7 @@ def etodsfromvtods(mesh, vtods):
     return etods
     
 def getetob(wavefronts, forwardidxs, mesh, bdys):
-    vtods = prw.nodesToPhases(wavefronts, forwardidxs, mesh, bdys)
+    vtods, _ = prw.nodesToDirsAndPhases(wavefronts, forwardidxs, mesh, bdys)
     etods = etodsfromvtods(mesh, vtods)
     etob = [[pcb.PlaneWaves(ds, k=10)] if len(ds) else [] for ds in etods]
     return etob
