@@ -10,6 +10,7 @@ import pypwdg.test.utils.mesh as ptum
 import wavefrontexamples as erw
 import numpy as np
 import scipy.interpolate as si
+import math
 
 class NicolasBubble(object):
     def __init__(self, c=1, origin = [0.5,0.5], radius = 0.25):
@@ -40,8 +41,12 @@ def bubblematerial(c = 1, N = 20, dt = 0.05):
     pom.output2dfn(bounds, speed, npoints, show=False)
     slowness = lambda x : 1/ speed(x)
     gradslowness = prw.gradient(slowness, 1E-6)
-    x0 = np.vstack((np.linspace(0,1,N), np.zeros(N))).T
-    p0 = np.vstack((np.zeros(N), np.ones(N))).T
+#    x0 = np.vstack((np.linspace(0,1,N), np.zeros(N))).T
+#    p0 = np.vstack((np.zeros(N), np.ones(N))).T
+    angles = np.linspace(0, math.pi, N)
+    p0 = np.vstack((np.cos(angles), np.sin(angles))).T
+    x0 = np.array([0.5,0]) + dt * p0
+    
     wfs, idxs = prw.wavefront(x0, p0, slowness, gradslowness, dt, 1.01/c, 0.1)
     erw.plotwavefront(wfs, idxs)    
     phasefn = interpolatephase(wfs, dt)
