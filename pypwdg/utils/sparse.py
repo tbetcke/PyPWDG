@@ -72,9 +72,11 @@ class vbsr_matrix(object):
         self.indptr = numpy.array(indptr, dtype=int)    
         self.bsizei = numpy.array(bsizei, dtype=int)
         self.bsizej = numpy.array(bsizej, dtype=int)
-        self.bindj = numpy.concatenate(([0],bsizej)).cumsum()
-        self.bindi = numpy.concatenate(([0],bsizei)).cumsum()
+        self.bindj = numpy.concatenate(([0],bsizej)).cumsum(dtype=int)
+        self.bindi = numpy.concatenate(([0],bsizei)).cumsum(dtype=int)
         self.scalar = scalar
+        if self.bindi.dtype==np.float64:
+            print self.bsizei, self.bindi
 #        self.shape = (sum(self.bsizei), sum(self.bsizej))
         self.shape = (self.bindi[-1], self.bindj[-1])
         
@@ -148,7 +150,8 @@ class vbsr_matrix(object):
         rowidxs = []
         for s, i in zip(self.bsizei[structurerows], self.bindi[structurerows]):
             rowidxs.append(np.arange(i, i+s))
-        return np.concatenate(rowidxs) if len(rowidxs) else np.array([])
+            print s,i
+        return np.concatenate(rowidxs) if len(rowidxs) else np.array([], dtype=int)
         
     
     def _mul(self, lindices, lindptr, ldata, lshape, lsizes, rindices, rindptr, rdata, rshape, rsizes, otherscalar, prod):

@@ -37,7 +37,8 @@ class GeneralRobinPerturbation(object):
     def __init__(self, computationinfo, q):
         self.internalassembly = computationinfo.faceAssembly()
         mesh = computationinfo.problem.mesh
-        cut = ss.spdiags(mesh.cutfaces, [0], mesh.nfaces,mesh.nfaces)
+        cut = ss.spdiags((mesh.cutfaces > 0)*1, [0], mesh.nfaces,mesh.nfaces)
+#        print cut
         self.B = q * mesh.connectivity * cut
         self.Z = pms.AveragesAndJumps(mesh).Z     
         self.mesh = mesh   
@@ -77,6 +78,7 @@ class GeneralSchwarzWorker(object):
         self.S,self.G = system.getSystem(*sysargs, **syskwargs) 
         self.P = self.perturbation.getPerturbation()
         self.overlapdofs = self.P.subrows()
+        print self.overlapdofs.dtype
         log.info("Overlap dofs: %s"%self.overlapdofs) 
         return [self.S.subrows(self.mesh.neighbourelts), self.overlapdofs]
     
@@ -90,8 +92,9 @@ class GeneralSchwarzWorker(object):
                                                         # N.B. for an overlapping method these arrays will overlap between processes -
                                                         # it still all works!
         sl = set(localidxs)
-        extidxs =  np.sort(np.array(list(sl.intersection(allextidxs)), dtype=int)) # the exterior degrees for this process
-        intidxs = np.array(list(sl.difference(allextidxs).union(self.overlapdofs)), dtype=int) # the interior degrees for this process
+        extnooverlap = set(allextidxs).difference(self.overlapdofs)
+        extidxs =  np.sort(np.array(list(sl.intersection(extnooverlap)), dtype=int)) # the exterior degrees for this process
+        intidxs = np.array(list(sl.difference(extnooverlap)), dtype=int) # the interior degrees for this process
         self.intind = np.zeros(self.S.shape[0], dtype=bool) 
         self.intind[intidxs] = True # Create an indicator for the interior degrees
 
@@ -104,6 +107,10 @@ class GeneralSchwarzWorker(object):
         P = self.P.tocsr()
         MpP = M + P
         MmP = M - P
+
+        print "differences"
+        print M[extidxs][:, allextidxs] - MpP[extidxs][:, allextidxs]
+        print M[extidxs][:, intidxs] - MpP[extidxs][:, intidxs]
 
         # Decompose the system matrix.  
         self.ext_allext = M[extidxs][:, allextidxs] 
@@ -118,7 +125,7 @@ class GeneralSchwarzWorker(object):
         
     @ppd.parallelmethod()
     def multiplyext(self, x):
-        print x.shape, self.ext_allext.shape, self.ext_int.shape, self.int_allext.shape
+#        print x.shape, self.ext_allext.shape, self.ext_int.shape, self.int_allext.shape
         y = self.ext_allext * x - self.ext_int * self.int_intinv.solve(self.int_allext * x)
         return [y]  
     
@@ -145,25 +152,26 @@ import pypwdg.parallel.main
 if __name__=="__main__":
 
     k = 15
-#    n = 4
-#    g = pcb.FourierHankel([-1,-1], [0], k)
-#    bdytag = "BDY"
-#    bnddata={bdytag:pcbd.dirichlet(g)}
-#    
-#    bounds=np.array([[0,1],[0,1]],dtype='d')
-#    npoints=np.array([200,200])
-#    mesh = tum.regularsquaremesh(n, bdytag)    
-#    
-    direction=np.array([[1.0,1.0]])/math.sqrt(2)
-    g = pcb.PlaneWaves(direction, k)
+    n = 4
+    g = pcb.FourierHankel([-1,-1], [0], k)
+    bdytag = "BDY"
+    bnddata={bdytag:pcbd.dirichlet(g)}
     
-    bnddata={11:pcbd.zero_dirichlet(),
-             10:pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g=g)}
-    
-    bounds=np.array([[-2,2],[-2,2]],dtype='d')
+    bounds=np.array([[0,1],[0,1]],dtype='d')
     npoints=np.array([200,200])
-    with puf.pushd('../../examples/2D'):
-        mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
+    mesh = tum.regularsquaremesh(n, bdytag)    
+    
+#    direction=np.array([[1.0,1.0]])/math.sqrt(2)
+#    g = pcb.PlaneWaves(direction, k)
+#    
+#    bnddata={11:pcbd.zero_dirichlet(),
+#             10:pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g=g)}
+#    
+#    bounds=np.array([[-2,2],[-2,2]],dtype='d')
+#    npoints=np.array([200,200])
+#    with puf.pushd('../../examples/2D'):
+#        mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
+#
 
     basisrule = pcb.planeWaveBases(2,k,9)
     nquad = 7
@@ -177,7 +185,7 @@ if __name__=="__main__":
     
     compinfo = psc.ComputationInfo(problem, basisrule, nquad)
     computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
-    perturbation = GeneralRobinPerturbation(compinfo, 1E-6)
+    perturbation = GeneralRobinPerturbation(compinfo, 0.1)
 #    sol = computation.solution(psd.SchwarzOperator(mesh), psi.GMRESSolver('ctor'))
 
     sol = computation.solution(psd.GeneralSchwarzOperator(GeneralSchwarzWorker(perturbation, mesh)), psi.GMRESSolver('ctor'))
