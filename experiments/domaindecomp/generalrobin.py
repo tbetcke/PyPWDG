@@ -39,13 +39,13 @@ class GeneralRobinPerturbation(object):
         mesh = computationinfo.problem.mesh
         cut = ss.spdiags((mesh.cutfaces > 0)*1, [0], mesh.nfaces,mesh.nfaces)
 #        print cut
-        self.B = q * mesh.connectivity * cut
+        self.B = q * (mesh.connectivity * cut + cut)
         self.Z = pms.AveragesAndJumps(mesh).Z     
         self.mesh = mesh   
 
     def getPerturbation(self):
-        return pms.sumfaces(self.mesh, self.internalassembly.assemble([[self.B, self.B], 
-                                        [self.Z, self.Z]]))
+        return pms.sumfaces(self.mesh, self.internalassembly.assemble([[self.B, self.Z], 
+                                        [self.B, self.Z]]))
     
 
 #@ppd.distribute()
@@ -105,12 +105,9 @@ class GeneralSchwarzWorker(object):
         M = self.S.tocsr() # Get CSR representations of the system matrix ...
         b = self.G.tocsr() # ... and the load vector
         P = self.P.tocsr()
+        print P
         MpP = M + P
         MmP = M - P
-
-        print "differences"
-        print M[extidxs][:, allextidxs] - MpP[extidxs][:, allextidxs]
-        print M[extidxs][:, intidxs] - MpP[extidxs][:, intidxs]
 
         # Decompose the system matrix.  
         self.ext_allext = M[extidxs][:, allextidxs] 
