@@ -13,7 +13,6 @@ def image(v, npoints, bounds, alpha = 1.0, cmap=None, colorbar = True):
     z = v.reshape(npoints)
     
     mp.figure()
-    print bounds.ravel()
     c = mp.imshow(z.T, extent=bounds.ravel(), origin='lower', alpha = alpha, cmap=cmap)
     if colorbar: mp.colorbar(c)
 

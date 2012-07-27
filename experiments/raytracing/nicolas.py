@@ -48,7 +48,7 @@ def bubblematerial(c = 1, N = 20, dt = 0.05):
     x0 = np.array([0.5,0]) + dt * p0
     
     wfs, idxs = prw.wavefront(x0, p0, slowness, gradslowness, dt, 1.01/c, 0.1)
-    erw.plotwavefront(wfs, idxs)    
+    erw.plotwavefront(wfs, idxs, bounds)    
     phasefn = interpolatephase(wfs, dt)
     pom.output2dfn(bounds, phasefn, npoints, show=False)
     

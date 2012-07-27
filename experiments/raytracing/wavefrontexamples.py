@@ -13,15 +13,13 @@ import numpy as np
 
 import pypwdg.setup.problem as psp
 
-def plotwavefront(wavefronts, forwardidxs = None):
+def plotwavefront(wavefronts, forwardidxs = None, bounds = None):
     for (x,p) in wavefronts:
-        print x
         mp.plot(x[:,0], x[:,1])
+    if bounds is not None: mp.axis(np.array(bounds).ravel())
     if forwardidxs:
         x01s = []
         for ((x0,p0), (x1,p1), fidx) in zip(wavefronts[:-1], wavefronts[1:], forwardidxs[1:]):
-            print x1.shape, x0.shape
-            print fidx
             xf = x1 if fidx is None else x1[fidx]
             x01s.append(np.dstack((x0,xf)))
         xy = np.vstack(x01s)

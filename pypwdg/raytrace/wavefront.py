@@ -127,8 +127,6 @@ def wavefront(x0,p0,slowness,gradslowness,deltat,Tmax,tol):
 
     for _ in range(nsteps):
         xi,pi,fwdidx = fillin(x,p,tol)
-        print "xi",xi 
-        print "pi",pi
         wavefronts.append((xi,pi))
         forwardidxs.append(fwdidx)
         x,p = onestep(xi,pi,slowness,gradslowness,deltat)
