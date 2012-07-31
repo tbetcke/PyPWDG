@@ -79,7 +79,6 @@ class StructuredPoints(object):
         upper = np.ceil(intervals * (eupper - self.lower) / (self.upper - self.lower)).astype(int)+1
         lower = np.max((lower, np.zeros(self.dim, dtype=int)), axis=0)
         upper = np.min((upper, self.npoints), axis=0)
-#        print lower, upper
         # We're going to take advantage of numpy array broadcasting and assemble a hypercube.
         # of indices and points.  The first step is to work out how to reshape the indices in each
         # axis.        

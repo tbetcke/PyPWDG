@@ -23,7 +23,7 @@ def contour(p, v, npoints):
     z = v.reshape(npoints)
     
     mp.figure()
-    c = mp.contourf(x,y,z)
+    c = mp.contour(x,y,z)
     mp.colorbar(c)
 
 def showmesh(mesh):    
@@ -72,12 +72,14 @@ def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True, s
     if plotmesh: showmesh(solution.computation.problem.mesh)
     if show: mp.show()
        
-def output2dfn(bounds, fn, npoints, show = True, **kwargs):
+def output2dfn(bounds, fn, npoints, show = True, type=None, **kwargs):
     bounds=np.array(bounds,dtype='d')
     points = pug.StructuredPoints(bounds.transpose(), npoints).toArray()
     v = np.real(fn(points))
-#    contour(points, v, npoints)
-    image(v, npoints, bounds, **kwargs)
+    if type=='contour':
+        contour(points, v, npoints)
+    else:
+        image(v, npoints, bounds, **kwargs)
     if show: mp.show()
 
 def showdirections2(mesh, etods, **kwargs):

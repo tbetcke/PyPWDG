@@ -188,6 +188,7 @@ class WavefrontInterpolate():
 
     def interpolate(self, v):
         """ Find all the triangles that each v is in, then average the linear interpolation of the phases"""
+        print len(v)
         v1 = np.vstack((v.T, np.ones(len(v)))) # set up the points for the barycentric calculation
         bary1 = np.array(map(lambda lup: sl.lu_solve(lup, v1), self.lup1)) # calculate the barycentric coords for the first set of triangles
         bary2 = np.array(map(lambda lup: sl.lu_solve(lup, v1), self.lup2)) # ... and the second
@@ -206,37 +207,67 @@ class WavefrontInterpolate():
         return vfound, phases[vfound] / nTris[vfound].reshape(-1,1), phi[vfound] / nTris[vfound]        
 
 
-def nodesToDirsAndPhases(wavefronts, forwardidxs, meshinfo, bdys):
-    nodedirs = [[] for _ in range(meshinfo.nnodes)]
-    nodephases = [[] for _ in range(meshinfo.nnodes)]
-    bdylist = sum([list(nodes) for (i, nodes) in meshinfo.boundaries if i in bdys], [])    
-    ftov = ss.csr_matrix((np.ones(meshinfo.nfaces * 2, dtype=np.int8), meshinfo.faces.ravel(), np.arange(0, meshinfo.nfaces+1)*2), dtype=np.int8)
-    vtov = ftov.T * ftov
-    vtov.data = vtov.data / vtov.data
+class StructuredPointInfo(object):
+    def __init__(self, structuredpoints, boundary):
+        N = structuredpoints.length
+        n = structuredpoints.strides[0]
+        self.adjacency = ss.spdiags(np.ones((4, N), dtype=int), [-n, -1, 1, n],N,N )
+        self.N = N
+        self.bdynodes = np.zeros(N, dtype=bool)
+        self.bdynodes[boundary] = True
+        self.points = structuredpoints.toArray()
+        
+    def neighbour(self, pointindicator):
+        return self.adjacency * pointindicator > 0
+            
+    def boundary(self):
+        return self.bdynodes
+
+class MeshPointInfo(object):
+    def __init__(self, meshinfo, bdytags):
+        bdylist = sum([list(nodes) for (i, nodes) in meshinfo.boundaries if i in bdytags], [])    
+        ftov = ss.csr_matrix((np.ones(meshinfo.nfaces * 2, dtype=np.int8), meshinfo.faces.ravel(), np.arange(0, meshinfo.nfaces+1)*2), dtype=np.int8)
+        self.vtov = ftov.T * ftov
+        self.vtov.data = self.vtov.data / self.vtov.data
+        self.bdynodes = np.zeros(meshinfo.nnodes, dtype=bool)
+        self.bdynodes[bdylist] = True
+        self.points = meshinfo.nodes
+        self.N = meshinfo.nnodes
+        
+    def neighbour(self, pointindicator):
+        return self.vtov * pointindicator
+        
+    def boundary(self):
+        return self.bdynodes
+
+def nodesToDirsAndPhases(wavefronts, forwardidxs, pointinfo):
+    nodedirs = [[] for _ in range(pointinfo.N)]
+    nodephases = [[] for _ in range(pointinfo.N)]
  
-    bdynodes = np.zeros(meshinfo.nnodes, dtype=bool)
-    bdynodes[bdylist] = True   
-    nextnodes = np.zeros(meshinfo.nnodes, dtype=bool)
+    nextnodes = np.zeros(pointinfo.N, dtype=bool)
        
     for t, ((x0,p0),(x1,p1),idxs) in enumerate(zip(wavefronts[:-1], wavefronts[1:], forwardidxs[1:])):
         # For each wavefront, we'll search for nodes that are within it.
         # We start with curnodes.  
-        curnodes = nextnodes if nextnodes.any() else bdynodes # we start with the neighbours of the previous wavefront (or the boundary)
-        nextnodes = np.zeros(meshinfo.nnodes, dtype=bool)
+        print "nextnodes", sum(nextnodes)
+        curnodes = nextnodes if nextnodes.any() else pointinfo.boundary() # we start with the neighbours of the previous wavefront (or the boundary)
+        nextnodes = np.zeros(pointinfo.N, dtype=bool)
         
-        checkednodes = np.zeros(meshinfo.nnodes, dtype=bool) 
+        checkednodes = np.zeros(pointinfo.N, dtype=bool) 
         (x1p, p1p) = (x1,p1) if idxs is None else (x1[idxs], p1[idxs]) 
         wi = WavefrontInterpolate(x0,x1p,p0,p1p)
         while curnodes.any():
             cnz = curnodes.nonzero()[0]
-            found, dirs, phases = wi.interpolate(meshinfo.nodes[cnz])
+            
+            found, dirs, phases = wi.interpolate(pointinfo.points[cnz])
             nextnodes[cnz[np.logical_not(found)]] = True
+            curnodes[cnz[np.logical_not(found)]] = False
             if len(found): # we found something
                 for d, p, idx in zip(dirs, phases, cnz[found]):
                     nodedirs[idx].append(d)
                     nodephases[idx].append(p + t)
-                checkednodes[cnz] = True        
-                curnodes = np.logical_and((vtov * curnodes), np.logical_not(checkednodes))
+                checkednodes[cnz] = True
+                curnodes = np.logical_and(pointinfo.neighbour(curnodes), np.logical_not(checkednodes))
             else:
                 break # we didn't find anything.  Stop working with this wavefront
         
