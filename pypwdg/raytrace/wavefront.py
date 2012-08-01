@@ -8,6 +8,9 @@ import scipy.linalg as sl
 import scipy.sparse as ss
 import math
 
+import logging
+log = logging.Logger(__name__)
+
 def norm(a):
     return np.sqrt(np.sum(a**2,axis=1))
 
@@ -188,7 +191,6 @@ class WavefrontInterpolate():
 
     def interpolate(self, v):
         """ Find all the triangles that each v is in, then average the linear interpolation of the phases"""
-        print len(v)
         v1 = np.vstack((v.T, np.ones(len(v)))) # set up the points for the barycentric calculation
         bary1 = np.array(map(lambda lup: sl.lu_solve(lup, v1), self.lup1)) # calculate the barycentric coords for the first set of triangles
         bary2 = np.array(map(lambda lup: sl.lu_solve(lup, v1), self.lup2)) # ... and the second
@@ -213,8 +215,7 @@ class StructuredPointInfo(object):
         n = structuredpoints.strides[0]
         self.adjacency = ss.spdiags(np.ones((4, N), dtype=int), [-n, -1, 1, n],N,N )
         self.N = N
-        self.bdynodes = np.zeros(N, dtype=bool)
-        self.bdynodes[boundary] = True
+        self.bdynodes = boundary
         self.points = structuredpoints.toArray()
         
     def neighbours(self, pointidxs):
@@ -223,52 +224,61 @@ class StructuredPointInfo(object):
             
     def boundary(self):
         return self.bdynodes
-
-class MeshPointInfo(object):
-    def __init__(self, meshinfo, bdytags):
-        bdylist = sum([list(nodes) for (i, nodes) in meshinfo.boundaries if i in bdytags], [])    
-        ftov = ss.csr_matrix((np.ones(meshinfo.nfaces * 2, dtype=np.int8), meshinfo.faces.ravel(), np.arange(0, meshinfo.nfaces+1)*2), dtype=np.int8)
-        self.vtov = ftov.T * ftov
-        self.vtov.data = self.vtov.data / self.vtov.data
-        self.bdynodes = np.zeros(meshinfo.nnodes, dtype=bool)
-        self.bdynodes[bdylist] = True
-        self.points = meshinfo.nodes
-        self.N = meshinfo.nnodes
-        
-    def neighbour(self, pointindicator):
-        return self.vtov * pointindicator
-        
-    def boundary(self):
-        return self.bdynodes
+#
+#class MeshPointInfo(object):
+#    def __init__(self, meshinfo, bdytags):
+#        bdylist = sum([list(nodes) for (i, nodes) in meshinfo.boundaries if i in bdytags], [])    
+#        ftov = ss.csr_matrix((np.ones(meshinfo.nfaces * 2, dtype=np.int8), meshinfo.faces.ravel(), np.arange(0, meshinfo.nfaces+1)*2), dtype=np.int8)
+#        self.vtov = ftov.T * ftov
+#        self.vtov.data = self.vtov.data / self.vtov.data
+#        self.bdynodes = np.zeros(meshinfo.nnodes, dtype=bool)
+#        self.bdynodes[bdylist] = True
+#        self.points = meshinfo.nodes
+#        self.N = meshinfo.nnodes
+#        
+#    def neighbour(self, pointindicator):
+#        return self.vtov * pointindicator
+#        
+#    def boundary(self):
+#        return self.bdynodes
 
 def nodesToDirsAndPhases(wavefronts, forwardidxs, pointinfo, lookback = 1):
-    print "lookback", lookback
+    ''' Interpolate some wavefronts onto some points 
+        Args:
+            wavefronts, forwardidxs: define the wavefront
+            pointinfo: Defines the points to interpolate onto (see StructuredPointInfo)
+            lookback: An estimate of the maximum distance between 2 wavefronts associated with neighbouring points.  Should be something like ceil(h / (c * dt))
+        Returns: 
+            a tuple containing the directions per point and the phases per point
+    '''
     nodedirs = [[] for _ in range(pointinfo.N)]
     nodephases = [[] for _ in range(pointinfo.N)]
      
-    pointsperwavefront = [pointinfo.boundary()]
-       
-    for t, ((x0,p0),(x1,p1),idxs) in enumerate(zip(wavefronts[:-1], wavefronts[1:], forwardidxs[1:])):
-        # For each wavefront, we'll search for nodes that are within it.
-        startnodes = np.concatenate(pointsperwavefront[-lookback:])
-        curnodes = np.unique(np.concatenate((startnodes,pointinfo.neighbours(startnodes))))
-        print "curnodes", len(curnodes)
-        pf = [np.array([], dtype=int)]
+    pointsperwavefront = [pointinfo.boundary()] # The points found for each wavefront  
+    
+    log.info('Processing %s wavefronts'%len(wavefronts))
+    for t, ((x0,p0),(x1,p1),idxs) in enumerate(zip(wavefronts[:-1], wavefronts[1:], forwardidxs[1:])):  # For each wavefront, we'll search for nodes that are within it.
+
+        startnodes = np.concatenate(pointsperwavefront[-lookback:]) # Collect the points in some recent wavefronts
+        curnodes = np.unique(np.concatenate((startnodes,pointinfo.neighbours(startnodes)))) # Add in their neighbours
         
-        checkednodes = [] 
+        pf = [np.array([], dtype=int)] # the points that we've found        
+        checkednodes = [] # the points that we've checked
+        
         (x1p, p1p) = (x1,p1) if idxs is None else (x1[idxs], p1[idxs]) 
-        wi = WavefrontInterpolate(x0,x1p,p0,p1p)
+        wi = WavefrontInterpolate(x0,x1p,p0,p1p) # This object will perform interpolation for a given wavefront
         while len(curnodes) > 0:
             
-            found, dirs, phases = wi.interpolate(pointinfo.points[curnodes])
+            found, dirs, phases = wi.interpolate(pointinfo.points[curnodes]) # Check the current points
             if np.any(found): # we found something
+                # Record the results:
                 for d, p, idx in zip(dirs, phases, curnodes[found]):
                     nodedirs[idx].append(d)
                     nodephases[idx].append(p + t)
                 pf.append(curnodes[found])
-                checkednodes.append(curnodes)
-                curnodes = pointinfo.neighbours(curnodes[found])
-                print "neighbours", sum(found), len(curnodes)
+                
+                checkednodes.append(curnodes) # Ensure that we don't duplicate effort
+                curnodes = pointinfo.neighbours(curnodes[found]) # Now lets check the neighbours of the points that we found
                 for cn in checkednodes:
                     curnodes = np.setdiff1d(curnodes, cn, assume_unique=True)
                 
@@ -276,6 +286,7 @@ def nodesToDirsAndPhases(wavefronts, forwardidxs, pointinfo, lookback = 1):
                 break # we didn't find anything.  Stop working with this wavefront
             
         pointsperwavefront.append(np.concatenate(pf))
+        log.info('Wavefront %s: Started: %s, Checked %s, Found %s'%(t, len(startnodes), sum(map(len, checkednodes)), len(pointsperwavefront[-1])))
     return nodedirs, nodephases
         
         
