@@ -33,10 +33,11 @@ def interpolatephase(wfs, dt):
     return si.LinearNDInterpolator(points, phases*dt, fill_value = -1)
             
 
-def bubblematerial(c = 1, N = 20, dt = 0.01):
+def bubblematerial(c = 1, N = 20, dt = 0.02):
     
     bounds = [[0,1],[0,1]]
-    npoints = [50,50]
+    npoints = [100,100]
+    
     
     speed = NicolasBubble()
     pom.output2dfn(bounds, speed, npoints, show=False)
@@ -58,9 +59,10 @@ def bubblematerial(c = 1, N = 20, dt = 0.01):
 #    _, phases = prw.nodesToDirsAndPhases(wfs, idxs, prw.MeshPointInfo(meshinfo, ["BDY"]))
     
     sp = pug.StructuredPoints(np.array(bounds).T, npoints)
-    pointinfo = prw.StructuredPointInfo(sp, sp.getPoints([[0.4,-0.1],[0.6,0.1]])[0])
-    print "boundary", pointinfo.points[pointinfo.boundary()]
-    _, phases = prw.nodesToDirsAndPhases(wfs, idxs, pointinfo)
+    pointinfo = prw.StructuredPointInfo(sp, sp.getPoints([[0.4,0],[0.6,0.1]])[0])
+    h = np.max((sp.upper - sp.lower) / sp.npoints)
+    print "h", h
+    _, phases = prw.nodesToDirsAndPhases(wfs, idxs, pointinfo, lookback = int(math.ceil(h / dt)))
     
     
     firstphase = np.array([p[0] if len(p) > 0 else -1 for p in phases])*dt

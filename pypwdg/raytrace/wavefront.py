@@ -217,8 +217,9 @@ class StructuredPointInfo(object):
         self.bdynodes[boundary] = True
         self.points = structuredpoints.toArray()
         
-    def neighbour(self, pointindicator):
-        return self.adjacency * pointindicator > 0
+    def neighbours(self, pointidxs):
+        n = len(pointidxs)
+        return (self.adjacency * ss.csc_matrix((np.ones(n, dtype=int), pointidxs, [0, n]), shape=(self.N, 1))).tocsc().indices.ravel()
             
     def boundary(self):
         return self.bdynodes
@@ -240,37 +241,41 @@ class MeshPointInfo(object):
     def boundary(self):
         return self.bdynodes
 
-def nodesToDirsAndPhases(wavefronts, forwardidxs, pointinfo):
+def nodesToDirsAndPhases(wavefronts, forwardidxs, pointinfo, lookback = 1):
+    print "lookback", lookback
     nodedirs = [[] for _ in range(pointinfo.N)]
     nodephases = [[] for _ in range(pointinfo.N)]
- 
-    nextnodes = np.zeros(pointinfo.N, dtype=bool)
+     
+    pointsperwavefront = [pointinfo.boundary()]
        
     for t, ((x0,p0),(x1,p1),idxs) in enumerate(zip(wavefronts[:-1], wavefronts[1:], forwardidxs[1:])):
         # For each wavefront, we'll search for nodes that are within it.
-        # We start with curnodes.  
-        print "nextnodes", sum(nextnodes)
-        curnodes = nextnodes if nextnodes.any() else pointinfo.boundary() # we start with the neighbours of the previous wavefront (or the boundary)
-        nextnodes = np.zeros(pointinfo.N, dtype=bool)
+        startnodes = np.concatenate(pointsperwavefront[-lookback:])
+        curnodes = np.unique(np.concatenate((startnodes,pointinfo.neighbours(startnodes))))
+        print "curnodes", len(curnodes)
+        pf = [np.array([], dtype=int)]
         
-        checkednodes = np.zeros(pointinfo.N, dtype=bool) 
+        checkednodes = [] 
         (x1p, p1p) = (x1,p1) if idxs is None else (x1[idxs], p1[idxs]) 
         wi = WavefrontInterpolate(x0,x1p,p0,p1p)
-        while curnodes.any():
-            cnz = curnodes.nonzero()[0]
+        while len(curnodes) > 0:
             
-            found, dirs, phases = wi.interpolate(pointinfo.points[cnz])
-            nextnodes[cnz[np.logical_not(found)]] = True
-            curnodes[cnz[np.logical_not(found)]] = False
-            if len(found): # we found something
-                for d, p, idx in zip(dirs, phases, cnz[found]):
+            found, dirs, phases = wi.interpolate(pointinfo.points[curnodes])
+            if np.any(found): # we found something
+                for d, p, idx in zip(dirs, phases, curnodes[found]):
                     nodedirs[idx].append(d)
                     nodephases[idx].append(p + t)
-                checkednodes[cnz] = True
-                curnodes = np.logical_and(pointinfo.neighbour(curnodes), np.logical_not(checkednodes))
+                pf.append(curnodes[found])
+                checkednodes.append(curnodes)
+                curnodes = pointinfo.neighbours(curnodes[found])
+                print "neighbours", sum(found), len(curnodes)
+                for cn in checkednodes:
+                    curnodes = np.setdiff1d(curnodes, cn, assume_unique=True)
+                
             else:
                 break # we didn't find anything.  Stop working with this wavefront
-        
+            
+        pointsperwavefront.append(np.concatenate(pf))
     return nodedirs, nodephases
         
         
