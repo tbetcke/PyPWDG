@@ -39,7 +39,7 @@ class GeneralRobinPerturbation(object):
         mesh = computationinfo.problem.mesh
         cut = ss.spdiags((mesh.cutfaces > 0)*1, [0], mesh.nfaces,mesh.nfaces)
 #        print cut
-        self.B = q * (mesh.connectivity * cut + cut)
+        self.B = q * (cut - cut * mesh.connectivity)
         self.Z = pms.AveragesAndJumps(mesh).Z     
         self.mesh = mesh   
 
@@ -68,6 +68,10 @@ class GeneralSchwarzWorker(object):
     def __init__(self, perturbation, mesh):
         self.mesh = mesh
         self.perturbation = perturbation
+    
+    @ppd.parallelmethod()
+    def overlap(self):
+        return [self.overlapdofs]
         
     @ppd.parallelmethod()
     def initialise(self, system, sysargs, syskwargs):
@@ -105,7 +109,8 @@ class GeneralSchwarzWorker(object):
         M = self.S.tocsr() # Get CSR representations of the system matrix ...
         b = self.G.tocsr() # ... and the load vector
         P = self.P.tocsr()
-        print P
+        
+        print "Non zero entries in perturbation matrix", sum(np.abs(P.data) > 1E-6)
         MpP = M + P
         MmP = M - P
 
@@ -168,7 +173,7 @@ if __name__=="__main__":
 #    npoints=np.array([200,200])
 #    with puf.pushd('../../examples/2D'):
 #        mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
-#
+
 
     basisrule = pcb.planeWaveBases(2,k,9)
     nquad = 7
@@ -182,10 +187,35 @@ if __name__=="__main__":
     
     compinfo = psc.ComputationInfo(problem, basisrule, nquad)
     computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
-    perturbation = GeneralRobinPerturbation(compinfo, 0.1)
-#    sol = computation.solution(psd.SchwarzOperator(mesh), psi.GMRESSolver('ctor'))
+    perturbation = GeneralRobinPerturbation(compinfo, 1E-6)
 
     sol = computation.solution(psd.GeneralSchwarzOperator(GeneralSchwarzWorker(perturbation, mesh)), psi.GMRESSolver('ctor'))
+#    bs = psi.BrutalSolver(np.complex)
+#    gsw1 = GeneralSchwarzWorker(perturbation, mesh)
+#    sol = computation.solution(psd.GeneralSchwarzOperator(gsw1), bs)
+#    M1 = bs.M
+#    b1 = bs.b
+#    x1 = bs.x
+#    p2 = GeneralRobinPerturbation(compinfo, 1.0)
+#    gsw2 = GeneralSchwarzWorker(p2, mesh)
+#    sol = computation.solution(psd.GeneralSchwarzOperator(gsw2), bs)
+#    
+#    overlap1 = np.concatenate(gsw1.overlap())
+#    overlap2 = np.concatenate(gsw2.overlap())
+#    print overlap1
+#    print overlap2
+#    M2 = bs.M
+#    b2 = bs.b
+#    x2 = bs.x
+#    dM = M1 - M2
+#    print "dM", dM
+#    mp.figure()
+#    mp.spy(dM,markersize = 1)
+#    print b1 - b2
+#    print x1 - x2
+#    print dM[9:12, :]
+#    print dM[:,9:12]
+#    print (x1 - x2)[9:12]
 #    print sol.x
     
 #    sol = computation.solution(SchwarzOperator(pmm.overlappingPartitions(mesh)), psi.GMRESSolver('ctor'))

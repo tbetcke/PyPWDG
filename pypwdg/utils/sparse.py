@@ -150,7 +150,6 @@ class vbsr_matrix(object):
         rowidxs = []
         for s, i in zip(self.bsizei[structurerows], self.bindi[structurerows]):
             rowidxs.append(np.arange(i, i+s))
-            print s,i
         return np.concatenate(rowidxs) if len(rowidxs) else np.array([], dtype=int)
         
     

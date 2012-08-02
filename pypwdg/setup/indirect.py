@@ -87,24 +87,23 @@ class DiagonalBlockOperator(object):
         
 
 class BrutalSolver(object):
-    def __init__(self, dtype):
+    def __init__(self, dtype, store=False):
         self.dtype = dtype
+        self.store = store
     
     def solve(self, operator):
         b = operator.rhs()
         n = len(b)
         M = np.hstack([operator.multiply(x).reshape(-1,1) for x in np.eye(n, dtype=self.dtype)])
         log.debug("M = %s, b = %s", M.shape, b.shape)
-#        print "Brutal Solver", M
-#        print 'b',b
-#        mp.figure()
-#        mp.spy(M, markersize=1)
         x = ssl.spsolve(M, b)
-#        print 'solve: x', x
-#        print x
+        if self.store:
+            self.M = M
+            self.b = b
+            self.x = x
+            
         if hasattr(operator, 'postprocess'):
             x = operator.postprocess(x)
-#        print x
         return x
         
 
@@ -157,7 +156,7 @@ class GMRESSolver(object):
 #        x, status = ssl.bicgstab(lo, b, callback = callback, M=pc)
         x, status = ssl.gmres(lo, b, callback = self.callback, M=pc, restart=n)
         log.info(status)
-
+        print x
         if hasattr(operator, 'postprocess'):
             x = operator.postprocess(x)
         return x
