@@ -40,10 +40,12 @@ class SchwarzWorker(object):
         intidxs = np.array(list(sl.difference(allextidxs)), dtype=int) # the interior degrees for this process
         self.intind = np.zeros(self.S.shape[0], dtype=bool) 
         self.intind[intidxs] = True # Create an indicator for the interior degrees
+        self.localext = allextidxs.searchsorted(extidxs)
 
         log.debug("local %s"%localidxs)
         log.debug("external %s"%extidxs)
         log.debug("internal %s"%intidxs)
+        log.info("localext %s"%self.localext)
 
         M = self.S.tocsr() # Get CSR representations of the system matrix ...
         b = self.G.tocsr() # ... and the load vector
@@ -57,7 +59,7 @@ class SchwarzWorker(object):
         self.intsolveb = self.int_intinv.solve(b[intidxs].todense().A.squeeze())
         rhs = b[extidxs].todense().A.squeeze() - self.ext_int * self.intsolveb
         return [rhs]
-        
+    
         
     @ppd.parallelmethod()
     def multiplyext(self, x):
@@ -65,9 +67,8 @@ class SchwarzWorker(object):
         return [y]  
     
     @ppd.parallelmethod()
-    def precondext(self, x):        
-        return x
-#        return [self.DE.solve(x[self.localfromallext])]
+    def precondext(self, x):              
+        return [self.ext_extinv.solve(x[self.localext]) if hasattr(self, 'ext_extinv') else x[self.localext] ]
     
     @ppd.parallelmethod(None, ppd.tuplesum)
     def recoverinterior(self, xe):
@@ -105,7 +106,7 @@ class GeneralSchwarzOperator(object):
         return y
     
     def precond(self, x):
-        return x
+        return np.concatenate(self.workers.precondext(x))
     
     def postprocess(self, xe):
         """ Given some values at the exterior dofs, recover the global solution """

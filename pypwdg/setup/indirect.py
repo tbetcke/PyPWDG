@@ -132,12 +132,12 @@ class ItTracker(object):
         its = self.its
         self.its = []
         return its
-    
-class GMRESSolver(object):
 
-    def __init__(self, dtype, callback=ItCounter()):
+class IterativeSolver(object):
+    
+    def __init__(self, dtype, callback=None):
         self.dtype = dtype
-        self.callback = callback
+        self.callback = callback if callback is not None else ItCounter()
 
     def solve(self, operator):
         if self.dtype=='ctor':
@@ -148,18 +148,30 @@ class GMRESSolver(object):
         
         b = operator.rhs()        
         n = len(b)
-        log.info("GMRES solving system of size %s", n)
+        log.info("IterativeSolver solving system of size %s", n)
         
         lo = ssl.LinearOperator((n,n), operator.multiply, dtype=dtype)
         pc = ssl.LinearOperator((n,n), operator.precond, dtype=dtype) if hasattr(operator, 'precond') else None
         
-#        x, status = ssl.bicgstab(lo, b, callback = callback, M=pc)
-        x, status = ssl.gmres(lo, b, callback = self.callback, M=pc, restart=n)
-        log.info(status)
-        print x
+        x = self.solveop(lo, b, pc, n)
+
         if hasattr(operator, 'postprocess'):
             x = operator.postprocess(x)
         return x
+
+class GMRESSolver(IterativeSolver):
+    def solveop(self, lo,b,pc,n):
+        x,status = ssl.gmres(lo, b, callback=self.callback, M=pc, restart = n)
+        log.info(status)
+        return x
+
+class BICGSTABSolver(IterativeSolver):
+    def solve(self, lo,b,pc,n):
+        x,status = ssl.bicgstab(lo, b, callback=self.callback, M=pc)
+        log.info(status)
+        return x
+
+
 
 class ComplexToRealOperator(object):
     def __init__(self, complexop):

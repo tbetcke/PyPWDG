@@ -25,6 +25,7 @@ import pypwdg.test.utils.mesh as tum
 import time
 import numpy as np
 import scipy.sparse as ss
+import scipy.sparse.linalg as ssl
 import math
 import logging
 log = logging.getLogger(__name__)
@@ -48,25 +49,10 @@ class GeneralRobinPerturbation(object):
                                         [self.B, self.Z]]))
     
 
-#@ppd.distribute()
-#class GeneralRobinWorker(psd.SchwarzWorker):
-#
-#    def __init__(self, perturbation, mesh):
-#        psd.SchwarzWorker.__init__(self, mesh)
-#        self.perturbation = perturbation
-#
-#    @ppd.parallelmethod()
-#    def initialise(self, system, sysargs, syskwargs):
-#        extdofs = psd.SchwarzWorker.initialise(system, sysargs, syskwargs)
-#        self.P = self.perturbation.getPerturbation()
-#        overlapdofs = self.P.subrows()
-#        log.info("Overlap dofs: %s"%overlapdofs) 
-#        extdofs.append(overlapdofs)
-
 @ppd.distribute()
-class GeneralSchwarzWorker(object):
+class PerturbedSchwarzWorker(psd.SchwarzWorker):
     def __init__(self, perturbation, mesh):
-        self.mesh = mesh
+        psd.SchwarzWorker.__init__(self, mesh)
         self.perturbation = perturbation
     
     @ppd.parallelmethod()
@@ -75,22 +61,15 @@ class GeneralSchwarzWorker(object):
         
     @ppd.parallelmethod()
     def initialise(self, system, sysargs, syskwargs):
-        """ Initialise the system in the worker
-        
-            returns a list of the neighbouring degrees of freedom required by this process
-        """
-        self.S,self.G = system.getSystem(*sysargs, **syskwargs) 
+        neighbours = psd.SchwarzWorker.initialise(self, system, sysargs, syskwargs)
         self.P = self.perturbation.getPerturbation()
         self.overlapdofs = self.P.subrows()
-        print self.overlapdofs.dtype
         log.info("Overlap dofs: %s"%self.overlapdofs) 
-        return [self.S.subrows(self.mesh.neighbourelts), self.overlapdofs]
+        return neighbours+[self.overlapdofs]
     
     @ppd.parallelmethod()
     def setexternalidxs(self, allextidxs):
-        """ Tell this worker which degrees of freedom are exterior (i.e. are accessed by one process from another) 
-        
-            Returns this worker's contribution to the RHS for the Schur complement system
+        """ Todo: refactor the base class to avoid duplication here
         """
         localidxs = self.S.subrows(self.mesh.partition) # the degrees of freedom calculated by this process
                                                         # N.B. for an overlapping method these arrays will overlap between processes -
@@ -101,16 +80,18 @@ class GeneralSchwarzWorker(object):
         intidxs = np.array(list(sl.difference(extnooverlap)), dtype=int) # the interior degrees for this process
         self.intind = np.zeros(self.S.shape[0], dtype=bool) 
         self.intind[intidxs] = True # Create an indicator for the interior degrees
+        self.localext = allextidxs.searchsorted(extidxs)
 
         log.debug("local %s"%localidxs)
         log.debug("external %s"%extidxs)
         log.debug("internal %s"%intidxs)
+        log.info("localext %s"%self.localext)
 
         M = self.S.tocsr() # Get CSR representations of the system matrix ...
         b = self.G.tocsr() # ... and the load vector
         P = self.P.tocsr()
         
-        print "Non zero entries in perturbation matrix", sum(np.abs(P.data) > 1E-6)
+        log.info("Non zero entries in perturbation matrix = %s"%sum(np.abs(P.data) > 1E-6))
         MpP = M + P
         MmP = M - P
 
@@ -119,42 +100,32 @@ class GeneralSchwarzWorker(object):
         self.int_intinv = ssl.splu(MpP[intidxs][:,intidxs])
         self.int_allext = MmP[intidxs][:, allextidxs]
         self.ext_int = M[extidxs][:, intidxs]
+        self.ext_extinv = ssl.splu(MpP[extidxs, :][:, extidxs])
+        
+#        mp.subplot(1,3,1)
+#        mp.spy(self.ext_allext, markersize=1)
+#        mp.subplot(1,3,2)
+#        mp.spy(self.int_allext, markersize=1)
+#        mp.subplot(1,3,3)
+#        mp.spy(self.ext_int, markersize=1)
+#        mp.show()
         
         self.intsolveb = self.int_intinv.solve(b[intidxs].todense().A.squeeze())
         rhs = b[extidxs].todense().A.squeeze() - self.ext_int * self.intsolveb
-        return [rhs]
-        
-        
-    @ppd.parallelmethod()
-    def multiplyext(self, x):
-#        print x.shape, self.ext_allext.shape, self.ext_int.shape, self.int_allext.shape
-        y = self.ext_allext * x - self.ext_int * self.int_intinv.solve(self.int_allext * x)
-        return [y]  
-    
-    @ppd.parallelmethod()
-    def precondext(self, x):        
-        return x
-#        return [self.DE.solve(x[self.localfromallext])]
-    
-    @ppd.parallelmethod(None, ppd.tuplesum)
-    def recoverinterior(self, xe):
-        """ Recover all the local interior degrees from the exterior degrees
-        
-            returns a tuple of the contribution to the global solution vector and an indicator of what 
-            degrees have been written to.  The indicator is used to average duplicate contributions for 
-            overlapping methods.
-        """ 
-        x = np.zeros_like(self.intind, dtype=complex)
-        x[self.intind] = self.intsolveb - self.int_intinv.solve(self.int_allext * xe)
-        return x, self.intind*1
-        
+        return [rhs]        
+#
+#@ppd.parallel()
+#def test():
+#    import time
+#    time.sleep(np.random.rand() / 10)
+#    return [ppd.comm.rank]
    
 import pypwdg.parallel.main
 
 if __name__=="__main__":
 
-    k = 15
-    n = 4
+    k = 20
+    n = 6
     g = pcb.FourierHankel([-1,-1], [0], k)
     bdytag = "BDY"
     bnddata={bdytag:pcbd.dirichlet(g)}
@@ -162,6 +133,10 @@ if __name__=="__main__":
     bounds=np.array([[0,1],[0,1]],dtype='d')
     npoints=np.array([200,200])
     mesh = tum.regularsquaremesh(n, bdytag)    
+#    meshinfo = tum.regularsquaremeshinfo(n, bdytag)
+#    topology = pmm.Topology(meshinfo)
+#    partition = pmm.BespokePartition(meshinfo, topology, lambda n: np.arange(meshinfo.nelements).reshape(n, -1))    
+#    mesh = pmm.MeshView(meshinfo, topology, partition)
     
 #    direction=np.array([[1.0,1.0]])/math.sqrt(2)
 #    g = pcb.PlaneWaves(direction, k)
@@ -174,8 +149,7 @@ if __name__=="__main__":
 #    with puf.pushd('../../examples/2D'):
 #        mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 
-
-    basisrule = pcb.planeWaveBases(2,k,9)
+    basisrule = pcb.planeWaveBases(2,k,8)
     nquad = 7
    
 #    mesh = pmo.overlappingPartitions(pmo.overlappingPartitions(mesh))
@@ -187,9 +161,20 @@ if __name__=="__main__":
     
     compinfo = psc.ComputationInfo(problem, basisrule, nquad)
     computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
-    perturbation = GeneralRobinPerturbation(compinfo, 1E-6)
-
-    sol = computation.solution(psd.GeneralSchwarzOperator(GeneralSchwarzWorker(perturbation, mesh)), psi.GMRESSolver('ctor'))
+    for p in [0]:#, 1E-6, 1]:# 1j, -0.1, -0.1j]:
+        perturbation = GeneralRobinPerturbation(compinfo, p)
+    
+        op = psd.GeneralSchwarzOperator(PerturbedSchwarzWorker(perturbation, mesh))
+        sol = computation.solution(op, psi.GMRESSolver('ctor'))
+        pom.output2dsoln(bounds, sol, npoints, show=False)
+        
+        n = len(op.rhs())
+        M = np.hstack([op.multiply(x).reshape(-1,1) for x in np.eye(n)])
+        e = np.linalg.eigvals(M)
+#        print e
+        pom.mp.figure()
+        pom.mp.scatter(e.real, e.imag)
+                 
 #    bs = psi.BrutalSolver(np.complex)
 #    gsw1 = GeneralSchwarzWorker(perturbation, mesh)
 #    sol = computation.solution(psd.GeneralSchwarzOperator(gsw1), bs)
@@ -220,4 +205,6 @@ if __name__=="__main__":
     
 #    sol = computation.solution(SchwarzOperator(pmm.overlappingPartitions(mesh)), psi.GMRESSolver('ctor'))
     pom.outputMeshPartition(bounds, npoints, mesh)
+    
+    pom.mp.show()
     pom.output2dsoln(bounds, sol, npoints, show=True)
