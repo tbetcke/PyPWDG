@@ -37,7 +37,7 @@ class SchwarzWorker(object):
                                                         # it still all works!
         sl = set(localidxs)
         extidxs =  np.sort(np.array(list(sl.intersection(allextidxs)), dtype=int)) # the exterior degrees for this process
-        intidxs = np.array(list(sl.difference(allextidxs)), dtype=int) # the interior degrees for this process
+        intidxs = np.sort(np.array(list(sl.difference(allextidxs)), dtype=int)) # the interior degrees for this process
         self.intind = np.zeros(self.S.shape[0], dtype=bool) 
         self.intind[intidxs] = True # Create an indicator for the interior degrees
         self.localext = allextidxs.searchsorted(extidxs)

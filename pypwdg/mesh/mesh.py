@@ -202,6 +202,7 @@ class Partition(object):
         cutelts = basicinfo.elttofaces * self.cutfaces
         self.neighbourelts = (cutelts <= -1).nonzero()[0]
         self.innerbdyelts = (cutelts >= 1).nonzero()[0]
+        print partition
 #        print "cut faces", (self.cutfaces==1).nonzero()[0], sum(self.cutfaces==1)
 #        print 'Neighbour elements', self.neighbourelts
     

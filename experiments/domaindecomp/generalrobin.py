@@ -77,14 +77,14 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
         sl = set(localidxs)
         extnooverlap = set(allextidxs).difference(self.overlapdofs)
         extidxs =  np.sort(np.array(list(sl.intersection(extnooverlap)), dtype=int)) # the exterior degrees for this process
-        intidxs = np.array(list(sl.difference(extnooverlap)), dtype=int) # the interior degrees for this process
+        intidxs = np.sort(np.array(list(sl.difference(extnooverlap)), dtype=int)) # the interior degrees for this process
         self.intind = np.zeros(self.S.shape[0], dtype=bool) 
         self.intind[intidxs] = True # Create an indicator for the interior degrees
         self.localext = allextidxs.searchsorted(extidxs)
 
-        log.debug("local %s"%localidxs)
-        log.debug("external %s"%extidxs)
-        log.debug("internal %s"%intidxs)
+        log.info("local %s"%localidxs)
+        log.info("external %s"%extidxs)
+        log.info("internal %s"%intidxs)
         log.info("localext %s"%self.localext)
 
         M = self.S.tocsr() # Get CSR representations of the system matrix ...
@@ -100,7 +100,7 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
         self.int_intinv = ssl.splu(MpP[intidxs][:,intidxs])
         self.int_allext = MmP[intidxs][:, allextidxs]
         self.ext_int = M[extidxs][:, intidxs]
-        self.ext_extinv = ssl.splu(MpP[extidxs, :][:, extidxs])
+#        self.ext_extinv = ssl.splu(MpP[extidxs, :][:, extidxs])
         
 #        mp.subplot(1,3,1)
 #        mp.spy(self.ext_allext, markersize=1)
@@ -122,9 +122,67 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
    
 import pypwdg.parallel.main
 
-if __name__=="__main__":
+def search():
+    k = 5
+    g = pcb.FourierHankel([-1,-1], [0], k)
+    bdytag = "BDY"
+    bnddata={bdytag:pcbd.dirichlet(g)}
+    
+    bounds=np.array([[0,1],[0,1]],dtype='d')
+    npoints=np.array([200,200])
+    relerr = []
+    params = []
+    for n in range(4,10):
+        mesh = tum.regularsquaremesh(n, bdytag)    
+        mesh = pmo.overlappingPartitions(mesh)
+        problem = psp.Problem(mesh,k,bnddata)
+    #    meshinfo = tum.regularsquaremeshinfo(n, bdytag)
+    #    topology = pmm.Topology(meshinfo)
+    #    partition = pmm.BespokePartition(meshinfo, topology, lambda n: np.arange(meshinfo.nelements).reshape(n, -1))    
+    #    mesh = pmm.MeshView(meshinfo, topology, partition)
+        
+    #    direction=np.array([[1.0,1.0]])/math.sqrt(2)
+    #    g = pcb.PlaneWaves(direction, k)
+    #    
+    #    bnddata={11:pcbd.zero_dirichlet(),
+    #             10:pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1],g=g)}
+    #    
+    #    bounds=np.array([[-2,2],[-2,2]],dtype='d')
+    #    npoints=np.array([200,200])
+    #    with puf.pushd('../../examples/2D'):
+    #        mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
+    
+    
+        # goes wrong for n=7 with npw = 6 & 7.
+        for npw in range(1, 12):  
+            basisrule = pcb.planeWaveBases(2,k,npw)
+            nquad = 10
+           
+        #    mesh = pmo.overlappingPartitions(pmo.overlappingPartitions(mesh))
+            
+           
+        #    problem = psp.Problem(mesh, k, bnddata)
+            
+            compinfo = psc.ComputationInfo(problem, basisrule, nquad)
+            computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
+            sold = computation.solution(psc.DirectOperator(), psc.DirectSolver())
+            pom.output2dsoln(bounds, sold, npoints, show = False)
+            for p in [0]:#, 1E-6, 1]:# 1j, -0.1, -0.1j]:
+                perturbation = GeneralRobinPerturbation(compinfo, p)
+            
+                op = psd.GeneralSchwarzOperator(PerturbedSchwarzWorker(perturbation, mesh))
+        #        sol = computation.solution(op, psi.GMRESSolver('ctor'))
+                sol = computation.solution(op, psi.BrutalSolver(np.complex))       
+                ds = np.abs(sold.x - sol.x)
+                relerr.append(np.max(ds) / np.max(np.abs(sold.x)))
+                params.append((n,npw))
+                print relerr
+                print params
 
-    k = 20
+if __name__=="__main__":
+#    search()
+#    exit()
+    k = 1
     n = 6
     g = pcb.FourierHankel([-1,-1], [0], k)
     bdytag = "BDY"
@@ -132,11 +190,11 @@ if __name__=="__main__":
     
     bounds=np.array([[0,1],[0,1]],dtype='d')
     npoints=np.array([200,200])
-    mesh = tum.regularsquaremesh(n, bdytag)    
-#    meshinfo = tum.regularsquaremeshinfo(n, bdytag)
-#    topology = pmm.Topology(meshinfo)
-#    partition = pmm.BespokePartition(meshinfo, topology, lambda n: np.arange(meshinfo.nelements).reshape(n, -1))    
-#    mesh = pmm.MeshView(meshinfo, topology, partition)
+#    mesh = tum.regularsquaremesh(n, bdytag)    
+    meshinfo = tum.regularsquaremeshinfo(n, bdytag)
+    topology = pmm.Topology(meshinfo)
+    partition = pmm.BespokePartition(meshinfo, topology, lambda n: np.arange(meshinfo.nelements).reshape(n, -1))    
+    mesh = pmm.MeshView(meshinfo, topology, partition)
     
 #    direction=np.array([[1.0,1.0]])/math.sqrt(2)
 #    g = pcb.PlaneWaves(direction, k)
@@ -149,8 +207,11 @@ if __name__=="__main__":
 #    with puf.pushd('../../examples/2D'):
 #        mesh = pmm.gmshMesh('squarescatt.msh',dim=2)
 
-    basisrule = pcb.planeWaveBases(2,k,8)
-    nquad = 7
+
+    # goes wrong for n=7 with npw = 6 & 7.  
+    npw = 2  
+    basisrule = pcb.planeWaveBases(2,k,npw)
+    nquad = 10
    
 #    mesh = pmo.overlappingPartitions(pmo.overlappingPartitions(mesh))
     mesh = pmo.overlappingPartitions(mesh)
@@ -161,13 +222,20 @@ if __name__=="__main__":
     
     compinfo = psc.ComputationInfo(problem, basisrule, nquad)
     computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
+    sold = computation.solution(psc.DirectOperator(), psc.DirectSolver())
+    pom.output2dsoln(bounds, sold, npoints, show = False)
     for p in [0]:#, 1E-6, 1]:# 1j, -0.1, -0.1j]:
         perturbation = GeneralRobinPerturbation(compinfo, p)
     
         op = psd.GeneralSchwarzOperator(PerturbedSchwarzWorker(perturbation, mesh))
-        sol = computation.solution(op, psi.GMRESSolver('ctor'))
+#        sol = computation.solution(op, psi.GMRESSolver('ctor'))
+        sol = computation.solution(op, psi.BrutalSolver(np.complex))       
+        ds = np.abs(sold.x - sol.x)
+        mds = np.min(ds)
+        print mds
+#        print np.log10(ds / mds).astype(int).reshape(-1,npw)
         pom.output2dsoln(bounds, sol, npoints, show=False)
-        
+        print np.hstack((sol.x.reshape(-1,npw), sold.x.reshape(-1,npw)))
         n = len(op.rhs())
         M = np.hstack([op.multiply(x).reshape(-1,1) for x in np.eye(n)])
         e = np.linalg.eigvals(M)
