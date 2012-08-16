@@ -110,7 +110,7 @@ class BrutalSolver(object):
 class ItCounter(object):
     def __init__(self, stride = 20):
         self.n = 0
-        self.stride = 20
+        self.stride = stride
     
     def __call__(self, x):
         self.n +=1
@@ -146,7 +146,7 @@ class IterativeSolver(object):
         else:
             dtype = self.dtype
         
-        b = operator.rhs()        
+        b = operator.rhs()       
         n = len(b)
         log.info("IterativeSolver solving system of size %s", n)
         
@@ -154,7 +154,6 @@ class IterativeSolver(object):
         pc = ssl.LinearOperator((n,n), operator.precond, dtype=dtype) if hasattr(operator, 'precond') else None
         
         x = self.solveop(lo, b, pc, n)
-
         if hasattr(operator, 'postprocess'):
             x = operator.postprocess(x)
         return x
@@ -166,7 +165,7 @@ class GMRESSolver(IterativeSolver):
         return x
 
 class BICGSTABSolver(IterativeSolver):
-    def solve(self, lo,b,pc,n):
+    def solveop(self, lo,b,pc,n):
         x,status = ssl.bicgstab(lo, b, callback=self.callback, M=pc)
         log.info(status)
         return x
