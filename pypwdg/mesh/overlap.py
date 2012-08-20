@@ -17,6 +17,7 @@ class OverlappingPartition(pmm.Partition):
         log.debug(overlappart)
         pmm.Partition.__init__(self, meshview.basicinfo, meshview.topology, overlappart, meshview.part.partidx)
         self.cutfaces = meshview.part.cutfaces
+        self.oldneighbours = meshview.neighbourelts
 
 def overlappingPartitions(meshview):
     return pmm.MeshView(meshview.basicinfo, meshview.topology, OverlappingPartition(meshview))

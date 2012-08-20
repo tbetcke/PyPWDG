@@ -80,6 +80,7 @@ class SchwarzWorker(object):
         """ 
         x = np.zeros_like(self.intind, dtype=complex)
         x[self.intind] = self.intsolveb - self.int_intinv.solve(self.int_allext * xe)
+        print "recover", np.nonzero(np.abs(x[self.intind])<1E-3)
         return x, self.intind*1
 
 class GeneralSchwarzOperator(object):
@@ -110,9 +111,11 @@ class GeneralSchwarzOperator(object):
     
     def postprocess(self, xe):
         """ Given some values at the exterior dofs, recover the global solution """
-        x, count = self.workers.recoverinterior(xe) # Get the workers to recover their interior dofs 
-        count[self.extidxs]+=1 
-        x[self.extidxs] = xe # Now add in the exterior stuff (no point having the workers do this)
+        x, count = self.workers.recoverinterior(xe) # Get the workers to recover their interior dofs
+        print count 
+        count[self.extidxs]+=1
+        print 'count', count
+        x[self.extidxs] += xe # Now add in the exterior stuff (no point having the workers do this)
         return x / count # Average anything that got duplicated
              
 class SchwarzOperator(GeneralSchwarzOperator):

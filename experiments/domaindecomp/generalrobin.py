@@ -41,13 +41,17 @@ class GeneralRobinPerturbation(object):
         mesh = computationinfo.problem.mesh
         cut = ss.spdiags((mesh.cutfaces > 0)*1, [0], mesh.nfaces,mesh.nfaces)
 #        print cut
-        self.B = q * (cut - cut * mesh.connectivity)
+#        self.B = q * (cut - cut * mesh.connectivity)
+        self.B = q * (cut * mesh.connectivity)
         self.Z = pms.AveragesAndJumps(mesh).Z     
         self.mesh = mesh   
 
     def getPerturbation(self):
         return pms.sumfaces(self.mesh, self.internalassembly.assemble([[self.B, self.Z], 
-                                        [self.B, self.Z]]))
+                                                                       [self.B, self.Z]]))
+    
+    def getNeighbours(self):
+        return self.mesh.part.oldneighbours
     
 
 @ppd.distribute()
@@ -64,7 +68,7 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
     def initialise(self, system, sysargs, syskwargs):
         neighbours = psd.SchwarzWorker.initialise(self, system, sysargs, syskwargs)
         self.P = self.perturbation.getPerturbation()
-        self.overlapdofs = self.P.subrows()
+        self.overlapdofs = self.P.subrows(self.perturbation.getNeighbours())
         log.debug("Overlap dofs: %s"%self.overlapdofs) 
         return neighbours+[self.overlapdofs]
     
@@ -79,8 +83,12 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
         extnooverlap = set(allextidxs).difference(self.overlapdofs)
         extidxs =  np.sort(np.array(list(sl.intersection(extnooverlap)), dtype=int)) # the exterior degrees for this process
         intidxs = np.sort(np.array(list(sl.difference(extnooverlap)), dtype=int)) # the interior degrees for this process
+        
+        intminusidxs = np.sort(np.array(list(sl.difference(allextidxs)), dtype=int))
         self.intind = np.zeros(self.S.shape[0], dtype=bool) 
-        self.intind[intidxs] = True # Create an indicator for the interior degrees
+        self.intind[intminusidxs] = True # Create an indicator for the interior degrees
+        self.intminusint = intidxs.searchsorted(intminusidxs)
+        
         self.localext = allextidxs.searchsorted(extidxs)
 
         log.debug("local %s"%localidxs)
@@ -93,14 +101,18 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
         P = self.P.tocsr()
         
         log.info("Non zero entries in perturbation matrix = %s"%sum(np.abs(P.data) > 1E-6))
+        print "Pinternal", P[intidxs]
+        print "Pei", P[extidxs][:, intidxs]
+        print "Pee", P[extidxs][:, allextidxs]
         MpP = M + P
         MmP = M - P
 
         # Decompose the system matrix.  
-        self.ext_allext = M[extidxs][:, allextidxs] 
-        self.int_intinv = ssl.splu(MpP[intidxs][:,intidxs])
-        self.int_allext = MmP[intidxs][:, allextidxs]
-        self.ext_int = M[extidxs][:, intidxs]
+        self.ext_allext = MmP[extidxs][:, allextidxs] 
+        self.int_intinv = ssl.splu(M[intidxs][:,intidxs])
+        self.int_allext = M[intidxs][:, allextidxs]
+        self.ext_int = MpP[extidxs][:, intidxs]
+        self.int_ext = M[intidxs][:, extidxs]
 #        self.ext_extinv = ssl.splu(MpP[extidxs, :][:, extidxs])
         
 #        mp.subplot(1,3,1)
@@ -113,7 +125,27 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
         
         self.intsolveb = self.int_intinv.solve(b[intidxs].todense().A.squeeze())
         rhs = b[extidxs].todense().A.squeeze() - self.ext_int * self.intsolveb
-        return [rhs]        
+        return [rhs]       
+    
+    @ppd.parallelmethod(None, ppd.tuplesum)
+    def recoverinterior(self, xe):
+        """ Recover all the local interior degrees from the exterior degrees
+        
+            returns a tuple of the contribution to the global solution vector and an indicator of what 
+            degrees have been written to.  The indicator is used to average duplicate contributions for 
+            overlapping methods.
+        """ 
+        x = np.zeros_like(self.intind, dtype=complex)
+#        print len(self.intind), sum(self.intind), len(self.intminusint)
+#        x[self.intind]
+#        print len(self.int_ext * xe)
+#        print len(self.int_intinv.solve(self.int_ext * xe))
+#        print len(self.intsolveb)
+
+        x[self.intind] = (self.intsolveb - self.int_intinv.solve(self.int_ext * xe[self.localext]))[self.intminusint]
+        return x, self.intind*1
+    
+     
 #
 #@ppd.parallel()
 #def test():
@@ -179,7 +211,7 @@ def search():
 if __name__=="__main__":
 #    search()
 #    exit()
-    k = 15
+    k = 10
     n = 6
     g = pcb.FourierHankel([-1,-1], [0], k)
     bdytag = "BDY"
@@ -206,7 +238,7 @@ if __name__=="__main__":
 
 
     # goes wrong for n=7 with npw = 6 & 7.  
-    npw = 7  
+    npw = 17  
     basisrule = pcb.planeWaveBases(2,k,npw)
     nquad = 10
    
@@ -221,7 +253,7 @@ if __name__=="__main__":
     computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
     sold = computation.solution(psc.DirectOperator(), psc.DirectSolver())
     pom.output2dsoln(bounds, sold, npoints, show = False)
-    for p in [0.1]:#, 1, 1j, -0.1, -0.1j]:
+    for p in [1j]:#, 1, 1j, -0.1, -0.1j]:
         perturbation = GeneralRobinPerturbation(compinfo, p)
     
         op = psd.GeneralSchwarzOperator(PerturbedSchwarzWorker(perturbation, mesh))
