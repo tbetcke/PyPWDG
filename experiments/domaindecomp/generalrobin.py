@@ -90,6 +90,7 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
         self.intminusint = intidxs.searchsorted(intminusidxs)
         
         self.localext = allextidxs.searchsorted(extidxs)
+        print "localext", self.localext
 
         log.debug("local %s"%localidxs)
         log.debug("external %s"%extidxs)
@@ -211,7 +212,7 @@ def search():
 if __name__=="__main__":
 #    search()
 #    exit()
-    k = 10
+    k = 30
     n = 6
     g = pcb.FourierHankel([-1,-1], [0], k)
     bdytag = "BDY"
@@ -253,7 +254,7 @@ if __name__=="__main__":
     computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
     sold = computation.solution(psc.DirectOperator(), psc.DirectSolver())
     pom.output2dsoln(bounds, sold, npoints, show = False)
-    for p in [1j]:#, 1, 1j, -0.1, -0.1j]:
+    for p in [2.0j]:#, 1, 1j, -0.1, -0.1j]:
         perturbation = GeneralRobinPerturbation(compinfo, p)
     
         op = psd.GeneralSchwarzOperator(PerturbedSchwarzWorker(perturbation, mesh))
