@@ -25,7 +25,6 @@ import pypwdg.test.utils.mesh as tum
 import time
 import numpy as np
 import scipy.sparse as ss
-import scipy.sparse.linalg as ssl
 import scipy.io as sio
 import math
 import logging
@@ -39,11 +38,13 @@ class GeneralRobinPerturbation(object):
     def __init__(self, computationinfo, q):
         self.internalassembly = computationinfo.faceAssembly()
         mesh = computationinfo.problem.mesh
+        AJ = pms.AveragesAndJumps(mesh)
         cut = ss.spdiags((mesh.cutfaces > 0)*1, [0], mesh.nfaces,mesh.nfaces)
 #        print cut
+#        self.B = q * cut * AJ.JD
 #        self.B = q * (cut - cut * mesh.connectivity)
         self.B = q * (cut * mesh.connectivity)
-        self.Z = pms.AveragesAndJumps(mesh).Z     
+        self.Z = AJ.Z     
         self.mesh = mesh   
 
     def getPerturbation(self):
@@ -90,7 +91,8 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
         self.intminusint = intidxs.searchsorted(intminusidxs)
         
         self.localext = allextidxs.searchsorted(extidxs)
-        print "localext", self.localext
+#        print "localext", self.localext
+#        print "intminusint", self.intminusint
 
         log.debug("local %s"%localidxs)
         log.debug("external %s"%extidxs)
@@ -102,9 +104,9 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
         P = self.P.tocsr()
         
         log.info("Non zero entries in perturbation matrix = %s"%sum(np.abs(P.data) > 1E-6))
-        print "Pinternal", P[intidxs]
-        print "Pei", P[extidxs][:, intidxs]
-        print "Pee", P[extidxs][:, allextidxs]
+#        print "Pinternal", P[intidxs]
+#        print "Pei", P[extidxs][:, intidxs]
+#        print "Pee", P[extidxs][:, allextidxs]
         MpP = M + P
         MmP = M - P
 
@@ -114,6 +116,10 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
         self.int_allext = M[intidxs][:, allextidxs]
         self.ext_int = MpP[extidxs][:, intidxs]
         self.int_ext = M[intidxs][:, extidxs]
+#        pom.mp.spy(M[intidxs][:,intidxs], markersize=1)
+#        pom.mp.figure()
+#        pom.mp.spy(self.int_intinv.solve(np.eye(len(intidxs))))
+#        pom.mp.show()
 #        self.ext_extinv = ssl.splu(MpP[extidxs, :][:, extidxs])
         
 #        mp.subplot(1,3,1)
@@ -125,8 +131,9 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
 #        mp.show()
         
         self.intsolveb = self.int_intinv.solve(b[intidxs].todense().A.squeeze())
-        rhs = b[extidxs].todense().A.squeeze() - self.ext_int * self.intsolveb
-        return [rhs]       
+        self.rhs = b[extidxs].todense().A.squeeze() - self.ext_int * self.intsolveb
+        self.JMinv = None
+        return [self.rhs]       
     
     @ppd.parallelmethod(None, ppd.tuplesum)
     def recoverinterior(self, xe):
@@ -146,7 +153,7 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
         x[self.intind] = (self.intsolveb - self.int_intinv.solve(self.int_ext * xe[self.localext]))[self.intminusint]
         return x, self.intind*1
     
-     
+
 #
 #@ppd.parallel()
 #def test():
@@ -157,7 +164,7 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
 import pypwdg.parallel.main
 
 def search():
-    k = 15
+    k = 20
     g = pcb.FourierHankel([-1,-1], [0], k)
     bdytag = "BDY"
     bnddata={bdytag:pcbd.dirichlet(g)}
@@ -190,8 +197,8 @@ def search():
     computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
     sold = computation.solution(psc.DirectOperator(), psc.DirectSolver())
     pom.output2dsoln(bounds, sold, npoints, show = False)
-    for x in np.arange(0,2,0.2):#, 1E-6, 1]:# 1j, -0.1, -0.1j]:
-        for y in np.arange(-1,1,0.2):
+    for x in np.arange(-10,10,2):#, 1E-6, 1]:# 1j, -0.1, -0.1j]:
+        for y in np.arange(-10,10,2):
             q = x + 1j * y
             perturbation = GeneralRobinPerturbation(compinfo, q)
         
@@ -212,11 +219,11 @@ def search():
 if __name__=="__main__":
 #    search()
 #    exit()
-    k = 30
+    k = 15
     n = 6
     g = pcb.FourierHankel([-1,-1], [0], k)
     bdytag = "BDY"
-    bnddata={bdytag:pcbd.dirichlet(g)}
+    bnddata={bdytag:pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1], g)}
     
     bounds=np.array([[0,1],[0,1]],dtype='d')
     npoints=np.array([200,200])
@@ -239,7 +246,7 @@ if __name__=="__main__":
 
 
     # goes wrong for n=7 with npw = 6 & 7.  
-    npw = 17  
+    npw = 7
     basisrule = pcb.planeWaveBases(2,k,npw)
     nquad = 10
    
@@ -254,11 +261,20 @@ if __name__=="__main__":
     computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
     sold = computation.solution(psc.DirectOperator(), psc.DirectSolver())
     pom.output2dsoln(bounds, sold, npoints, show = False)
-    for p in [2.0j]:#, 1, 1j, -0.1, -0.1j]:
+    for p in [0]:#, 1, 1j, -0.1, -0.1j]:
         perturbation = GeneralRobinPerturbation(compinfo, p)
     
         op = psd.GeneralSchwarzOperator(PerturbedSchwarzWorker(perturbation, mesh))
+#        op = psd.SchwarzOperator(mesh)
+        
+        
         sol = computation.solution(op, psi.GMRESSolver('ctor'))
+
+        xe = sold.x[op.extidxs]
+        print "check jacobi multiply", np.max(np.abs(op.jacobimultiply(xe) - xe))
+        print op.jacobimultiply(xe)- xe
+
+
 #        sol = computation.solution(op, psi.BrutalSolver(np.complex))       
 #        print np.log10(ds / mds).astype(int).reshape(-1,npw)
         pom.output2dsoln(bounds, sol, npoints, show=False)
@@ -269,6 +285,15 @@ if __name__=="__main__":
 #        print e
         pom.mp.figure()
         pom.mp.scatter(e.real, e.imag)
+        
+        x = op.rhs()
+        
+        for _ in range(6):
+            s = op.postprocess(x)
+            pom.output2dsoln(bounds, psc.Solution(compinfo, s), npoints, show=False)
+            for _ in range(10):
+                x = op.jacobimultiply(x)
+        
                  
 #    bs = psi.BrutalSolver(np.complex)
 #    gsw1 = GeneralSchwarzWorker(perturbation, mesh)

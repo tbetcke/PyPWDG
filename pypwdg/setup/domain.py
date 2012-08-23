@@ -9,6 +9,8 @@ import pypwdg.parallel.mpiload as ppm
 import time
 import numpy as np
 import logging
+import scipy.linalg as sl
+
 log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler())
 
@@ -55,10 +57,14 @@ class SchwarzWorker(object):
         self.int_intinv = ssl.splu(M[intidxs][:,intidxs])
         self.int_allext = M[intidxs][:, allextidxs]
         self.ext_int = M[extidxs][:, intidxs]
+        self.int_ext = M[intidxs][:, extidxs]
+
         
         self.intsolveb = self.int_intinv.solve(b[intidxs].todense().A.squeeze())
-        rhs = b[extidxs].todense().A.squeeze() - self.ext_int * self.intsolveb
-        return [rhs]
+        self.rhs = b[extidxs].todense().A.squeeze() - self.ext_int * self.intsolveb
+        self.JMinv = None
+
+        return [self.rhs]
     
         
     @ppd.parallelmethod()
@@ -82,6 +88,18 @@ class SchwarzWorker(object):
         x[self.intind] = self.intsolveb - self.int_intinv.solve(self.int_allext * xe)
         print "recover", np.nonzero(np.abs(x[self.intind])<1E-3)
         return x, self.intind*1
+    
+    @ppd.parallelmethod()
+    def jacobimultiply(self, xe):
+        if self.JMinv is None:
+            IISIE = np.hstack([self.int_intinv.solve(x.A.ravel()).reshape(-1,1) for x in self.int_ext.todense().T])
+            print IISIE.shape, self.ext_int.shape, self.ext_allext[:, self.localext].shape
+            
+            JM = self.ext_allext[:, self.localext] - self.ext_int * IISIE
+            self.JMinv = sl.lu_factor(JM)
+            print len(self.JMinv)
+        xe[self.localext] = 0
+        return [sl.lu_solve(self.JMinv, self.rhs - self.ext_allext * xe)]
 
 class GeneralSchwarzOperator(object):
     """ Together with SchwarzWorker, the SchwarzOperator implements a linear system whose
@@ -109,12 +127,15 @@ class GeneralSchwarzOperator(object):
     def precond(self, x):
         return np.concatenate(self.workers.precondext(x))
     
+    def jacobimultiply(self, x):
+        return np.concatenate(self.workers.jacobimultiply(x))
+    
     def postprocess(self, xe):
         """ Given some values at the exterior dofs, recover the global solution """
         x, count = self.workers.recoverinterior(xe) # Get the workers to recover their interior dofs
-        print count 
+#        print count 
         count[self.extidxs]+=1
-        print 'count', count
+#        print 'count', count
         x[self.extidxs] += xe # Now add in the exterior stuff (no point having the workers do this)
         return x / count # Average anything that got duplicated
              
