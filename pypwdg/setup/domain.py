@@ -113,7 +113,9 @@ class GeneralSchwarzOperator(object):
         self.workers = workers
     
     def setup(self, system, sysargs, syskwargs):
-        self.extidxs = np.unique(np.concatenate(self.workers.initialise(system, sysargs, syskwargs)))
+        e = np.concatenate(self.workers.initialise(system, sysargs, syskwargs))
+        self.extidxs = np.unique(e)
+        print "duplicate ", len(e) - len(self.extidxs)
         self.rhsvec = np.concatenate(self.workers.setexternalidxs(self.extidxs))
         log.info("Schur complement system has %s dofs"%len(self.extidxs))
     
