@@ -30,6 +30,7 @@ import scipy.io as sio
 import math
 import logging
 log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger('pypwdg.setup.domain').setLevel(logging.INFO)
 
@@ -99,12 +100,15 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
         log.debug("external %s"%extidxs)
         log.debug("internal %s"%intidxs)
         log.debug("localext %s"%self.localext)
+        
+        log.debug("overlap %s"%self.overlapdofs)
 
         M = self.S.tocsr() # Get CSR representations of the system matrix ...
         b = self.G.tocsr() # ... and the load vector
         P = self.P.tocsr()
-        print "M", M.todense()
-        print "P", P.todense()
+#        print "M", M.todense()
+#        print "P", P.todense()
+#        print "b", b.todense()
         
         log.info("Non zero entries in perturbation matrix = %s"%sum(np.abs(P.data) > 1E-6))
 #        print "Pinternal", P[intidxs]
@@ -156,6 +160,9 @@ class PerturbedSchwarzWorker(psd.SchwarzWorker):
         x[self.intind] = (self.intsolveb - self.int_intinv.solve(self.int_ext * xe[self.localext]))[self.intminusint]
         return x, self.intind*1
     
+    @ppd.parallelmethod(None, ppd.tuplesum)
+    def getData(self):
+        return (self.S, self.P, self.G)
 
 #
 #@ppd.parallel()
@@ -226,7 +233,7 @@ if __name__=="__main__":
 #    search()
 #    exit()
     k = 5
-    n = 2
+    n = 4
     g = pcb.FourierHankel([-1,-1], [0], k)
     bdytag = "BDY"
     bnddata={bdytag:pcbd.generic_boundary_data([-1j*k,1],[-1j*k,1], g)}
@@ -252,12 +259,12 @@ if __name__=="__main__":
 
 
     # goes wrong for n=7 with npw = 6 & 7.  
-    npw = 7
+    npw = 5
     basisrule = pcb.planeWaveBases(2,k,npw)
     dovolumes=False
     
-    basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(0))
-    dovolumes = True
+#    basisrule = pcbr.ReferenceBasisRule(pcbr.Dubiner(0))
+#    dovolumes = True
     nquad = 7
    
 #    mesh = pmo.overlappingPartitions(pmo.overlappingPartitions(mesh))
@@ -269,15 +276,21 @@ if __name__=="__main__":
     compinfo = psc.ComputationInfo(problem, basisrule, nquad)
     computation = psc.Computation(compinfo, pcp.HelmholtzSystem)
     sold = computation.solution(psc.DirectOperator(), psc.DirectSolver(), dovolumes=dovolumes)
+    print "direct solution", sold.x
     pom.output2dsoln(bounds, sold, npoints, show = False)
     for p in [1]:#, 1, 1j, -0.1, -0.1j]:
         perturbation = GeneralRobinPerturbation(compinfo, p)
     
-        op = psd.GeneralSchwarzOperator(PerturbedSchwarzWorker(perturbation, mesh))
+        w = PerturbedSchwarzWorker(perturbation, mesh)
+        op = psd.GeneralSchwarzOperator(w)
 #        op = psd.SchwarzOperator(mesh)
         
-        
         sol = computation.solution(op, psi.GMRESSolver('ctor'), dovolumes=dovolumes)
+
+        M, P, G = w.getData()
+        sio.savemat('mpg.mat', {'M':M.tocsr(), 'P':P.tocsr(), 'G':G.tocsr().todense()})
+
+        print "solution", sol.x
 
         xe = sol.x[op.extidxs]
         print "check jacobi multiply", np.max(np.abs(op.jacobimultiply(xe) - xe))
@@ -290,7 +303,7 @@ if __name__=="__main__":
         pom.output2dsoln(bounds, sol, npoints, show=False)
         n = len(op.rhs())
         M = np.hstack([op.multiply(x).reshape(-1,1) for x in np.eye(n)])
-        sio.savemat('reduced.mat', {'M':M, 'b':op.rhs()})
+        sio.savemat('reduced.mat', {'R':M, 'b':op.rhs()})
         e = np.linalg.eigvals(M)
 #        print e
         pom.mp.figure()
@@ -298,7 +311,7 @@ if __name__=="__main__":
         
         x = op.rhs()
         
-        for _ in range(6):
+        for _ in range(0):
             s = op.postprocess(x)
             pom.output2dsoln(bounds, psc.Solution(compinfo, s), npoints, show=False)
             for _ in range(10):
