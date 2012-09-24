@@ -154,6 +154,7 @@ class IterativeSolver(object):
         pc = ssl.LinearOperator((n,n), operator.precond, dtype=dtype) if hasattr(operator, 'precond') else None
         
         x = self.solveop(lo, b, pc, n)
+        print "pre-post-process",x
         if hasattr(operator, 'postprocess'):
             x = operator.postprocess(x)
         return x

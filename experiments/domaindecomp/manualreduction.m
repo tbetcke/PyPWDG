@@ -17,61 +17,103 @@ e1 = [40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64
 i1 = [  0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  85  86  87  88  89  95  96  97  98  99 105 106 107 108 109 115 116 117 118 119]+1;
 i2 = [ 40  41  42  43  44  50  51  52  53  54  60  61  62  63  64  70  71  72  73  74 120 121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159]+1;
 
-d1 = o2;
+d1 = o2; % indices of the overlapped dofs in the underlying matrix
 d2 = o1;
 
-e1m = setdiff(e1,d1);
-e2m = setdiff(e2,d2);
-i1m = setdiff(i1,o1);
+e1m = setdiff(e1,d1); % external minus overlapped
+e2m = setdiff(e2,d2); 
+i1m = setdiff(i1,o1); % internal minus overlapping
 i2m = setdiff(i2,o2);
 
-p1 = [i1m,e1m,d1,o1];
+p1 = [i1m,e1m,d1,o1]; % the indices of the dofs of the perturbed system from the underlying matrix
 p2 = [i2m,e2m,d2,o2];
 
 p = [p1,p2];
 
-ai1 = 1:length(i1m);
-ae1 = (1:length(e1m)) + ai1(end);
-ad1 = (1:length(d1)) + ae1(end);
-ao1 = (1:length(o1)) + ad1(end);
+ai1m = 1:length(i1m); % where the internal^- dofs sit in the pertubed system
+ae1m = (1:length(e1m)) + ai1m(end); % ... external^- ...
+ad1 = (1:length(d1)) + ae1m(end); % ... overlapped ...
+ao1 = (1:length(o1)) + ad1(end); % etc.
 
-ai2 = (1:length(i2m)) + ao1(end);
-ae2 = (1:length(e2m)) + ai2(end);
-ad2 = (1:length(d2)) + ae2(end);
+ai2m = (1:length(i2m)) + ao1(end);
+ae2m = (1:length(e2m)) + ai2m(end);
+ad2 = (1:length(d2)) + ae2m(end);
 ao2 = (1:length(o2)) + ad2(end);
 
-ap1 = [ai1,ae1,ad1,ao1];
-ap2 = [ai2,ae2,ad2,ao2];
+ap1 = [ai1m,ae1m,ad1,ao1]; % indices of all the dofs from the first partition in the perturbed system
+ap2 = [ai2m,ae2m,ad2,ao2];
 
-ax1 = [ai1,ae1,ad1];
-ax2 = [ai2,ae2,ad2];
+ax1 = [ai1m,ae1m,ad1]; % everyting except the overlapping dofs (i.e. get rid of the duplicates)
+ax2 = [ai2m,ae2m,ad2];
 ax = [ax1,ax2];
+ux1 = [i1m,e1m,d1]; % and the corresponding dofs from the underlying matrix (i.e. all of them, but ordered)
+ux2 = [i2m,e2m,d2];
+ux = [ux1,ux2];
 
-
-P1 = P(d1, o1);
+P1 = P(d1, o1); % The interesting bit of the perturbation matrix
 P2 = P(d2, o2);
-% P1 = rand(size(P1))
-% P2 = rand(size(P2))
+%  P1 = rand(size(P1));
+%  P2 = rand(size(P2));
 
 n = length(p)
 MM = sparse(n,n);
-MM(ap1,ap1) = M(p1,p1);
+MM(ap1,ap1) = M(p1,p1); % Build the main bit of the perturbed system
 MM(ap2,ap2) = M(p2,p2);
-MM(ao2, ae1) = M(o2, e1m);
-MM(ao1, ae2) = M(o1, e2m);
+MM(ao2, ae1m) = M(o2, e1m);
+MM(ao1, ae2m) = M(o1, e2m);
 
 PP = sparse(n,n);
-PP(ad1, [ao1, ad2]) = [P1, -P1];
+PP(ad1, [ao1, ad2]) = [P1, -P1]; % Build the perturbation
 PP(ad2, [ad1, ao2]) = [-P2, P2];
 
 
-GG = G(p);
+GG = G(p); % some of the RHS needs to be duplicated in order to create the RHS for the perturbed system
 
 xx = (MM + PP) \ GG;
 
 max(xx(ad1) - xx(ao2))
 max(xx(ad2) - xx(ao1))
 
-erridx = find(abs(xx(ax) - x) > 1E-4)
-x(erridx)
+erridx = find(abs(xx(ax) - x(ux)) > 1E-4)
+x(ux(erridx))
 xx(ax(erridx))
+
+% Now do the Schur complement:
+e = [e1,e2];
+
+ni1 = length(i1);
+ni2 = length(i2);
+ne1 = length(e1);
+ne2 = length(e2);
+ne = ne1 + ne2;
+
+[~,d1ine1,~] = intersect(e1,d1);
+[~,d2ine2,~] = intersect(e2,d2);
+[~,e1ine,~] = intersect(e,e1);
+[~,e2ine,~] = intersect(e,e2);
+[~,o1ini1,~] = intersect(i1,o1);
+[~,o2ini2,~] = intersect(i2,o2);
+
+
+
+Pei1 = sparse(ne1, ni1);
+Pei1(d1ine1,o1ini1) = P1;
+Pei2 = sparse(ne2, ni2);
+Pei2(d2ine2,o2ini2) = P2;
+
+Pee1 = sparse(ne1, ne);
+Pee1(d1ine1,e2ine(d2ine2)) = P1;
+Pee2 = sparse(ne2, ne);
+Pee2(d2ine2,e1ine(d1ine1)) = P2;
+
+q = 1
+
+S1 = M(e1, e) - q * Pee1 - (M(e1,i1) + q * Pei1) * (M(i1,i1) \ M(i1,e));
+S2 = M(e2, e) - q * Pee2 - (M(e2,i2) + q * Pei2) * (M(i2,i2) \ M(i2,e));
+
+g1 = G(e1) - M(e1,i1) * (M(i1,i1) \ G(i1));
+g2 = G(e2) - M(e2,i2) * (M(i2,i2) \ G(i2));
+
+xe = [S1;S2] \ [g1;g2];
+[xe,x(e)]
+
