@@ -11,19 +11,25 @@ x = M \ G;
 o1 = [ 85  86  87  88  89  95  96  97  98  99 105 106 107 108 109 115 116 117 118 119]+1;
 o2 = [40 41 42 43 44 50 51 52 53 54 60 61 62 63 64 70 71 72 73 74]+1;
 
-e2 = [ 80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98  99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119]+1;
-e1 = [40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79]+1;
+%raw indices:
+re2 = [ 80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98  99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119]+1;
+re1 = [40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79]+1;
 
-i1 = [  0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  85  86  87  88  89  95  96  97  98  99 105 106 107 108 109 115 116 117 118 119]+1;
-i2 = [ 40  41  42  43  44  50  51  52  53  54  60  61  62  63  64  70  71  72  73  74 120 121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159]+1;
+ri1 = [  0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  85  86  87  88  89  95  96  97  98  99 105 106 107 108 109 115 116 117 118 119]+1;
+ri2 = [ 40  41  42  43  44  50  51  52  53  54  60  61  62  63  64  70  71  72  73  74 120 121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159]+1;
 
 d1 = o2; % indices of the overlapped dofs in the underlying matrix
 d2 = o1;
 
-e1m = setdiff(e1,d1); % external minus overlapped
-e2m = setdiff(e2,d2); 
-i1m = setdiff(i1,o1); % internal minus overlapping
-i2m = setdiff(i2,o2);
+e1m = setdiff(re1,d1); % external minus overlapped
+e2m = setdiff(re2,d2); 
+i1m = setdiff(ri1,o1); % internal minus overlapping
+i2m = setdiff(ri2,o2);
+
+e1 = [e1m, d1]
+e2 = [e2m, d2]
+i1 = [i1m, o1]
+i2 = [i2m, o2]
 
 p1 = [i1m,e1m,d1,o1]; % the indices of the dofs of the perturbed system from the underlying matrix
 p2 = [i2m,e2m,d2,o2];
@@ -43,7 +49,7 @@ ao2 = (1:length(o2)) + ad2(end);
 ap1 = [ai1m,ae1m,ad1,ao1]; % indices of all the dofs from the first partition in the perturbed system
 ap2 = [ai2m,ae2m,ad2,ao2];
 
-ax1 = [ai1m,ae1m,ad1]; % everyting except the overlapping dofs (i.e. get rid of the duplicates)
+ax1 = [ai1m,ae1m,ad1]; % everything except the overlapping dofs (i.e. get rid of the duplicates)
 ax2 = [ai2m,ae2m,ad2];
 ax = [ax1,ax2];
 ux1 = [i1m,e1m,d1]; % and the corresponding dofs from the underlying matrix (i.e. all of them, but ordered)
@@ -52,8 +58,8 @@ ux = [ux1,ux2];
 
 P1 = P(d1, o1); % The interesting bit of the perturbation matrix
 P2 = P(d2, o2);
-%  P1 = rand(size(P1));
-%  P2 = rand(size(P2));
+%   P1 = rand(size(P1));
+%   P2 = rand(size(P2));
 
 n = length(p)
 MM = sparse(n,n);
@@ -68,8 +74,11 @@ PP(ad2, [ad1, ao2]) = [-P2, P2];
 
 
 GG = G(p); % some of the RHS needs to be duplicated in order to create the RHS for the perturbed system
+q = 1
 
-xx = (MM + PP) \ GG;
+MP = MM+q * PP
+
+xx = MP \ GG;
 
 max(xx(ad1) - xx(ao2))
 max(xx(ad2) - xx(ao1))
@@ -81,39 +90,51 @@ xx(ax(erridx))
 % Now do the Schur complement:
 e = [e1,e2];
 
-ni1 = length(i1);
-ni2 = length(i2);
-ne1 = length(e1);
-ne2 = length(e2);
-ne = ne1 + ne2;
+% ni1 = length(i1);
+% ni2 = length(i2);
+% ne1 = length(e1);
+% ne2 = length(e2);
+% ne = ne1 + ne2;
+% 
+% [~,d1ine1] = ismember(d1,e1);
+% [~,d2ine2] = ismember(d2,e2);
+% [~,e1ine] = ismember(e1,e);
+% [~,e2ine] = ismember(e2, e);
+% [~,o1ini1] = ismember(o1,i1);
+% [~,o2ini2] = ismember(o2,i2);
+% 
+% 
+% 
+% Pei1 = sparse(ne1, ni1);
+% Pei1(d1ine1,o1ini1) = P1;
+% Pei2 = sparse(ne2, ni2);
+% Pei2(d2ine2,o2ini2) = P2;
+% 
+% Pee1 = sparse(ne1, ne);
+% Pee1(d1ine1,e2ine(d2ine2)) = P1;
+% Pee2 = sparse(ne2, ne);
+% Pee2(d2ine2,e1ine(d1ine1)) = P2;
 
-[~,d1ine1,~] = intersect(e1,d1);
-[~,d2ine2,~] = intersect(e2,d2);
-[~,e1ine,~] = intersect(e,e1);
-[~,e2ine,~] = intersect(e,e2);
-[~,o1ini1,~] = intersect(i1,o1);
-[~,o2ini2,~] = intersect(i2,o2);
 
-
-
-Pei1 = sparse(ne1, ni1);
-Pei1(d1ine1,o1ini1) = P1;
-Pei2 = sparse(ne2, ni2);
-Pei2(d2ine2,o2ini2) = P2;
-
-Pee1 = sparse(ne1, ne);
-Pee1(d1ine1,e2ine(d2ine2)) = P1;
-Pee2 = sparse(ne2, ne);
-Pee2(d2ine2,e1ine(d1ine1)) = P2;
-
-q = 1
-
-S1 = M(e1, e) - q * Pee1 - (M(e1,i1) + q * Pei1) * (M(i1,i1) \ M(i1,e));
-S2 = M(e2, e) - q * Pee2 - (M(e2,i2) + q * Pei2) * (M(i2,i2) \ M(i2,e));
+% S1 = M(e1, e)  - (M(e1,i1) + q * Pei1) * (M(i1,i1) \ M(i1,e));
+% S2 = M(e2, e)  - (M(e2,i2) + q * Pei2) * (M(i2,i2) \ M(i2,e));
+% S1 = M(e1, e) - q * Pee1 - (M(e1,i1) + q * Pei1) * (M(i1,i1) \ M(i1,e));
+% S2 = M(e2, e) - q * Pee2 - (M(e2,i2) + q * Pei2) * (M(i2,i2) \ M(i2,e));
+S1 = M(e1, e) - q * P(e1,e) - (M(e1,i1) + q * P(e1,i1)) * (M(i1,i1) \ M(i1,e));
+S2 = M(e2, e) - q * P(e2,e) - (M(e2,i2) + q * P(e2,i2)) * (M(i2,i2) \ M(i2,e));
 
 g1 = G(e1) - M(e1,i1) * (M(i1,i1) \ G(i1));
 g2 = G(e2) - M(e2,i2) * (M(i2,i2) \ G(i2));
 
 xe = [S1;S2] \ [g1;g2];
-[xe,x(e)]
+
+% Now do the Schur complement blindly:
+ae = [ae1m,ad1, ae2m, ad2]; 
+ai = [ai1m, ao1, ai2m, ao2];
+
+MPS = MP(ae,ae) - MP(ae,ai) * (MP(ai,ai) \ MP(ai,ae));
+GS = GG(ae) - MP(ae,ai) * (MP(ai,ai) \ GG(ai));
+xs = MPS \ GS;
+
+[xe,x(e),xs]
 
