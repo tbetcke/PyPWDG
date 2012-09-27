@@ -50,7 +50,7 @@ class DirectSolver(object):
             self.callback(M)
         b = operator.rhs()
         x = self.solvemethod(M,b).squeeze()
-#        print 'x', x
+        print 'x', x
         print "Relative residual: ", np.linalg.norm(M * x -b) / np.linalg.norm(x)
         return x
 

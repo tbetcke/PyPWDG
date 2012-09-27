@@ -1,4 +1,11 @@
 '''
+Structure matrices represent finite element concepts at the mesh level.  For example, AveragesAndJumps.AD 
+is a matrix that represents the average Dirichlet value across (double-sided) faces, it is nfaces x nfaces and each row has
+a 1 on the diagonal and another 1 in the column of the corresponding face from the neighbouring element.
+
+They are the basic building blocks for the bilinear forms, and are fed into pypwdg.utils.sparse.vbsr_matrix to build
+block-sparse system and mass matrices.
+
 Created on Aug 6, 2010
 
 @author: joel

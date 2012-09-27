@@ -1,7 +1,18 @@
 '''
+Meshes have 3 components:  A MeshInfo, which contains the underlying information that determines the Mesh;
+a Topology, which looks after (most of) the calculated connectivity information; and a Partition, which
+determines which bit of the mesh is being looked after by this particular process.
+
+These three components are wrapped together by a MeshView, which provides a view onto the data appropriate
+to the current process.
+
+The MeshInfo and Topology classes are both ppd.immutable, i.e. copies are placed in all processes.  The Partition
+objects are (typically) ppd.distribute, which means that the instances in each process are different.  The MeshView
+is just an ordinary object, which gets serialised every time (N.B. since it only contains 3 references, it's light-weight).
+
 Created on Jul 27, 2010
 
-@author: tbetcke
+@author: tbetcke, joel
 '''
 import numpy as np
 import scipy.sparse as ss
@@ -11,7 +22,7 @@ import logging
 log = logging.getLogger(__name__)
 
 def gmshInfo(fname, dim, *args, **kwargs):
-    ''' Construct a Mesh from a gmsh dictionary '''
+    ''' Construct a MeshInfo from a gmsh dictionary '''
     
     if dim==2:
         gmsh_elem_key=2 # Key for triangle element in Gmsh 
@@ -38,6 +49,7 @@ def gmshInfo(fname, dim, *args, **kwargs):
     return SimplicialMeshInfo(nodes, elements, elemIdentity, boundaries, dim, *args, **kwargs)
 
 def gmshMesh(*args, **kwargs):
+    ''' Helper function to wrap a MeshView around a gmsh MeshInfo'''
     meshinfo = gmshInfo(*args, **kwargs)
     topology = Topology(meshinfo)
     partition = DistributedPartition(meshinfo, topology)    
@@ -188,7 +200,12 @@ class Topology(object):
 
 
 class Partition(object):
-    ''' A partition of a mesh'''
+    ''' A partition of a mesh.
+    
+        The user should not need to construct this directly.  Instead construct a DistributedPartition
+        or a BespokePartition.  N.B. With each of these subclasses, the ppd.distribute decorator 
+        automatically fill in the partition and partidx parameters.   
+    '''
     def __init__(self, basicinfo, topology, partition=None, partidx=0):
         self.partition = np.arange(basicinfo.nelements) if partition is None else partition 
         self.partidx = partidx
@@ -202,18 +219,26 @@ class Partition(object):
         cutelts = basicinfo.elttofaces * self.cutfaces
         self.neighbourelts = (cutelts <= -1).nonzero()[0]
         self.innerbdyelts = (cutelts >= 1).nonzero()[0]
+        print "cutfaces", self.cutfaces
+        print partition
 #        print "cut faces", (self.cutfaces==1).nonzero()[0], sum(self.cutfaces==1)
 #        print 'Neighbour elements', self.neighbourelts
     
 
 @ppd.distribute(lambda n: lambda basicinfo, topology: [((basicinfo, topology, partition, i),{}) for i, partition in enumerate(basicinfo.partition(n))]) 
 class DistributedPartition(Partition):
-    ''' A helper class that creates one mesh partition per worker process'''
+    ''' A helper class that creates one mesh partition per worker process based on the partition calculated by the MeshInfo'''
     pass    
 
 @ppd.distribute(lambda n: lambda basicinfo, topology, partitions: [((basicinfo, topology, partition, i),{}) for i, partition in enumerate(partitions(n))]) 
 class BespokePartition(Partition):
-    ''' A helper class that creates one mesh partition per worker process'''
+    ''' A helper class that creates one mesh partition per worker process based on a user-supplied list of partitions
+    
+        Inputs:
+            basicinfo: A MeshInfo
+            topology: A Topology
+            partitions: A list of partitions, which will be iterated over by the ppd.distribute decorator.
+    '''
     pass    
 
 class MeshView(object):
@@ -256,6 +281,7 @@ class MeshView(object):
         return dict([(entity, self.part.fp * ss.spdiags((self.topology.faceentities == entity) * 1, [0], self.nfaces,self.nfaces)) for entity in self.topology.entities])
 
 def meshFromInfo(meshinfo):
+    ''' Given a meshinfo, create a MeshView'''
     topology = Topology(meshinfo)
     partition = DistributedPartition(meshinfo, topology)
     return MeshView(meshinfo, topology, partition)

@@ -15,7 +15,7 @@ np.set_printoptions(precision=4, threshold='nan',  linewidth=1000)
 
 @ppd.distribute()
 class DefaultOperator(object):
-
+    ''' A default operator: grab the (local part of the) system matrix and do a matrix multiply'''
     
     @ppd.parallelmethod()    
     def setup(self, system, sysargs, syskwargs):   
@@ -36,6 +36,7 @@ class DefaultOperator(object):
 
 @ppd.distribute()
 class BlockPrecondOperator(DefaultOperator):       
+    ''' Add a preconditioner based on the diagonal block associated with this partition'''
     def __init__(self, mesh):
         self.mesh = mesh
     
@@ -55,6 +56,7 @@ class BlockPrecondOperator(DefaultOperator):
 
 @ppd.distribute()
 class DiagonalBlockOperator(object):
+    ''' Add a preconditioner based on the diagonal blocks (each block comes from one mesh element)'''
     
     def __init__(self, mesh):
         self.mesh = mesh
@@ -87,31 +89,31 @@ class DiagonalBlockOperator(object):
         
 
 class BrutalSolver(object):
-    def __init__(self, dtype):
+    ''' A direct solver that uses the indirect solver Operators.  Useful for testing'''
+    def __init__(self, dtype, store=False):
         self.dtype = dtype
+        self.store = store
     
     def solve(self, operator):
         b = operator.rhs()
         n = len(b)
         M = np.hstack([operator.multiply(x).reshape(-1,1) for x in np.eye(n, dtype=self.dtype)])
         log.debug("M = %s, b = %s", M.shape, b.shape)
-#        print "Brutal Solver", M
-#        print 'b',b
-#        mp.figure()
-#        mp.spy(M, markersize=1)
         x = ssl.spsolve(M, b)
-#        print 'solve: x', x
-#        print x
+        if self.store:
+            self.M = M
+            self.b = b
+            self.x = x
+            
         if hasattr(operator, 'postprocess'):
             x = operator.postprocess(x)
-#        print x
         return x
         
 
 class ItCounter(object):
     def __init__(self, stride = 20):
         self.n = 0
-        self.stride = 20
+        self.stride = stride
     
     def __call__(self, x):
         self.n +=1
@@ -133,12 +135,16 @@ class ItTracker(object):
         its = self.its
         self.its = []
         return its
-    
-class GMRESSolver(object):
 
-    def __init__(self, dtype, callback=ItCounter()):
+class IterativeSolver(object):
+    ''' Generic iterative solver class
+    
+        Inputs:
+            dtype: datatype of operator.  Use 'ctor' if the operator is complex, but the iterative solvers don't support complex
+    '''
+    def __init__(self, dtype, callback=None):
         self.dtype = dtype
-        self.callback = callback
+        self.callback = callback if callback is not None else ItCounter()
 
     def solve(self, operator):
         if self.dtype=='ctor':
@@ -147,22 +153,35 @@ class GMRESSolver(object):
         else:
             dtype = self.dtype
         
-        b = operator.rhs()        
+        b = operator.rhs()       
         n = len(b)
-        log.info("GMRES solving system of size %s", n)
+        log.info("IterativeSolver solving system of size %s", n)
         
         lo = ssl.LinearOperator((n,n), operator.multiply, dtype=dtype)
         pc = ssl.LinearOperator((n,n), operator.precond, dtype=dtype) if hasattr(operator, 'precond') else None
         
-#        x, status = ssl.bicgstab(lo, b, callback = callback, M=pc)
-        x, status = ssl.gmres(lo, b, callback = self.callback, M=pc, restart=n)
-        log.info(status)
-
+        x = self.solveop(lo, b, pc, n)
+        print "pre-post-process",x
         if hasattr(operator, 'postprocess'):
             x = operator.postprocess(x)
         return x
 
+class GMRESSolver(IterativeSolver):
+    def solveop(self, lo,b,pc,n):
+        x,status = ssl.gmres(lo, b, callback=self.callback, M=pc, restart = n)
+        log.info(status)
+        return x
+
+class BICGSTABSolver(IterativeSolver):
+    def solveop(self, lo,b,pc,n):
+        x,status = ssl.bicgstab(lo, b, callback=self.callback, M=pc)
+        log.info(status)
+        return x
+
+
+
 class ComplexToRealOperator(object):
+    ''' Convert a complex operator into a real operator'''
     def __init__(self, complexop):
         self.op = complexop
         if hasattr(complexop, 'precond'):

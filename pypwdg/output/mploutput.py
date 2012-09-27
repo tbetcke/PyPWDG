@@ -10,6 +10,13 @@ import matplotlib.pyplot as mp
 import pypwdg.parallel.decorate as ppd
 
 def image(v, npoints, bounds, alpha = 1.0, cmap=None, colorbar = True):    
+    ''' Display an image.
+    
+        Inputs:
+            v: the data
+            npoints: the number of points in each dimension
+            bounds: the bounds for each dimension
+    '''
     z = v.reshape(npoints)
     
     mp.figure()
@@ -18,6 +25,13 @@ def image(v, npoints, bounds, alpha = 1.0, cmap=None, colorbar = True):
 
 
 def contour(p, v, npoints):    
+    ''' A contour plot
+        
+        Inputs:
+            p: points
+            v: data
+            npoints: number of points in each dimension
+    '''
     x = p[:,0].reshape(npoints)
     y = p[:,1].reshape(npoints)
     z = v.reshape(npoints)
@@ -27,6 +41,7 @@ def contour(p, v, npoints):
     mp.colorbar(c)
 
 def showmesh(mesh):    
+    ''' Plot the mesh onto the current plot'''
     mp.triplot(mesh.nodes[:,0], mesh.nodes[:,1], mesh.elements, linewidth=1.0, color='k')
 
 def output2derror(bounds, solution, fn, npoints, plotmesh = True):
@@ -48,6 +63,7 @@ def getPartitions(mesh):
     return [mesh.partition]
 
 def outputMeshPartition(bounds, npoints, mesh, nparts = 0):
+    ''' Show the mesh partitions'''
     bounds=np.array(bounds,dtype='d')
     points = pug.StructuredPoints(bounds.transpose(), npoints)
     parts = getPartitions(mesh) if nparts==0 else mesh.basicinfo.partition(nparts)
@@ -59,7 +75,8 @@ def outputMeshPartition(bounds, npoints, mesh, nparts = 0):
     image(v, npoints, bounds, colorbar=False)
     showmesh(mesh)
 
-def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True, show = True, **kwargs):    
+def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True, show = True, **kwargs):
+    ''' Plot a (2D) solution'''    
     bounds=np.array(bounds,dtype='d')
     points = pug.StructuredPoints(bounds.transpose(), npoints)
     spe = solution.getEvaluator(filter)
@@ -73,6 +90,10 @@ def output2dsoln(bounds, solution, npoints, filter = np.real, plotmesh = True, s
     if show: mp.show()
        
 def output2dfn(bounds, fn, npoints, show = True, type=None, **kwargs):
+    ''' Plot a (2D) function 
+    
+        For example, to be compared with output2dsoln
+    '''
     bounds=np.array(bounds,dtype='d')
     points = pug.StructuredPoints(bounds.transpose(), npoints).toArray()
     v = np.real(fn(points))

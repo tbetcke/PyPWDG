@@ -13,6 +13,10 @@ import numpy as np
 #            print b
 #            
 def vtkbasis(mesh, etob, fname, coeffs):
+    ''' Find the directions from a (non-uniform) plane wave basis and output a VTK-compatible file
+    
+        It's possible that this needs to be updated to work with recent changes to ElementToBasis
+    '''
     try:
         import vtk
         

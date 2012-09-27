@@ -142,6 +142,7 @@ def workersend(obj):
     complexhandler = ArrayHandler("cplx", np.complex, 25, realhandler)    
     csio = cStringIO.StringIO()
     p = cPickle.Pickler(csio, protocol=2)
+    # Comment out the following line to turn off array batching (not that you should ever need to)
     p.persistent_id = complexhandler.process
     p.dump(obj)            
     comm.gather((csio.getvalue(), complexhandler), None, root=0)
