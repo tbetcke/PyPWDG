@@ -15,7 +15,7 @@ np.set_printoptions(precision=4, threshold='nan',  linewidth=1000)
 
 @ppd.distribute()
 class DefaultOperator(object):
-
+    ''' A default operator: grab the (local part of the) system matrix and do a matrix multiply'''
     
     @ppd.parallelmethod()    
     def setup(self, system, sysargs, syskwargs):   
@@ -36,6 +36,7 @@ class DefaultOperator(object):
 
 @ppd.distribute()
 class BlockPrecondOperator(DefaultOperator):       
+    ''' Add a preconditioner based on the diagonal block associated with this partition'''
     def __init__(self, mesh):
         self.mesh = mesh
     
@@ -55,6 +56,7 @@ class BlockPrecondOperator(DefaultOperator):
 
 @ppd.distribute()
 class DiagonalBlockOperator(object):
+    ''' Add a preconditioner based on the diagonal blocks (each block comes from one mesh element)'''
     
     def __init__(self, mesh):
         self.mesh = mesh
@@ -87,6 +89,7 @@ class DiagonalBlockOperator(object):
         
 
 class BrutalSolver(object):
+    ''' A direct solver that uses the indirect solver Operators.  Useful for testing'''
     def __init__(self, dtype, store=False):
         self.dtype = dtype
         self.store = store
@@ -134,7 +137,11 @@ class ItTracker(object):
         return its
 
 class IterativeSolver(object):
+    ''' Generic iterative solver class
     
+        Inputs:
+            dtype: datatype of operator.  Use 'ctor' if the operator is complex, but the iterative solvers don't support complex
+    '''
     def __init__(self, dtype, callback=None):
         self.dtype = dtype
         self.callback = callback if callback is not None else ItCounter()
@@ -174,6 +181,7 @@ class BICGSTABSolver(IterativeSolver):
 
 
 class ComplexToRealOperator(object):
+    ''' Convert a complex operator into a real operator'''
     def __init__(self, complexop):
         self.op = complexop
         if hasattr(complexop, 'precond'):

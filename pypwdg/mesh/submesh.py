@@ -1,4 +1,6 @@
 '''
+This is unused, or at least, not guaranteed to work.
+
 Created on Mar 7, 2012
 
 @author: joel

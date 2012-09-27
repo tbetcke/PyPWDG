@@ -11,7 +11,11 @@ log = logging.getLogger(__name__)
 
 @ppd.distribute()
 class OverlappingPartition(pmm.Partition):
-    '''Add in the neighbouring elements, but keep the cutfaces'''
+    '''A Partition class that supports an overlapping method.  
+    
+        The neighbouring elements are added to each partition (so they are, strictly speaking, no longer
+        a partition).  N.B. cutfaces is left the same
+    '''
     def __init__(self, meshview):
         overlappart = np.sort(np.concatenate((meshview.partition, meshview.neighbourelts)))
         log.debug(overlappart)

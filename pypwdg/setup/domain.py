@@ -1,4 +1,6 @@
 '''
+Classes to support a Schwarz domain decomposition.
+
 Created on May 17, 2012
 
 @author: joel
@@ -16,6 +18,7 @@ log.addHandler(logging.StreamHandler())
 
 @ppd.distribute()
 class SchwarzWorker(object):
+    ''' The local work that needs to be done for a Schwarz decomposition'''
     def __init__(self, mesh):
         self.mesh = mesh
         

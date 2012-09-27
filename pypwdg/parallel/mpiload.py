@@ -1,4 +1,8 @@
 '''
+Load MPI.
+
+It might be nice for this module to interact with the logging in order to display the partition id in all log messages. 
+
 Created on Nov 11, 2010
 
 @author: joel

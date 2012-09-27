@@ -11,11 +11,13 @@ import numpy
 import collections as c
 
 class BoundaryCondition(object):
+    """ A BoundaryCondition combines boundary coefficients with boundary data.""" 
     def __init__(self, lcoeffs, rcoeffs = None, data = None):
         self.data = ZeroBoundaryData() if data is None else data
         self.coeffs = BoundaryCoefficients(lcoeffs, rcoeffs)
 
 class ZeroBoundaryData(object):
+    """ An example of what's expected from a boundary data object"""
     def __init__(self):
         self.n = 1
             
@@ -44,7 +46,6 @@ class BoundaryCoefficients(object):
         if g=None homogeneous boundary conditions are assumed
         
     """
-    
     
     def __init__(self,l_coeffs,r_coeffs=None):  
         if r_coeffs is None: r_coeffs=[0, 0]

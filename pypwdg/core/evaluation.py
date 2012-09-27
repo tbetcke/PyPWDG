@@ -47,7 +47,11 @@ class Evaluator(object):
 
 @distribute()
 class StructuredPointsEvaluator(object):
-#    @print_timing
+    """ Allows the evaluation of a function at some StructuredPoints.  The function
+        is determined by a basis and a corresponding vector of coefficients
+        
+        See pypwdg.utils.geometry for the StructuredPoints class        
+    """        
     def __init__(self, mesh, elttobasis, filter, x):
         self.mesh = mesh
         self.elttobasis = elttobasis
@@ -55,7 +59,6 @@ class StructuredPointsEvaluator(object):
         self.x = x
     
     @parallelmethod(reduceop = tuplesum)
-#    @print_timing
     def evaluate(self, structuredpoints):
         outputshape = structuredpoints.length if len(self.x.shape) == 1 else (structuredpoints.length, self.x.shape[1])
         vals = numpy.zeros(outputshape, dtype=numpy.complex128)

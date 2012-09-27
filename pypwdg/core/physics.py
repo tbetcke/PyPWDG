@@ -8,6 +8,7 @@ import pypwdg.parallel.decorate as ppd
 
 @ppd.distribute()
 class HelmholtzBoundary(object):
+    """ Assemble the vector or matrix associated with the boundary data for a Helmholtz system """ 
     def __init__(self, computationinfo, entity, bdyinfo, delta=0.5):
         bdycoeffs, bdyftob = bdyinfo
         bdyvandermondes = computationinfo.faceVandermondes(bdyftob)  
