@@ -1,5 +1,5 @@
 '''
-This is unused, or at least, not guaranteed to work.
+These classes support the building of surface meshes along the interface between two domains.
 
 Created on Mar 7, 2012
 
